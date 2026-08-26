@@ -79,3 +79,32 @@ class RuleDecision(_StrictModel):
     effect: RuleEffect
     rule_id: str | None = None
     message: str | None = None
+
+
+class DLPPattern(_StrictModel):
+    pattern: str
+    label: str
+    action: Literal["mask", "deny"]
+
+
+class ClientConfig(_StrictModel):
+    client_id: str
+    domain_allowlist: tuple[str, ...] = Field(min_length=1)
+    block_private_ip: bool = True
+    dlp_patterns: tuple[DLPPattern, ...] = ()
+
+
+class SkillCall(_StrictModel):
+    skill_name: str
+    url: str
+    method: HttpMethod
+    actor: str = "unknown"
+    request_body: dict[str, Any] = Field(default_factory=dict)
+    response_text: str = ""
+    response_status: int | None = None
+
+
+class InterceptDecision(_StrictModel):
+    allowed: bool
+    reason: str | None = None
+    dlp_matches: dict[str, list[str]] = Field(default_factory=dict)
