@@ -5,6 +5,7 @@ do cliente, conhecimento curado vive num Vault plugável, e um agente (Claude, v
 orquestra ferramentas sobre essas duas camadas.
 
 Arquitetura completa: ver `docs/spec.md` (spec v2.1, pós Red Team/Blue Team).
+Fluxo de trabalho (spec por passo → aprovação → implementação → changelog): ver `docs/README.md`.
 
 ## Status
 

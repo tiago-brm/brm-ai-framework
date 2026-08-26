@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "BRM Framework — MCP engine, rule evaluator, and vault for BRM Solutions clients"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic>=2.13.4",
+]
 
 [dependency-groups]
 dev = [

@@ -121,7 +121,8 @@ fabric.properties
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
@@ -319,3 +320,7 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,macos,jetbrains
+
+# graphify: machine-local paths (the graph itself IS versioned)
+graphify-out/.graphify_python
+graphify-out/.graphify_root

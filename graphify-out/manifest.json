@@ -1,0 +1,67 @@
+{
+  "/Users/tiagopereiraramos/brm-ai-framework/README.md": {
+    "mtime": 1787751791.3850524,
+    "ast_hash": "36a8f927618f154ae86ded51d5a54443",
+    "semantic_hash": "36a8f927618f154ae86ded51d5a54443"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/docs/spec.md": {
+    "mtime": 1787748624.0626593,
+    "ast_hash": "9ee5a8bc7d6e575e984fdfe6e7fbf7e5",
+    "semantic_hash": "9ee5a8bc7d6e575e984fdfe6e7fbf7e5"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/tests/test_contracts.py": {
+    "mtime": 1787750524.6307936,
+    "ast_hash": "6ce09e75fbfe432bf78a473d52b65435",
+    "semantic_hash": "6ce09e75fbfe432bf78a473d52b65435"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/tests/__init__.py": {
+    "mtime": 1787750429.3013663,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/tests/test_models.py": {
+    "mtime": 1787750514.2340093,
+    "ast_hash": "0d55d7238dfcc514d5228cb87ab33163",
+    "semantic_hash": "0d55d7238dfcc514d5228cb87ab33163"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/__init__.py": {
+    "mtime": 1787750429.293599,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/core/models.py": {
+    "mtime": 1787750446.5294628,
+    "ast_hash": "c6589fe5e7fcc31ccdc26abe5675f9a3",
+    "semantic_hash": "c6589fe5e7fcc31ccdc26abe5675f9a3"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/core/__init__.py": {
+    "mtime": 1787750429.295202,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/core/contracts.py": {
+    "mtime": 1787750457.130402,
+    "ast_hash": "24421552e0920c6ae092a21cf5470758",
+    "semantic_hash": "24421552e0920c6ae092a21cf5470758"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/dynamic_skills/__init__.py": {
+    "mtime": 1787750429.2967618,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/vault/__init__.py": {
+    "mtime": 1787750429.29835,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/audit/__init__.py": {
+    "mtime": 1787750429.2999227,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/docs/changelog/001-contracts.md": {
+    "mtime": 1787750554.1267936,
+    "ast_hash": "85bf19a7d7b1ace900d3a0771820c4d9",
+    "semantic_hash": "85bf19a7d7b1ace900d3a0771820c4d9"
+  }
+}
