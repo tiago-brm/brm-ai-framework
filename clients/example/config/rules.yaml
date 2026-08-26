@@ -1,0 +1,33 @@
+schema_version: 1
+client_id: example
+
+rules:
+  - id: max-valor-consulta
+    description: Denies requests querying more than R$ 100,000
+    condition:
+      ">":
+        - var: valor_consultado
+        - 100000
+    effect: deny
+    message: Valor consultado acima do limite permitido
+
+  - id: envio-externo-requer-aprovacao
+    description: Requires human approval for external API calls
+    condition:
+      "==":
+        - var: tipo_acao
+        - enviar_para_sistema_externo
+    effect: require_approval
+    message: Esta ação envolve envio para sistema externo
+
+  - id: acesso-permitido-horario
+    description: Allows access only during business hours
+    condition:
+      and:
+        - ">=":
+            - var: hora_local
+            - 8
+        - "<":
+            - var: hora_local
+            - 18
+    effect: allow

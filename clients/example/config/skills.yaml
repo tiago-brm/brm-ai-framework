@@ -1,0 +1,51 @@
+schema_version: 1
+client_id: example
+
+skills:
+  - name: enviar_email
+    description: Sends emails via SMTP to approved addresses
+    method: POST
+    url_template: https://mail.example.com/api/send
+    allowed_domains:
+      - mail.example.com
+    parameters:
+      destinatario:
+        type: string
+        required: true
+      assunto:
+        type: string
+        required: true
+      corpo:
+        type: string
+        required: true
+    timeout_seconds: 30.0
+
+  - name: consultar_erp
+    description: Queries the legacy ERP for financial data
+    method: GET
+    url_template: https://erp-internal.example.com/api/consultas
+    allowed_domains:
+      - erp-internal.example.com
+    parameters:
+      filtro:
+        type: string
+      data_inicio:
+        type: string
+    timeout_seconds: 60.0
+
+  - name: registrar_documento
+    description: Records a document in the internal registry system
+    method: POST
+    url_template: https://sistema-registros.example.com/v1/docs
+    allowed_domains:
+      - sistema-registros.example.com
+    parameters:
+      titulo:
+        type: string
+        required: true
+      conteudo:
+        type: string
+        required: true
+      tags:
+        type: array
+    timeout_seconds: 45.0

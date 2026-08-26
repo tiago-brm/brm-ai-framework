@@ -324,3 +324,5 @@ pyrightconfig.json
 # graphify: machine-local paths (the graph itself IS versioned)
 graphify-out/.graphify_python
 graphify-out/.graphify_root
+# Claude Code worktrees (local, não versionar)
+.claude/worktrees/
