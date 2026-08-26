@@ -73,3 +73,9 @@ class AuditEvent(_StrictModel):
     rule_id: str | None = None
     payload_digest: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+class RuleDecision(_StrictModel):
+    effect: RuleEffect
+    rule_id: str | None = None
+    message: str | None = None

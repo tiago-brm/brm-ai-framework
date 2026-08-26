@@ -30,9 +30,9 @@
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
   "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/core/models.py": {
-    "mtime": 1787750446.5294628,
-    "ast_hash": "c6589fe5e7fcc31ccdc26abe5675f9a3",
-    "semantic_hash": "c6589fe5e7fcc31ccdc26abe5675f9a3"
+    "mtime": 1787753190.185366,
+    "ast_hash": "1c929191060dc9bb5aef4b6e6270c8c8",
+    "semantic_hash": "1c929191060dc9bb5aef4b6e6270c8c8"
   },
   "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/core/__init__.py": {
     "mtime": 1787750429.295202,
@@ -63,5 +63,35 @@
     "mtime": 1787750554.1267936,
     "ast_hash": "85bf19a7d7b1ace900d3a0771820c4d9",
     "semantic_hash": "85bf19a7d7b1ace900d3a0771820c4d9"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/tests/test_rule_evaluator.py": {
+    "mtime": 1787755052.1860998,
+    "ast_hash": "94f0908bd317671354bc89ce1563ca6d",
+    "semantic_hash": "94f0908bd317671354bc89ce1563ca6d"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/mcp_engine/core/rule_evaluator.py": {
+    "mtime": 1787755034.9526033,
+    "ast_hash": "f7a1dadbe08fcfd187804143aa536d82",
+    "semantic_hash": "f7a1dadbe08fcfd187804143aa536d82"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/docs/README.md": {
+    "mtime": 1787752600.2454433,
+    "ast_hash": "9612ce55a25487d7c0f4c1a5f40961db",
+    "semantic_hash": "9612ce55a25487d7c0f4c1a5f40961db"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/docs/changelog/002-rule-evaluator.md": {
+    "mtime": 1787755133.3961332,
+    "ast_hash": "c62671642813d84c92914213dafd5d76",
+    "semantic_hash": "c62671642813d84c92914213dafd5d76"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/docs/specs/002-rule-evaluator.md": {
+    "mtime": 1787755114.89018,
+    "ast_hash": "2442dadaabc865732f35f480ffc7954c",
+    "semantic_hash": "2442dadaabc865732f35f480ffc7954c"
+  },
+  "/Users/tiagopereiraramos/brm-ai-framework/docs/specs/001-contracts.md": {
+    "mtime": 1787751783.5386045,
+    "ast_hash": "c9eb62a34c5147ec47c43c0d6455edb7",
+    "semantic_hash": "c9eb62a34c5147ec47c43c0d6455edb7"
   }
 }

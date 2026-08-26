@@ -4,49 +4,46 @@
   "graph": {
     "hyperedges": [
       {
-        "id": "phase1_contract_model_layer",
-        "label": "Phase 1 contract + model layer (Protocols over versioned Pydantic models)",
+        "id": "ciclo_documentacao_por_passo",
+        "label": "Ciclo de documenta\u00e7\u00e3o por passo (spec \u2192 changelog \u2192 graphify)",
         "nodes": [
-          "core_contracts_ruleprovider",
-          "core_contracts_skillprovider",
-          "core_contracts_auditsink",
-          "core_models_ruleset",
-          "core_models_skillset",
-          "core_models_auditevent"
+          "docs_readme_specs_dir",
+          "docs_readme_changelog_dir",
+          "docs_readme_graphify",
+          "docs_readme_ciclo_por_passo"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "docs/README.md"
+      },
+      {
+        "id": "motor_avaliacao_regras_002",
+        "label": "Motor de avalia\u00e7\u00e3o de regras (passo 002)",
+        "nodes": [
+          "specs_002_rule_evaluator_rule_evaluator_py",
+          "specs_002_rule_evaluator_ruleset",
+          "specs_002_rule_evaluator_ruledecision",
+          "specs_002_rule_evaluator_ruleevaluationerror",
+          "specs_002_rule_evaluator_json_logic_qubit"
         ],
         "relation": "form",
         "confidence": "EXTRACTED",
         "confidence_score": 1.0,
-        "source_file": "docs/changelog/001-contracts.md"
+        "source_file": "docs/specs/002-rule-evaluator.md"
       },
       {
-        "id": "protocol_conformance_testing_pattern",
-        "label": "In-memory fakes proven against runtime_checkable Protocols via isinstance",
+        "id": "pipeline_auditoria_decisao",
+        "label": "Pipeline de auditoria da decis\u00e3o (RuleDecision \u2192 interceptor \u2192 AuditEvent)",
         "nodes": [
-          "test_contracts_inmemoryruleprovider",
-          "test_contracts_inmemoryskillprovider",
-          "test_contracts_inmemoryauditsink",
-          "core_contracts_ruleprovider",
-          "core_contracts_skillprovider",
-          "core_contracts_auditsink"
+          "specs_002_rule_evaluator_ruledecision",
+          "specs_002_rule_evaluator_interceptor_py",
+          "specs_002_rule_evaluator_auditevent"
         ],
         "relation": "participate_in",
         "confidence": "EXTRACTED",
         "confidence_score": 1.0,
-        "source_file": "tests/test_contracts.py"
-      },
-      {
-        "id": "spec_changelog_documentation_cycle",
-        "label": "Numbered spec-then-changelog documentation cycle applied to step 001",
-        "nodes": [
-          "docs_readme_documentation_cycle",
-          "specs_001_contracts",
-          "changelog_001_contracts"
-        ],
-        "relation": "participate_in",
-        "confidence": "INFERRED",
-        "confidence_score": 0.85,
-        "source_file": "docs/README.md"
+        "source_file": "docs/specs/002-rule-evaluator.md"
       }
     ]
   },
@@ -60,7 +57,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 7,
       "norm_label": "brm framework",
       "id": "readme_brm_framework"
     },
@@ -73,7 +70,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 7,
       "norm_label": "vault (camada de conhecimento curado)",
       "id": "readme_vault"
     },
@@ -86,7 +83,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 7,
       "norm_label": "mcp engine",
       "id": "readme_mcp_engine"
     },
@@ -99,7 +96,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 6,
+      "community": 8,
       "norm_label": "fase 1 \u2014 mvp seguro por cliente",
       "id": "readme_fase_1"
     },
@@ -112,7 +109,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "audit/ (log de auditoria append-only)",
       "id": "readme_audit_dir"
     },
@@ -125,7 +122,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 7,
       "norm_label": "clients/<cliente>/config/ (rules.yaml + skills.yaml)",
       "id": "readme_clients_config"
     },
@@ -138,7 +135,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 7,
       "norm_label": "control plane (visual, centralizado)",
       "id": "readme_control_plane"
     },
@@ -152,7 +149,7 @@
       "author": null,
       "contributor": null,
       "rationale": "2-3 clientes pagando, com pelo menos um pedindo explicitamente self-service de regras, \u00e9 o sinal de sa\u00edda da Fase 1; antes disso a decis\u00e3o de n\u00e3o migrar para o Control Plane visual fica ancorada em demanda real, n\u00e3o em antecipa\u00e7\u00e3o arquitetural.",
-      "community": 6,
+      "community": 8,
       "norm_label": "gatilho de saida da fase 1",
       "id": "readme_exit_trigger"
     },
@@ -205,7 +202,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 9,
+      "community": 6,
       "norm_label": "camada 3 (agente)",
       "id": "docs_spec_camada_3_agente"
     },
@@ -219,7 +216,7 @@
       "author": null,
       "contributor": null,
       "rationale": "MCP j\u00e1 garante portabilidade/agnosticismo futuro a outros LLMs de gra\u00e7a pelo protocolo; n\u00e3o vale gastar ciclo de engenharia testando outros modelos (Hermes/Llama) antes de um segundo LLM ser realmente exigido por contrato.",
-      "community": 9,
+      "community": 6,
       "norm_label": "claude",
       "id": "docs_spec_claude"
     },
@@ -232,7 +229,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 9,
+      "community": 6,
       "norm_label": "mcp (model context protocol)",
       "id": "docs_spec_mcp_protocol"
     },
@@ -246,7 +243,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Implementa\u00e7\u00e3o simples (YAML/pgvector) por dentro, mas atr\u00e1s de um contrato (search, add_note, get_related), para que oferecer Obsidian ou evoluir para o Control Plane na Fase 2 seja troca de adapter, n\u00e3o reescrita de arquitetura.",
-      "community": 3,
+      "community": 5,
       "norm_label": "vaultprovider",
       "id": "docs_spec_vaultprovider"
     },
@@ -259,7 +256,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 5,
       "norm_label": "ruleprovider",
       "id": "docs_spec_ruleprovider"
     },
@@ -272,7 +269,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 5,
       "norm_label": "skillprovider",
       "id": "docs_spec_skillprovider"
     },
@@ -285,7 +282,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 0,
       "norm_label": "auditsink",
       "id": "docs_spec_auditsink"
     },
@@ -298,7 +295,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 5,
       "norm_label": "pgvectorvaultprovider",
       "id": "docs_spec_pgvectorvaultprovider"
     },
@@ -311,7 +308,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 5,
       "norm_label": "obsidianvaultprovider",
       "id": "docs_spec_obsidianvaultprovider"
     },
@@ -324,7 +321,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 7,
       "norm_label": "rule_evaluator.py",
       "id": "docs_spec_rule_evaluator"
     },
@@ -337,7 +334,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "interceptor.py",
       "id": "docs_spec_interceptor"
     },
@@ -350,7 +347,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 7,
       "norm_label": "mcp_server.py",
       "id": "docs_spec_mcp_server"
     },
@@ -363,7 +360,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "rest_builder.py",
       "id": "docs_spec_rest_builder"
     },
@@ -376,7 +373,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "hash_chain.py",
       "id": "docs_spec_hash_chain"
     },
@@ -389,7 +386,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "genericrestskill",
       "id": "docs_spec_genericrestskill"
     },
@@ -403,7 +400,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Escolhido por ser puro dado (sandboxado), nunca eval de string livre, eliminando o risco de execu\u00e7\u00e3o de c\u00f3digo arbitr\u00e1rio disfar\u00e7ada de regra de neg\u00f3cio \u2014 risco identificado pelo Red Team.",
-      "community": 5,
+      "community": 7,
       "norm_label": "jsonlogic",
       "id": "docs_spec_jsonlogic"
     },
@@ -416,7 +413,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "dlp (data loss prevention)",
       "id": "docs_spec_dlp"
     },
@@ -429,7 +426,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "ssrf domain allowlist",
       "id": "docs_spec_ssrf_allowlist"
     },
@@ -443,7 +440,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Adiado para a Fase 2 (3+ clientes exigindo self-service) para evitar over-engineering prematuro; a decis\u00e3o de migrar fica ancorada em demanda real (cliente pedindo self-service de regras), n\u00e3o em antecipa\u00e7\u00e3o arquitetural ou apar\u00eancia de 'mais robusto'.",
-      "community": 3,
+      "community": 5,
       "norm_label": "control plane",
       "id": "docs_spec_control_plane"
     },
@@ -456,7 +453,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 5,
       "norm_label": "rule builder visual (low-code)",
       "id": "docs_spec_rule_builder_visual"
     },
@@ -469,7 +466,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 5,
       "norm_label": "skill builder generico",
       "id": "docs_spec_skill_builder"
     },
@@ -482,7 +479,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "fase 1 \u2014 mvp seguro por cliente",
       "id": "docs_spec_fase_1"
     },
@@ -495,7 +492,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 6,
+      "community": 8,
       "norm_label": "fase 2 \u2014 control plane real",
       "id": "docs_spec_fase_2"
     },
@@ -508,7 +505,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 10,
+      "community": 6,
       "norm_label": "fase 3 \u2014 escala multi-tenant e rpa serverless",
       "id": "docs_spec_fase_3"
     },
@@ -521,7 +518,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "human-in-the-loop",
       "id": "docs_spec_human_in_the_loop"
     },
@@ -534,7 +531,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 5,
       "norm_label": "staging \u2192 canary \u2192 producao",
       "id": "docs_spec_staging_canary_producao"
     },
@@ -547,7 +544,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "red team / blue team",
       "id": "docs_spec_red_team_blue_team"
     },
@@ -560,7 +557,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "ner (presidio)",
       "id": "docs_spec_ner_presidio"
     },
@@ -573,7 +570,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 1,
+      "community": 4,
       "norm_label": "mtls / jwt rotativo",
       "id": "docs_spec_mtls_jwt"
     },
@@ -587,7 +584,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Versionar o schema das configs (rules.yaml, skills.yaml) desde a v1 evita migra\u00e7\u00e3o dolorosa de configs manuais quando o Rule Builder visual passar a gerar esse schema automaticamente na Fase 2.",
-      "community": 3,
+      "community": 5,
       "norm_label": "schema_version",
       "id": "docs_spec_schema_version"
     },
@@ -601,7 +598,7 @@
       "author": null,
       "contributor": null,
       "rationale": "Deploy isolado real no cliente piloto antes de generalizar, para deixar o atrito real do primeiro deploy indicar o que precisa de abstra\u00e7\u00e3o, em vez de adivinhar isso arquiteturalmente.",
-      "community": 1,
+      "community": 4,
       "norm_label": "docker compose (deploy isolado)",
       "id": "docs_spec_docker_compose"
     },
@@ -614,7 +611,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 10,
+      "community": 6,
       "norm_label": "rpa serverless (wasm/lambda)",
       "id": "docs_spec_rpa_wasm_lambda"
     },
@@ -627,7 +624,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 10,
+      "community": 6,
       "norm_label": "vector store compartilhado multi-tenant",
       "id": "docs_spec_vector_store_multitenant"
     },
@@ -636,315 +633,315 @@
       "file_type": "code",
       "source_file": "tests/test_contracts.py",
       "source_location": "L1",
-      "id": "tests_test_contracts_py",
-      "community": 4,
-      "norm_label": "test_contracts.py"
+      "community": 0,
+      "norm_label": "test_contracts.py",
+      "id": "tests_test_contracts_py"
     },
     {
       "label": ".get_rules()",
       "file_type": "code",
       "source_file": "tests/test_contracts.py",
       "source_location": "L9",
-      "id": "tests_test_contracts_inmemoryruleprovider_get_rules",
-      "community": 4,
-      "norm_label": ".get_rules()"
+      "community": 0,
+      "norm_label": ".get_rules()",
+      "id": "tests_test_contracts_inmemoryruleprovider_get_rules"
     },
     {
       "label": ".get_skills()",
       "file_type": "code",
       "source_file": "tests/test_contracts.py",
       "source_location": "L17",
-      "id": "tests_test_contracts_inmemoryskillprovider_get_skills",
-      "community": 4,
-      "norm_label": ".get_skills()"
+      "community": 0,
+      "norm_label": ".get_skills()",
+      "id": "tests_test_contracts_inmemoryskillprovider_get_skills"
     },
     {
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "tests/test_contracts.py",
       "source_location": "L22",
-      "id": "tests_test_contracts_inmemoryauditsink_init",
-      "community": 4,
-      "norm_label": ".__init__()"
+      "community": 0,
+      "norm_label": ".__init__()",
+      "id": "tests_test_contracts_inmemoryauditsink_init"
     },
     {
       "label": ".record()",
       "file_type": "code",
       "source_file": "tests/test_contracts.py",
       "source_location": "L25",
-      "id": "tests_test_contracts_inmemoryauditsink_record",
-      "community": 8,
-      "norm_label": ".record()"
+      "community": 0,
+      "norm_label": ".record()",
+      "id": "tests_test_contracts_inmemoryauditsink_record"
     },
     {
       "label": ".iter_events()",
       "file_type": "code",
       "source_file": "tests/test_contracts.py",
       "source_location": "L28",
-      "id": "tests_test_contracts_inmemoryauditsink_iter_events",
-      "community": 8,
-      "norm_label": ".iter_events()"
+      "community": 0,
+      "norm_label": ".iter_events()",
+      "id": "tests_test_contracts_inmemoryauditsink_iter_events"
     },
     {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "tests/__init__.py",
       "source_location": "L1",
-      "id": "tests_init_py",
-      "community": 11,
-      "norm_label": "__init__.py"
+      "community": 9,
+      "norm_label": "__init__.py",
+      "id": "tests_init_py"
     },
     {
       "label": "test_models.py",
       "file_type": "code",
       "source_file": "tests/test_models.py",
       "source_location": "L1",
-      "id": "tests_test_models_py",
-      "community": 0,
-      "norm_label": "test_models.py"
+      "community": 2,
+      "norm_label": "test_models.py",
+      "id": "tests_test_models_py"
     },
     {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "mcp_engine/__init__.py",
       "source_location": "L1",
-      "id": "mcp_engine_init_py",
-      "community": 12,
-      "norm_label": "__init__.py"
+      "community": 10,
+      "norm_label": "__init__.py",
+      "id": "mcp_engine_init_py"
     },
     {
       "label": "models.py",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L1",
-      "id": "mcp_engine_core_models_py",
-      "community": 0,
-      "norm_label": "models.py"
+      "community": 2,
+      "norm_label": "models.py",
+      "id": "mcp_engine_core_models_py"
     },
     {
       "label": "_StrictModel",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L12",
-      "id": "core_models_strictmodel",
-      "community": 0,
-      "norm_label": "_strictmodel"
+      "community": 2,
+      "norm_label": "_strictmodel",
+      "id": "core_models_strictmodel"
     },
     {
       "label": "BaseModel",
       "file_type": "code",
       "source_file": "",
       "source_location": "",
-      "id": "basemodel",
-      "community": 0,
-      "norm_label": "basemodel"
+      "community": 2,
+      "norm_label": "basemodel",
+      "id": "basemodel"
     },
     {
       "label": "RuleEffect",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L16",
-      "id": "core_models_ruleeffect",
-      "community": 0,
-      "norm_label": "ruleeffect"
+      "community": 2,
+      "norm_label": "ruleeffect",
+      "id": "core_models_ruleeffect"
     },
     {
       "label": "str",
       "file_type": "code",
       "source_file": "",
       "source_location": "",
-      "id": "str",
-      "community": 0,
-      "norm_label": "str"
+      "community": 2,
+      "norm_label": "str",
+      "id": "str"
     },
     {
       "label": "Enum",
       "file_type": "code",
       "source_file": "",
       "source_location": "",
-      "id": "enum",
-      "community": 0,
-      "norm_label": "enum"
+      "community": 2,
+      "norm_label": "enum",
+      "id": "enum"
     },
     {
       "label": "Rule",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L22",
-      "id": "core_models_rule",
-      "community": 0,
-      "norm_label": "rule"
+      "community": 2,
+      "norm_label": "rule",
+      "id": "core_models_rule"
     },
     {
       "label": "RuleSet",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L30",
-      "id": "core_models_ruleset",
-      "community": 4,
-      "norm_label": "ruleset"
+      "community": 3,
+      "norm_label": "ruleset",
+      "id": "core_models_ruleset"
     },
     {
       "label": "HttpMethod",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L36",
-      "id": "core_models_httpmethod",
-      "community": 0,
-      "norm_label": "httpmethod"
+      "community": 2,
+      "norm_label": "httpmethod",
+      "id": "core_models_httpmethod"
     },
     {
       "label": "SkillDefinition",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L44",
-      "id": "core_models_skilldefinition",
-      "community": 0,
-      "norm_label": "skilldefinition"
+      "community": 2,
+      "norm_label": "skilldefinition",
+      "id": "core_models_skilldefinition"
     },
     {
       "label": "SkillSet",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L54",
-      "id": "core_models_skillset",
-      "community": 4,
-      "norm_label": "skillset"
+      "community": 0,
+      "norm_label": "skillset",
+      "id": "core_models_skillset"
     },
     {
       "label": "AuditDecision",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L60",
-      "id": "core_models_auditdecision",
-      "community": 0,
-      "norm_label": "auditdecision"
+      "community": 2,
+      "norm_label": "auditdecision",
+      "id": "core_models_auditdecision"
     },
     {
       "label": "AuditEvent",
       "file_type": "code",
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L66",
-      "id": "core_models_auditevent",
-      "community": 7,
-      "norm_label": "auditevent"
+      "community": 0,
+      "norm_label": "auditevent",
+      "id": "core_models_auditevent"
     },
     {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "mcp_engine/core/__init__.py",
       "source_location": "L1",
-      "id": "mcp_engine_core_init_py",
-      "community": 13,
-      "norm_label": "__init__.py"
+      "community": 11,
+      "norm_label": "__init__.py",
+      "id": "mcp_engine_core_init_py"
     },
     {
       "label": "contracts.py",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L1",
-      "id": "mcp_engine_core_contracts_py",
-      "community": 2,
-      "norm_label": "contracts.py"
+      "community": 0,
+      "norm_label": "contracts.py",
+      "id": "mcp_engine_core_contracts_py"
     },
     {
       "label": "RuleProvider",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L9",
-      "id": "core_contracts_ruleprovider",
-      "community": 2,
-      "norm_label": "ruleprovider"
+      "community": 0,
+      "norm_label": "ruleprovider",
+      "id": "core_contracts_ruleprovider"
     },
     {
       "label": "Protocol",
       "file_type": "code",
       "source_file": "",
       "source_location": "",
-      "id": "protocol",
-      "community": 2,
-      "norm_label": "protocol"
+      "community": 0,
+      "norm_label": "protocol",
+      "id": "protocol"
     },
     {
       "label": ".get_rules()",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L10",
-      "id": "core_contracts_ruleprovider_get_rules",
-      "community": 2,
-      "norm_label": ".get_rules()"
+      "community": 0,
+      "norm_label": ".get_rules()",
+      "id": "core_contracts_ruleprovider_get_rules"
     },
     {
       "label": "SkillProvider",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L14",
-      "id": "core_contracts_skillprovider",
-      "community": 2,
-      "norm_label": "skillprovider"
+      "community": 0,
+      "norm_label": "skillprovider",
+      "id": "core_contracts_skillprovider"
     },
     {
       "label": ".get_skills()",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L15",
-      "id": "core_contracts_skillprovider_get_skills",
-      "community": 2,
-      "norm_label": ".get_skills()"
+      "community": 0,
+      "norm_label": ".get_skills()",
+      "id": "core_contracts_skillprovider_get_skills"
     },
     {
       "label": "AuditSink",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L19",
-      "id": "core_contracts_auditsink",
-      "community": 2,
-      "norm_label": "auditsink"
+      "community": 0,
+      "norm_label": "auditsink",
+      "id": "core_contracts_auditsink"
     },
     {
       "label": ".record()",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L20",
-      "id": "core_contracts_auditsink_record",
-      "community": 2,
-      "norm_label": ".record()"
+      "community": 0,
+      "norm_label": ".record()",
+      "id": "core_contracts_auditsink_record"
     },
     {
       "label": ".iter_events()",
       "file_type": "code",
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L22",
-      "id": "core_contracts_auditsink_iter_events",
-      "community": 2,
-      "norm_label": ".iter_events()"
+      "community": 0,
+      "norm_label": ".iter_events()",
+      "id": "core_contracts_auditsink_iter_events"
     },
     {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "mcp_engine/dynamic_skills/__init__.py",
       "source_location": "L1",
-      "id": "mcp_engine_dynamic_skills_init_py",
-      "community": 14,
-      "norm_label": "__init__.py"
+      "community": 12,
+      "norm_label": "__init__.py",
+      "id": "mcp_engine_dynamic_skills_init_py"
     },
     {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "mcp_engine/vault/__init__.py",
       "source_location": "L1",
-      "id": "mcp_engine_vault_init_py",
-      "community": 15,
-      "norm_label": "__init__.py"
+      "community": 13,
+      "norm_label": "__init__.py",
+      "id": "mcp_engine_vault_init_py"
     },
     {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "audit/__init__.py",
       "source_location": "L1",
-      "id": "audit_init_py",
-      "community": 16,
-      "norm_label": "__init__.py"
+      "community": 14,
+      "norm_label": "__init__.py",
+      "id": "audit_init_py"
     },
     {
       "label": "test_ruleset_requires_schema_version_1",
@@ -955,9 +952,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_models_test_ruleset_requires_schema_version_1",
-      "community": 0,
-      "norm_label": "test_ruleset_requires_schema_version_1"
+      "community": 2,
+      "norm_label": "test_ruleset_requires_schema_version_1",
+      "id": "test_models_test_ruleset_requires_schema_version_1"
     },
     {
       "label": "test_ruleset_accepts_valid_rule",
@@ -968,9 +965,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_models_test_ruleset_accepts_valid_rule",
-      "community": 0,
-      "norm_label": "test_ruleset_accepts_valid_rule"
+      "community": 2,
+      "norm_label": "test_ruleset_accepts_valid_rule",
+      "id": "test_models_test_ruleset_accepts_valid_rule"
     },
     {
       "label": "test_models_reject_unknown_fields",
@@ -981,9 +978,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_models_test_models_reject_unknown_fields",
-      "community": 0,
-      "norm_label": "test_models_reject_unknown_fields"
+      "community": 2,
+      "norm_label": "test_models_reject_unknown_fields",
+      "id": "test_models_test_models_reject_unknown_fields"
     },
     {
       "label": "test_skill_definition_requires_at_least_one_allowed_domain",
@@ -994,9 +991,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_models_test_skill_definition_requires_at_least_one_allowed_domain",
-      "community": 0,
-      "norm_label": "test_skill_definition_requires_at_least_one_allowed_domain"
+      "community": 2,
+      "norm_label": "test_skill_definition_requires_at_least_one_allowed_domain",
+      "id": "test_models_test_skill_definition_requires_at_least_one_allowed_domain"
     },
     {
       "label": "test_skillset_roundtrip",
@@ -1007,9 +1004,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_models_test_skillset_roundtrip",
-      "community": 0,
-      "norm_label": "test_skillset_roundtrip"
+      "community": 2,
+      "norm_label": "test_skillset_roundtrip",
+      "id": "test_models_test_skillset_roundtrip"
     },
     {
       "label": "test_audit_event_defaults_schema_version",
@@ -1020,9 +1017,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_models_test_audit_event_defaults_schema_version",
-      "community": 0,
-      "norm_label": "test_audit_event_defaults_schema_version"
+      "community": 2,
+      "norm_label": "test_audit_event_defaults_schema_version",
+      "id": "test_models_test_audit_event_defaults_schema_version"
     },
     {
       "label": "test_models_are_immutable",
@@ -1033,9 +1030,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_models_test_models_are_immutable",
-      "community": 0,
-      "norm_label": "test_models_are_immutable"
+      "community": 2,
+      "norm_label": "test_models_are_immutable",
+      "id": "test_models_test_models_are_immutable"
     },
     {
       "label": "InMemoryRuleProvider",
@@ -1046,9 +1043,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_contracts_inmemoryruleprovider",
-      "community": 4,
-      "norm_label": "inmemoryruleprovider"
+      "community": 0,
+      "norm_label": "inmemoryruleprovider",
+      "id": "test_contracts_inmemoryruleprovider"
     },
     {
       "label": "InMemorySkillProvider",
@@ -1059,9 +1056,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_contracts_inmemoryskillprovider",
-      "community": 4,
-      "norm_label": "inmemoryskillprovider"
+      "community": 0,
+      "norm_label": "inmemoryskillprovider",
+      "id": "test_contracts_inmemoryskillprovider"
     },
     {
       "label": "InMemoryAuditSink",
@@ -1072,9 +1069,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_contracts_inmemoryauditsink",
-      "community": 8,
-      "norm_label": "inmemoryauditsink"
+      "community": 0,
+      "norm_label": "inmemoryauditsink",
+      "id": "test_contracts_inmemoryauditsink"
     },
     {
       "label": "test_in_memory_rule_provider_satisfies_protocol",
@@ -1085,9 +1082,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_contracts_test_in_memory_rule_provider_satisfies_protocol",
-      "community": 4,
-      "norm_label": "test_in_memory_rule_provider_satisfies_protocol"
+      "community": 0,
+      "norm_label": "test_in_memory_rule_provider_satisfies_protocol",
+      "id": "test_contracts_test_in_memory_rule_provider_satisfies_protocol"
     },
     {
       "label": "test_in_memory_skill_provider_satisfies_protocol",
@@ -1098,9 +1095,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_contracts_test_in_memory_skill_provider_satisfies_protocol",
-      "community": 4,
-      "norm_label": "test_in_memory_skill_provider_satisfies_protocol"
+      "community": 0,
+      "norm_label": "test_in_memory_skill_provider_satisfies_protocol",
+      "id": "test_contracts_test_in_memory_skill_provider_satisfies_protocol"
     },
     {
       "label": "test_in_memory_audit_sink_satisfies_protocol",
@@ -1111,9 +1108,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_contracts_test_in_memory_audit_sink_satisfies_protocol",
-      "community": 8,
-      "norm_label": "test_in_memory_audit_sink_satisfies_protocol"
+      "community": 0,
+      "norm_label": "test_in_memory_audit_sink_satisfies_protocol",
+      "id": "test_contracts_test_in_memory_audit_sink_satisfies_protocol"
     },
     {
       "label": "test_object_missing_methods_does_not_satisfy_protocol",
@@ -1124,9 +1121,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "test_contracts_test_object_missing_methods_does_not_satisfy_protocol",
-      "community": 2,
-      "norm_label": "test_object_missing_methods_does_not_satisfy_protocol"
+      "community": 0,
+      "norm_label": "test_object_missing_methods_does_not_satisfy_protocol",
+      "id": "test_contracts_test_object_missing_methods_does_not_satisfy_protocol"
     },
     {
       "label": "Spec 001 \u2014 Contratos da Fase 1",
@@ -1137,9 +1134,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "specs_001_contracts",
-      "community": 7,
-      "norm_label": "spec 001 \u2014 contratos da fase 1"
+      "community": 0,
+      "norm_label": "spec 001 \u2014 contratos da fase 1",
+      "id": "specs_001_contracts"
     },
     {
       "label": "Changelog 001 \u2014 Contratos da Fase 1",
@@ -1150,9 +1147,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "changelog_001_contracts",
-      "community": 7,
-      "norm_label": "changelog 001 \u2014 contratos da fase 1"
+      "community": 0,
+      "norm_label": "changelog 001 \u2014 contratos da fase 1",
+      "id": "changelog_001_contracts"
     },
     {
       "label": "Documenta\u00e7\u00e3o \u2014 conven\u00e7\u00e3o de trabalho",
@@ -1163,9 +1160,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "docs_readme",
-      "community": 7,
-      "norm_label": "documentacao \u2014 convencao de trabalho"
+      "community": 1,
+      "norm_label": "documentacao \u2014 convencao de trabalho",
+      "id": "docs_readme"
     },
     {
       "label": "Protocol instead of ABC (duck typing, no forced inheritance; runtime_checkable enables cheap isinstance conformance tests; lets mcp_engine depend on the interface so the Phase 2 Control Plane adapter can replace the YAML one without touching rule_evaluator/interceptor)",
@@ -1176,9 +1173,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "specs_001_contracts_protocol_rationale",
-      "community": 2,
-      "norm_label": "protocol instead of abc (duck typing, no forced inheritance; runtime_checkable enables cheap isinstance conformance tests; lets mcp_engine depend on the interface so the phase 2 control plane adapter can replace the yaml one without touching rule_evaluator/interceptor)"
+      "community": 0,
+      "norm_label": "protocol instead of abc (duck typing, no forced inheritance; runtime_checkable enables cheap isinstance conformance tests; lets mcp_engine depend on the interface so the phase 2 control plane adapter can replace the yaml one without touching rule_evaluator/interceptor)",
+      "id": "specs_001_contracts_protocol_rationale"
     },
     {
       "label": "Pydantic instead of dataclass (spec requires schema_version: 1 from v1; extra=\"forbid\" makes an unknown key in hand-edited rules.yaml/skills.yaml fail loudly at load instead of being silently ignored)",
@@ -1189,9 +1186,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "specs_001_contracts_pydantic_rationale",
-      "community": 4,
-      "norm_label": "pydantic instead of dataclass (spec requires schema_version: 1 from v1; extra=\"forbid\" makes an unknown key in hand-edited rules.yaml/skills.yaml fail loudly at load instead of being silently ignored)"
+      "community": 2,
+      "norm_label": "pydantic instead of dataclass (spec requires schema_version: 1 from v1; extra=\"forbid\" makes an unknown key in hand-edited rules.yaml/skills.yaml fail loudly at load instead of being silently ignored)",
+      "id": "specs_001_contracts_pydantic_rationale"
     },
     {
       "label": "frozen=True on all models (audit events and rules must not be mutable after being loaded or recorded)",
@@ -1202,9 +1199,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "specs_001_contracts_frozen_rationale",
-      "community": 7,
-      "norm_label": "frozen=true on all models (audit events and rules must not be mutable after being loaded or recorded)"
+      "community": 0,
+      "norm_label": "frozen=true on all models (audit events and rules must not be mutable after being loaded or recorded)",
+      "id": "specs_001_contracts_frozen_rationale"
     },
     {
       "label": "Spec \u2192 Approval \u2192 Implementation \u2192 Changelog \u2192 Graphify cycle",
@@ -1215,9 +1212,516 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "docs_readme_documentation_cycle",
-      "community": 7,
-      "norm_label": "spec \u2192 approval \u2192 implementation \u2192 changelog \u2192 graphify cycle"
+      "community": 0,
+      "norm_label": "spec \u2192 approval \u2192 implementation \u2192 changelog \u2192 graphify cycle",
+      "id": "docs_readme_documentation_cycle"
+    },
+    {
+      "label": "test_rule_evaluator.py",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L1",
+      "id": "tests_test_rule_evaluator_py",
+      "community": 3,
+      "norm_label": "test_rule_evaluator.py"
+    },
+    {
+      "label": "_rule()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L7",
+      "id": "tests_test_rule_evaluator_rule",
+      "community": 3,
+      "norm_label": "_rule()"
+    },
+    {
+      "label": "test_matching_rule_returns_its_effect()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L11",
+      "id": "tests_test_rule_evaluator_test_matching_rule_returns_its_effect",
+      "community": 3,
+      "norm_label": "test_matching_rule_returns_its_effect()"
+    },
+    {
+      "label": "test_require_approval_effect()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L27",
+      "id": "tests_test_rule_evaluator_test_require_approval_effect",
+      "community": 3,
+      "norm_label": "test_require_approval_effect()"
+    },
+    {
+      "label": "test_first_match_wins()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L40",
+      "id": "tests_test_rule_evaluator_test_first_match_wins",
+      "community": 3,
+      "norm_label": "test_first_match_wins()"
+    },
+    {
+      "label": "test_no_rule_matches_defaults_to_allow()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L51",
+      "id": "tests_test_rule_evaluator_test_no_rule_matches_defaults_to_allow",
+      "community": 3,
+      "norm_label": "test_no_rule_matches_defaults_to_allow()"
+    },
+    {
+      "label": "test_empty_ruleset_defaults_to_allow()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L61",
+      "id": "tests_test_rule_evaluator_test_empty_ruleset_defaults_to_allow",
+      "community": 3,
+      "norm_label": "test_empty_ruleset_defaults_to_allow()"
+    },
+    {
+      "label": "test_malformed_condition_raises_rule_evaluation_error()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L69",
+      "id": "tests_test_rule_evaluator_test_malformed_condition_raises_rule_evaluation_error",
+      "community": 3,
+      "norm_label": "test_malformed_condition_raises_rule_evaluation_error()"
+    },
+    {
+      "label": "test_rule_decision_is_immutable()",
+      "file_type": "code",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L79",
+      "id": "tests_test_rule_evaluator_test_rule_decision_is_immutable",
+      "community": 3,
+      "norm_label": "test_rule_decision_is_immutable()"
+    },
+    {
+      "label": "RuleDecision",
+      "file_type": "code",
+      "source_file": "mcp_engine/core/models.py",
+      "source_location": "L78",
+      "id": "core_models_ruledecision",
+      "community": 3,
+      "norm_label": "ruledecision"
+    },
+    {
+      "label": "rule_evaluator.py",
+      "file_type": "code",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L1",
+      "id": "mcp_engine_core_rule_evaluator_py",
+      "community": 3,
+      "norm_label": "rule_evaluator.py"
+    },
+    {
+      "label": "RuleEvaluationError",
+      "file_type": "code",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L12",
+      "id": "core_rule_evaluator_ruleevaluationerror",
+      "community": 3,
+      "norm_label": "ruleevaluationerror"
+    },
+    {
+      "label": "Exception",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "id": "exception",
+      "community": 3,
+      "norm_label": "exception"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L13",
+      "id": "core_rule_evaluator_ruleevaluationerror_init",
+      "community": 3,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": "evaluate()",
+      "file_type": "code",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L19",
+      "id": "core_rule_evaluator_evaluate",
+      "community": 3,
+      "norm_label": "evaluate()"
+    },
+    {
+      "label": "spec.md \u2014 arquitetura geral (v2.1)",
+      "file_type": "document",
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Fonte de verdade de longo prazo; n\u00e3o muda por passo \u2014 muda raramente e s\u00f3 por decis\u00e3o expl\u00edcita.",
+      "id": "docs_readme_spec_md",
+      "community": 1,
+      "norm_label": "spec.md \u2014 arquitetura geral (v2.1)"
+    },
+    {
+      "label": "docs/specs/ \u2014 desenho proposto por passo",
+      "file_type": "concept",
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Compromisso antes do c\u00f3digo: \u00e9 onde a discuss\u00e3o acontece e o que evita implementar a coisa errada. Aprovado ANTES de codar.",
+      "id": "docs_readme_specs_dir",
+      "community": 1,
+      "norm_label": "docs/specs/ \u2014 desenho proposto por passo"
+    },
+    {
+      "label": "docs/changelog/ \u2014 o que foi realmente implementado",
+      "file_type": "concept",
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Hist\u00f3rico honesto, escrito DEPOIS da implementa\u00e7\u00e3o: inclui o que divergiu do spec e por qu\u00ea, al\u00e9m de resultado de lint/testes.",
+      "id": "docs_readme_changelog_dir",
+      "community": 1,
+      "norm_label": "docs/changelog/ \u2014 o que foi realmente implementado"
+    },
+    {
+      "label": "Graphify (knowledge graph em graphify-out/)",
+      "file_type": "concept",
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "graphify --update incorpora spec + c\u00f3digo + changelog ao grafo, que passa a responder consultas via graphify query em vez de reler os documentos inteiros.",
+      "id": "docs_readme_graphify",
+      "community": 1,
+      "norm_label": "graphify (knowledge graph em graphify-out/)"
+    },
+    {
+      "label": "Ciclo por passo (spec \u2192 aprova\u00e7\u00e3o \u2192 /clear \u2192 implementa\u00e7\u00e3o \u2192 changelog \u2192 graphify)",
+      "file_type": "rationale",
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Nenhuma decis\u00e3o vive s\u00f3 na conversa: tudo decidido fica em disco, numerado em sequ\u00eancia. O /clear ap\u00f3s a aprova\u00e7\u00e3o do spec impede o contexto de estourar no meio da implementa\u00e7\u00e3o; uma sess\u00e3o nova l\u00ea o spec do disco e continua sem rediscutir nada. A numera\u00e7\u00e3o de specs/ e changelog/ \u00e9 a mesma (00N-<tema>.md).",
+      "id": "docs_readme_ciclo_por_passo",
+      "community": 1,
+      "norm_label": "ciclo por passo (spec \u2192 aprovacao \u2192 /clear \u2192 implementacao \u2192 changelog \u2192 graphify)"
+    },
+    {
+      "label": "Changelog 002 \u2014 Rule Evaluator sandboxado",
+      "file_type": "document",
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Diverg\u00eancia do spec reportada: json-logic trocado por json-logic-qubit porque o pacote citado pela pr\u00f3pria spec est\u00e1 quebrado em Python 3 \u2014 exatamente o tipo de coisa que 'hard rules que mais doem corrigir depois se nascerem inseguras' descreve; sem rodar teste nenhum, o rule_evaluator teria uma depend\u00eancia que quebra em toda chamada. Valida\u00e7\u00e3o: ruff limpo, pytest 18 passed (11 anteriores + 7 novos).",
+      "id": "changelog_002_rule_evaluator",
+      "community": 1,
+      "norm_label": "changelog 002 \u2014 rule evaluator sandboxado"
+    },
+    {
+      "label": "mcp_engine/core/rule_evaluator.py \u2014 evaluate(ruleset, facts)",
+      "file_type": "code",
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Percorre ruleset.rules na ordem do YAML; a primeira regra cujo condition avalia truthy decide o effect. Nenhuma regra casa \u2192 RuleDecision(effect=ALLOW). Condi\u00e7\u00e3o malformada levanta RuleEvaluationError(rule_id, cause) em vez de ser ignorada ou tratada como DENY silencioso.",
+      "id": "changelog_002_rule_evaluator_rule_evaluator_py",
+      "community": 1,
+      "norm_label": "mcp_engine/core/rule_evaluator.py \u2014 evaluate(ruleset, facts)"
+    },
+    {
+      "label": "RuleDecision (models.py)",
+      "file_type": "code",
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Campos effect, rule_id, message; _StrictModel como os demais (frozen, extra=forbid) \u2014 imut\u00e1vel.",
+      "id": "changelog_002_rule_evaluator_ruledecision",
+      "community": 1,
+      "norm_label": "ruledecision (models.py)"
+    },
+    {
+      "label": "RuleEvaluationError",
+      "file_type": "code",
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "changelog_002_rule_evaluator_ruleevaluationerror",
+      "community": 1,
+      "norm_label": "ruleevaluationerror"
+    },
+    {
+      "label": "json-logic-qubit (depend\u00eancia adotada)",
+      "file_type": "code",
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": "https://github.com/qubitproducts/json-logic-py",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Fork mantido recomendado pelos pr\u00f3prios mantenedores do reposit\u00f3rio original nas issues. Mesmo nome de m\u00f3dulo e fun\u00e7\u00e3o (from json_logic import jsonLogic) \u2014 zero mudan\u00e7a no design do rule_evaluator.py al\u00e9m do nome do pacote no pyproject.toml.",
+      "id": "changelog_002_rule_evaluator_json_logic_qubit",
+      "community": 1,
+      "norm_label": "json-logic-qubit (dependencia adotada)"
+    },
+    {
+      "label": "json-logic 0.6.3 (PyPI, quebrado em Python 3)",
+      "file_type": "code",
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Usa tests.keys()[0], sintaxe v\u00e1lida em Python 2 mas n\u00e3o em Python 3 \u2014 TypeError: 'dict_keys' object is not subscriptable em qualquer uso; issue aberta desde 2017 no upstream, nunca corrigida na vers\u00e3o publicada. O pacote citado pela pr\u00f3pria spec est\u00e1 quebrado, n\u00e3o \u00e9 peculiaridade deste projeto.",
+      "id": "changelog_002_rule_evaluator_json_logic",
+      "community": 1,
+      "norm_label": "json-logic 0.6.3 (pypi, quebrado em python 3)"
+    },
+    {
+      "label": "tests/test_rule_evaluator.py (7 casos)",
+      "file_type": "code",
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Cobre: ALLOW/DENY/REQUIRE_APPROVAL quando a regra casa, first-match-wins com duas regras conflitantes, default ALLOW sem match, RuleSet vazio cai no default, condi\u00e7\u00e3o malformada levanta RuleEvaluationError com o rule_id certo, RuleDecision imut\u00e1vel.",
+      "id": "changelog_002_rule_evaluator_test_rule_evaluator",
+      "community": 1,
+      "norm_label": "tests/test_rule_evaluator.py (7 casos)"
+    },
+    {
+      "label": "Spec 002 \u2014 Rule Evaluator sandboxado",
+      "file_type": "document",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Ordem vinda de docs/spec.md \u00a72.1 item 3: implementar o rule_evaluator sandboxado logo depois dos contratos \u2014 '\u00e9 pouco c\u00f3digo, mas \u00e9 o componente que mais d\u00f3i corrigir depois se nascer inseguro'. Regra dura: usar lib de JSONLogic, nunca eval de string livre.",
+      "id": "specs_002_rule_evaluator",
+      "community": 1,
+      "norm_label": "spec 002 \u2014 rule evaluator sandboxado"
+    },
+    {
+      "label": "rule_evaluator.py (desenho proposto)",
+      "file_type": "code",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "specs_002_rule_evaluator_rule_evaluator_py",
+      "community": 1,
+      "norm_label": "rule_evaluator.py (desenho proposto)"
+    },
+    {
+      "label": "RuleDecision (desenho: effect, rule_id, message)",
+      "file_type": "code",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Carrega rule_id/message para o audit log: o AuditEvent do passo 001 j\u00e1 tem rule_id: str | None \u2014 este \u00e9 o valor que alimenta esse campo quando o interceptor (pr\u00f3ximo passo) registrar a decis\u00e3o. _StrictModel, frozen=True.",
+      "id": "specs_002_rule_evaluator_ruledecision",
+      "community": 1,
+      "norm_label": "ruledecision (desenho: effect, rule_id, message)"
+    },
+    {
+      "label": "RuleEvaluationError (erro de config, n\u00e3o de neg\u00f3cio)",
+      "file_type": "code",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Condi\u00e7\u00e3o malformada n\u00e3o \u00e9 silenciosamente ignorada nem silenciosamente negada: \u00e9 erro de quem editou rules.yaml \u00e0 m\u00e3o \u2014 mesma filosofia do extra=forbid do passo 001, falhar alto no load/eval em vez de mascarar. Pular a regra quebrada silenciosamente \u00e9 pior: pode ser justo a regra que bloquearia algo perigoso.",
+      "id": "specs_002_rule_evaluator_ruleevaluationerror",
+      "community": 1,
+      "norm_label": "ruleevaluationerror (erro de config, nao de negocio)"
+    },
+    {
+      "label": "json-logic-qubit (depend\u00eancia do spec)",
+      "file_type": "code",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": "https://github.com/qubitproducts/json-logic-py",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Nota adicionada durante a implementa\u00e7\u00e3o: o pacote json-logic 'oficial' citado como exemplo pela spec est\u00e1 quebrado em Python 3 desde 2017 (tests.keys()[0] \u2192 TypeError reproduzido nos testes deste passo). json-logic-qubit \u00e9 o fork mantido que corrige isso; mesma API, ent\u00e3o nada no design muda.",
+      "id": "specs_002_rule_evaluator_json_logic_qubit",
+      "community": 1,
+      "norm_label": "json-logic-qubit (dependencia do spec)"
+    },
+    {
+      "label": "JsonLogic (jsonlogic.com)",
+      "file_type": "concept",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": "https://jsonlogic.com",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "specs_002_rule_evaluator_jsonlogic",
+      "community": 1,
+      "norm_label": "jsonlogic (jsonlogic.com)"
+    },
+    {
+      "label": "JSONLogic sandboxado, nunca eval",
+      "file_type": "rationale",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "json_logic.jsonLogic(rule.condition, facts), nada de eval/exec. rule.condition j\u00e1 \u00e9 um dict estruturado (carregado do YAML, validado na forma pelo Pydantic) \u2014 a \u00fanica superf\u00edcie de execu\u00e7\u00e3o \u00e9 o conjunto fixo de operadores da JsonLogic. N\u00e3o h\u00e1 string livre em nenhum ponto do caminho.",
+      "id": "specs_002_rule_evaluator_sandbox_sem_eval",
+      "community": 1,
+      "norm_label": "jsonlogic sandboxado, nunca eval"
+    },
+    {
+      "label": "first-match-wins",
+      "file_type": "rationale",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Ordem importa: percorre ruleset.rules na ordem do YAML; a primeira regra cujo condition avalia truthy define o effect. \u00c9 o modelo mais simples de auditar \u2014 quem l\u00ea o rules.yaml de cima pra baixo entende a decis\u00e3o sem precisar somar prioridades num\u00e9ricas.",
+      "id": "specs_002_rule_evaluator_first_match_wins",
+      "community": 1,
+      "norm_label": "first-match-wins"
+    },
+    {
+      "label": "Default ALLOW quando nenhuma regra casa",
+      "file_type": "rationale",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "As Hard Rules s\u00e3o um punhado de regras que bloqueiam ou exigem aprova\u00e7\u00e3o para a\u00e7\u00f5es perigosas \u2014 modelo de firewall com exce\u00e7\u00f5es, n\u00e3o whitelist exaustiva. Alternativa rejeitada: default DENY inverteria para 's\u00f3 o que est\u00e1 explicitamente permitido roda', exigindo uma regra por skill/a\u00e7\u00e3o; mais seguro em tese, mas n\u00e3o \u00e9 o que a spec descreve. Se preferir default-deny, \u00e9 uma linha (default_effect vira par\u00e2metro) \u2014 mas decidir agora, n\u00e3o descobrir depois que uma a\u00e7\u00e3o devia ter sido bloqueada e passou por falta de regra.",
+      "id": "specs_002_rule_evaluator_default_allow",
+      "community": 1,
+      "norm_label": "default allow quando nenhuma regra casa"
+    },
+    {
+      "label": "3-5 Hard Rules",
+      "file_type": "concept",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Item 3 da \u00a72.1 do spec.md: punhado de regras espec\u00edficas que bloqueiam ou exigem aprova\u00e7\u00e3o para a\u00e7\u00f5es perigosas. As regras reais do cliente 1 ficam fora de escopo \u2014 n\u00e3o existe cliente 1 configurado no repo; este passo entrega o motor.",
+      "id": "specs_002_rule_evaluator_hard_rules",
+      "community": 1,
+      "norm_label": "3-5 hard rules"
+    },
+    {
+      "label": "AuditEvent (passo 001)",
+      "file_type": "code",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "specs_002_rule_evaluator_auditevent",
+      "community": 1,
+      "norm_label": "auditevent (passo 001)"
+    },
+    {
+      "label": "interceptor.py (\u00a72.1 item 4: allowlist SSRF, DLP, audit log)",
+      "file_type": "concept",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Fora de escopo deste passo; \u00e9 o passo seguinte. Ser\u00e1 quem registra a RuleDecision no audit log.",
+      "id": "specs_002_rule_evaluator_interceptor_py",
+      "community": 1,
+      "norm_label": "interceptor.py (\u00a72.1 item 4: allowlist ssrf, dlp, audit log)"
+    },
+    {
+      "label": "RuleProvider (interface)",
+      "file_type": "code",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "specs_002_rule_evaluator_ruleprovider",
+      "community": 1,
+      "norm_label": "ruleprovider (interface)"
+    },
+    {
+      "label": "YamlRuleProvider (futuro)",
+      "file_type": "concept",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Fora de escopo: ainda n\u00e3o existe implementa\u00e7\u00e3o concreta de RuleProvider; este passo s\u00f3 consome o RuleSet j\u00e1 validado em mem\u00f3ria.",
+      "id": "specs_002_rule_evaluator_yamlruleprovider",
+      "community": 1,
+      "norm_label": "yamlruleprovider (futuro)"
+    },
+    {
+      "label": "RuleSet",
+      "file_type": "code",
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "specs_002_rule_evaluator_ruleset",
+      "community": 1,
+      "norm_label": "ruleset"
     }
   ],
   "links": [
@@ -1927,9 +2431,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_contracts_py",
-      "target": "test_contracts_inmemoryruleprovider",
-      "confidence_score": 1.0
+      "target": "test_contracts_inmemoryruleprovider"
     },
     {
       "relation": "contains",
@@ -1937,9 +2441,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_contracts_py",
-      "target": "test_contracts_inmemoryskillprovider",
-      "confidence_score": 1.0
+      "target": "test_contracts_inmemoryskillprovider"
     },
     {
       "relation": "contains",
@@ -1947,9 +2451,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_contracts_py",
-      "target": "test_contracts_inmemoryauditsink",
-      "confidence_score": 1.0
+      "target": "test_contracts_inmemoryauditsink"
     },
     {
       "relation": "contains",
@@ -1957,9 +2461,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_contracts_py",
-      "target": "test_contracts_test_in_memory_rule_provider_satisfies_protocol",
-      "confidence_score": 1.0
+      "target": "test_contracts_test_in_memory_rule_provider_satisfies_protocol"
     },
     {
       "relation": "contains",
@@ -1967,9 +2471,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_contracts_py",
-      "target": "test_contracts_test_in_memory_skill_provider_satisfies_protocol",
-      "confidence_score": 1.0
+      "target": "test_contracts_test_in_memory_skill_provider_satisfies_protocol"
     },
     {
       "relation": "contains",
@@ -1977,9 +2481,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_contracts_py",
-      "target": "test_contracts_test_in_memory_audit_sink_satisfies_protocol",
-      "confidence_score": 1.0
+      "target": "test_contracts_test_in_memory_audit_sink_satisfies_protocol"
     },
     {
       "relation": "contains",
@@ -1987,9 +2491,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_contracts_py",
-      "target": "test_contracts_test_object_missing_methods_does_not_satisfy_protocol",
-      "confidence_score": 1.0
+      "target": "test_contracts_test_object_missing_methods_does_not_satisfy_protocol"
     },
     {
       "relation": "method",
@@ -1997,9 +2501,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "test_contracts_inmemoryruleprovider",
-      "target": "tests_test_contracts_inmemoryruleprovider_get_rules",
-      "confidence_score": 1.0
+      "target": "tests_test_contracts_inmemoryruleprovider_get_rules"
     },
     {
       "relation": "method",
@@ -2007,9 +2511,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "test_contracts_inmemoryskillprovider",
-      "target": "tests_test_contracts_inmemoryskillprovider_get_skills",
-      "confidence_score": 1.0
+      "target": "tests_test_contracts_inmemoryskillprovider_get_skills"
     },
     {
       "relation": "method",
@@ -2017,9 +2521,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "test_contracts_inmemoryruleprovider",
-      "target": "tests_test_contracts_inmemoryauditsink_init",
-      "confidence_score": 1.0
+      "target": "tests_test_contracts_inmemoryauditsink_init"
     },
     {
       "relation": "method",
@@ -2027,9 +2531,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "test_contracts_inmemoryskillprovider",
-      "target": "tests_test_contracts_inmemoryauditsink_init",
-      "confidence_score": 1.0
+      "target": "tests_test_contracts_inmemoryauditsink_init"
     },
     {
       "relation": "method",
@@ -2037,9 +2541,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "test_contracts_inmemoryauditsink",
-      "target": "tests_test_contracts_inmemoryauditsink_init",
-      "confidence_score": 1.0
+      "target": "tests_test_contracts_inmemoryauditsink_init"
     },
     {
       "relation": "method",
@@ -2047,9 +2551,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "test_contracts_inmemoryauditsink",
-      "target": "tests_test_contracts_inmemoryauditsink_record",
-      "confidence_score": 1.0
+      "target": "tests_test_contracts_inmemoryauditsink_record"
     },
     {
       "relation": "method",
@@ -2057,9 +2561,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "test_contracts_inmemoryauditsink",
-      "target": "tests_test_contracts_inmemoryauditsink_iter_events",
-      "confidence_score": 1.0
+      "target": "tests_test_contracts_inmemoryauditsink_iter_events"
     },
     {
       "relation": "contains",
@@ -2067,9 +2571,9 @@
       "source_file": "tests/test_models.py",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_models_py",
-      "target": "test_models_test_ruleset_requires_schema_version_1",
-      "confidence_score": 1.0
+      "target": "test_models_test_ruleset_requires_schema_version_1"
     },
     {
       "relation": "contains",
@@ -2077,9 +2581,9 @@
       "source_file": "tests/test_models.py",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_models_py",
-      "target": "test_models_test_ruleset_accepts_valid_rule",
-      "confidence_score": 1.0
+      "target": "test_models_test_ruleset_accepts_valid_rule"
     },
     {
       "relation": "contains",
@@ -2087,9 +2591,9 @@
       "source_file": "tests/test_models.py",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_models_py",
-      "target": "test_models_test_models_reject_unknown_fields",
-      "confidence_score": 1.0
+      "target": "test_models_test_models_reject_unknown_fields"
     },
     {
       "relation": "contains",
@@ -2097,9 +2601,9 @@
       "source_file": "tests/test_models.py",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_models_py",
-      "target": "test_models_test_skill_definition_requires_at_least_one_allowed_domain",
-      "confidence_score": 1.0
+      "target": "test_models_test_skill_definition_requires_at_least_one_allowed_domain"
     },
     {
       "relation": "contains",
@@ -2107,9 +2611,9 @@
       "source_file": "tests/test_models.py",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_models_py",
-      "target": "test_models_test_skillset_roundtrip",
-      "confidence_score": 1.0
+      "target": "test_models_test_skillset_roundtrip"
     },
     {
       "relation": "contains",
@@ -2117,9 +2621,9 @@
       "source_file": "tests/test_models.py",
       "source_location": "L68",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_models_py",
-      "target": "test_models_test_audit_event_defaults_schema_version",
-      "confidence_score": 1.0
+      "target": "test_models_test_audit_event_defaults_schema_version"
     },
     {
       "relation": "contains",
@@ -2127,9 +2631,9 @@
       "source_file": "tests/test_models.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_models_py",
-      "target": "test_models_test_models_are_immutable",
-      "confidence_score": 1.0
+      "target": "test_models_test_models_are_immutable"
     },
     {
       "relation": "imports_from",
@@ -2138,9 +2642,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "enum",
-      "confidence_score": 1.0
+      "target": "enum"
     },
     {
       "relation": "contains",
@@ -2148,9 +2652,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_strictmodel",
-      "confidence_score": 1.0
+      "target": "core_models_strictmodel"
     },
     {
       "relation": "contains",
@@ -2158,9 +2662,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_ruleeffect",
-      "confidence_score": 1.0
+      "target": "core_models_ruleeffect"
     },
     {
       "relation": "contains",
@@ -2168,9 +2672,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_rule",
-      "confidence_score": 1.0
+      "target": "core_models_rule"
     },
     {
       "relation": "contains",
@@ -2178,9 +2682,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_ruleset",
-      "confidence_score": 1.0
+      "target": "core_models_ruleset"
     },
     {
       "relation": "contains",
@@ -2188,9 +2692,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_httpmethod",
-      "confidence_score": 1.0
+      "target": "core_models_httpmethod"
     },
     {
       "relation": "contains",
@@ -2198,9 +2702,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_skilldefinition",
-      "confidence_score": 1.0
+      "target": "core_models_skilldefinition"
     },
     {
       "relation": "contains",
@@ -2208,9 +2712,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_skillset",
-      "confidence_score": 1.0
+      "target": "core_models_skillset"
     },
     {
       "relation": "contains",
@@ -2218,9 +2722,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_auditdecision",
-      "confidence_score": 1.0
+      "target": "core_models_auditdecision"
     },
     {
       "relation": "contains",
@@ -2228,8 +2732,18 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L66",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_models_py",
-      "target": "core_models_auditevent",
+      "target": "core_models_auditevent"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/models.py",
+      "source_location": "L78",
+      "weight": 1.0,
+      "source": "mcp_engine_core_models_py",
+      "target": "core_models_ruledecision",
       "confidence_score": 1.0
     },
     {
@@ -2238,9 +2752,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_strictmodel",
-      "target": "basemodel",
-      "confidence_score": 1.0
+      "target": "basemodel"
     },
     {
       "relation": "inherits",
@@ -2248,9 +2762,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_rule",
-      "target": "core_models_strictmodel",
-      "confidence_score": 1.0
+      "target": "core_models_strictmodel"
     },
     {
       "relation": "inherits",
@@ -2258,9 +2772,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_ruleset",
-      "target": "core_models_strictmodel",
-      "confidence_score": 1.0
+      "target": "core_models_strictmodel"
     },
     {
       "relation": "inherits",
@@ -2268,9 +2782,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_skilldefinition",
-      "target": "core_models_strictmodel",
-      "confidence_score": 1.0
+      "target": "core_models_strictmodel"
     },
     {
       "relation": "inherits",
@@ -2278,9 +2792,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_skillset",
-      "target": "core_models_strictmodel",
-      "confidence_score": 1.0
+      "target": "core_models_strictmodel"
     },
     {
       "relation": "inherits",
@@ -2288,9 +2802,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L66",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_auditevent",
-      "target": "core_models_strictmodel",
-      "confidence_score": 1.0
+      "target": "core_models_strictmodel"
     },
     {
       "relation": "references",
@@ -2336,10 +2850,10 @@
       "relation": "inherits",
       "confidence": "EXTRACTED",
       "source_file": "mcp_engine/core/models.py",
-      "source_location": "L16",
+      "source_location": "L78",
       "weight": 1.0,
-      "source": "core_models_ruleeffect",
-      "target": "str",
+      "source": "core_models_ruledecision",
+      "target": "core_models_strictmodel",
       "confidence_score": 1.0
     },
     {
@@ -2348,9 +2862,19 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_ruleeffect",
-      "target": "enum",
-      "confidence_score": 1.0
+      "target": "str"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/models.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_models_ruleeffect",
+      "target": "enum"
     },
     {
       "relation": "references",
@@ -2363,24 +2887,14 @@
       "target": "core_models_ruleeffect"
     },
     {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "mcp_engine/core/models.py",
-      "source_location": "L36",
-      "weight": 1.0,
-      "source": "core_models_httpmethod",
-      "target": "str",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "mcp_engine/core/models.py",
-      "source_location": "L60",
-      "weight": 1.0,
-      "source": "core_models_auditdecision",
-      "target": "str",
-      "confidence_score": 1.0
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L7",
+      "weight": 0.8,
+      "source": "core_rule_evaluator_ruleevaluationerror",
+      "target": "core_models_ruleeffect",
+      "confidence_score": 0.5
     },
     {
       "relation": "inherits",
@@ -2388,9 +2902,9 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_httpmethod",
-      "target": "enum",
-      "confidence_score": 1.0
+      "target": "str"
     },
     {
       "relation": "inherits",
@@ -2398,9 +2912,29 @@
       "source_file": "mcp_engine/core/models.py",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_models_auditdecision",
-      "target": "enum",
-      "confidence_score": 1.0
+      "target": "str"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/models.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_models_httpmethod",
+      "target": "enum"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/models.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_models_auditdecision",
+      "target": "enum"
     },
     {
       "relation": "calls",
@@ -2436,6 +2970,17 @@
       "target": "core_models_rule"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_rule",
+      "target": "core_models_rule"
+    },
+    {
       "relation": "shares_data_with",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_contracts.py",
@@ -2451,9 +2996,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryskillprovider",
-      "target": "core_models_ruleset",
-      "confidence_score": 0.5
+      "target": "core_models_ruleset"
     },
     {
       "relation": "uses",
@@ -2461,9 +3006,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryauditsink",
-      "target": "core_models_ruleset",
-      "confidence_score": 0.5
+      "target": "core_models_ruleset"
     },
     {
       "relation": "shares_data_with",
@@ -2481,9 +3026,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_contracts_skillprovider",
-      "target": "core_models_ruleset",
-      "confidence_score": 0.5
+      "target": "core_models_ruleset"
     },
     {
       "relation": "uses",
@@ -2491,9 +3036,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_contracts_auditsink",
-      "target": "core_models_ruleset",
-      "confidence_score": 0.5
+      "target": "core_models_ruleset"
     },
     {
       "relation": "calls",
@@ -2559,6 +3104,82 @@
       "target": "core_models_skillset"
     },
     {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L7",
+      "weight": 0.8,
+      "source": "core_rule_evaluator_ruleevaluationerror",
+      "target": "core_models_ruleset",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_matching_rule_returns_its_effect",
+      "target": "core_models_ruleset"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_require_approval_effect",
+      "target": "core_models_ruleset"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_first_match_wins",
+      "target": "core_models_ruleset"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_no_rule_matches_defaults_to_allow",
+      "target": "core_models_ruleset"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_empty_ruleset_defaults_to_allow",
+      "target": "core_models_ruleset"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L71",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_malformed_condition_raises_rule_evaluation_error",
+      "target": "core_models_ruleset"
+    },
+    {
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -2596,9 +3217,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryruleprovider",
-      "target": "core_models_skillset",
-      "confidence_score": 0.5
+      "target": "core_models_skillset"
     },
     {
       "relation": "shares_data_with",
@@ -2616,9 +3237,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryauditsink",
-      "target": "core_models_skillset",
-      "confidence_score": 0.5
+      "target": "core_models_skillset"
     },
     {
       "relation": "uses",
@@ -2626,9 +3247,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_contracts_ruleprovider",
-      "target": "core_models_skillset",
-      "confidence_score": 0.5
+      "target": "core_models_skillset"
     },
     {
       "relation": "shares_data_with",
@@ -2646,9 +3267,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_contracts_auditsink",
-      "target": "core_models_skillset",
-      "confidence_score": 0.5
+      "target": "core_models_skillset"
     },
     {
       "relation": "calls",
@@ -2708,9 +3329,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryruleprovider",
-      "target": "core_models_auditevent",
-      "confidence_score": 0.5
+      "target": "core_models_auditevent"
     },
     {
       "relation": "uses",
@@ -2718,9 +3339,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L2",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryskillprovider",
-      "target": "core_models_auditevent",
-      "confidence_score": 0.5
+      "target": "core_models_auditevent"
     },
     {
       "relation": "shares_data_with",
@@ -2738,9 +3359,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_contracts_ruleprovider",
-      "target": "core_models_auditevent",
-      "confidence_score": 0.5
+      "target": "core_models_auditevent"
     },
     {
       "relation": "uses",
@@ -2748,9 +3369,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L5",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "core_contracts_skillprovider",
-      "target": "core_models_auditevent",
-      "confidence_score": 0.5
+      "target": "core_models_auditevent"
     },
     {
       "relation": "shares_data_with",
@@ -2799,9 +3420,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_contracts_py",
-      "target": "core_contracts_ruleprovider",
-      "confidence_score": 1.0
+      "target": "core_contracts_ruleprovider"
     },
     {
       "relation": "contains",
@@ -2809,9 +3430,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_contracts_py",
-      "target": "core_contracts_skillprovider",
-      "confidence_score": 1.0
+      "target": "core_contracts_skillprovider"
     },
     {
       "relation": "contains",
@@ -2819,9 +3440,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "mcp_engine_core_contracts_py",
-      "target": "core_contracts_auditsink",
-      "confidence_score": 1.0
+      "target": "core_contracts_auditsink"
     },
     {
       "relation": "inherits",
@@ -2829,9 +3450,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_contracts_ruleprovider",
-      "target": "protocol",
-      "confidence_score": 1.0
+      "target": "protocol"
     },
     {
       "relation": "method",
@@ -2839,9 +3460,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_contracts_ruleprovider",
-      "target": "core_contracts_ruleprovider_get_rules",
-      "confidence_score": 1.0
+      "target": "core_contracts_ruleprovider_get_rules"
     },
     {
       "relation": "implements",
@@ -2859,9 +3480,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L1",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryskillprovider",
-      "target": "core_contracts_ruleprovider",
-      "confidence_score": 0.5
+      "target": "core_contracts_ruleprovider"
     },
     {
       "relation": "uses",
@@ -2869,9 +3490,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L1",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryauditsink",
-      "target": "core_contracts_ruleprovider",
-      "confidence_score": 0.5
+      "target": "core_contracts_ruleprovider"
     },
     {
       "relation": "references",
@@ -2919,9 +3540,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_contracts_skillprovider",
-      "target": "protocol",
-      "confidence_score": 1.0
+      "target": "protocol"
     },
     {
       "relation": "inherits",
@@ -2929,9 +3550,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_contracts_auditsink",
-      "target": "protocol",
-      "confidence_score": 1.0
+      "target": "protocol"
     },
     {
       "relation": "method",
@@ -2939,9 +3560,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_contracts_skillprovider",
-      "target": "core_contracts_skillprovider_get_skills",
-      "confidence_score": 1.0
+      "target": "core_contracts_skillprovider_get_skills"
     },
     {
       "relation": "uses",
@@ -2949,9 +3570,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L1",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryruleprovider",
-      "target": "core_contracts_skillprovider",
-      "confidence_score": 0.5
+      "target": "core_contracts_skillprovider"
     },
     {
       "relation": "implements",
@@ -2969,9 +3590,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L1",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryauditsink",
-      "target": "core_contracts_skillprovider",
-      "confidence_score": 0.5
+      "target": "core_contracts_skillprovider"
     },
     {
       "relation": "references",
@@ -3019,9 +3640,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_contracts_auditsink",
-      "target": "core_contracts_auditsink_record",
-      "confidence_score": 1.0
+      "target": "core_contracts_auditsink_record"
     },
     {
       "relation": "method",
@@ -3029,9 +3650,9 @@
       "source_file": "mcp_engine/core/contracts.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "core_contracts_auditsink",
-      "target": "core_contracts_auditsink_iter_events",
-      "confidence_score": 1.0
+      "target": "core_contracts_auditsink_iter_events"
     },
     {
       "relation": "uses",
@@ -3039,9 +3660,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L1",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryruleprovider",
-      "target": "core_contracts_auditsink",
-      "confidence_score": 0.5
+      "target": "core_contracts_auditsink"
     },
     {
       "relation": "uses",
@@ -3049,9 +3670,9 @@
       "source_file": "tests/test_contracts.py",
       "source_location": "L1",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "test_contracts_inmemoryskillprovider",
-      "target": "core_contracts_auditsink",
-      "confidence_score": 0.5
+      "target": "core_contracts_auditsink"
     },
     {
       "relation": "implements",
@@ -3205,54 +3826,725 @@
       "weight": 1.0,
       "source": "docs_readme",
       "target": "docs_readme_documentation_cycle"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docs_readme",
+      "target": "docs_readme_spec_md"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docs_readme",
+      "target": "docs_readme_specs_dir"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docs_readme",
+      "target": "docs_readme_changelog_dir"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docs_readme",
+      "target": "docs_readme_graphify"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docs_readme",
+      "target": "docs_readme_ciclo_por_passo"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_rule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_test_matching_rule_returns_its_effect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_test_require_approval_effect",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_test_first_match_wins",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L51",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_test_no_rule_matches_defaults_to_allow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_test_empty_ruleset_defaults_to_allow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_test_malformed_condition_raises_rule_evaluation_error",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L79",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_py",
+      "target": "tests_test_rule_evaluator_test_rule_decision_is_immutable",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_matching_rule_returns_its_effect",
+      "target": "tests_test_rule_evaluator_rule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_require_approval_effect",
+      "target": "tests_test_rule_evaluator_rule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_first_match_wins",
+      "target": "tests_test_rule_evaluator_rule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L52",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_no_rule_matches_defaults_to_allow",
+      "target": "tests_test_rule_evaluator_rule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L70",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_malformed_condition_raises_rule_evaluation_error",
+      "target": "tests_test_rule_evaluator_rule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_matching_rule_returns_its_effect",
+      "target": "core_rule_evaluator_evaluate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_require_approval_effect",
+      "target": "core_rule_evaluator_evaluate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_first_match_wins",
+      "target": "core_rule_evaluator_evaluate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_no_rule_matches_defaults_to_allow",
+      "target": "core_rule_evaluator_evaluate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_empty_ruleset_defaults_to_allow",
+      "target": "core_rule_evaluator_evaluate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L74",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_malformed_condition_raises_rule_evaluation_error",
+      "target": "core_rule_evaluator_evaluate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_rule_evaluator.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "source": "tests_test_rule_evaluator_test_rule_decision_is_immutable",
+      "target": "core_models_ruledecision"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L7",
+      "weight": 0.8,
+      "source": "core_rule_evaluator_ruleevaluationerror",
+      "target": "core_models_ruledecision",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "core_rule_evaluator_evaluate",
+      "target": "core_models_ruledecision"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "mcp_engine_core_rule_evaluator_py",
+      "target": "core_rule_evaluator_ruleevaluationerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "mcp_engine_core_rule_evaluator_py",
+      "target": "core_rule_evaluator_evaluate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "core_rule_evaluator_ruleevaluationerror",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "core_rule_evaluator_ruleevaluationerror",
+      "target": "core_rule_evaluator_ruleevaluationerror_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "mcp_engine/core/rule_evaluator.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "core_rule_evaluator_evaluate",
+      "target": "core_rule_evaluator_ruleevaluationerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "se\u00e7\u00e3o 2.1, item 3",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator",
+      "target": "docs_readme_spec_md"
+    },
+    {
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "docs/spec.md \u00a72.1, item 3",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator",
+      "target": "docs_readme_spec_md"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator",
+      "target": "docs_readme_specs_dir"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator",
+      "target": "docs_readme_changelog_dir"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator",
+      "target": "specs_002_rule_evaluator"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator",
+      "target": "changelog_002_rule_evaluator_rule_evaluator_py"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator",
+      "target": "changelog_002_rule_evaluator_test_rule_evaluator"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "O que ainda n\u00e3o existe",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator",
+      "target": "specs_002_rule_evaluator_interceptor_py"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "O que ainda n\u00e3o existe",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator",
+      "target": "specs_002_rule_evaluator_yamlruleprovider"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "json_logic.jsonLogic(...)",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_rule_evaluator_py",
+      "target": "changelog_002_rule_evaluator_json_logic_qubit"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "evaluate(ruleset, facts) -> RuleDecision",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_rule_evaluator_py",
+      "target": "changelog_002_rule_evaluator_ruledecision"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "condi\u00e7\u00e3o malformada levanta RuleEvaluationError(rule_id, cause)",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_rule_evaluator_py",
+      "target": "changelog_002_rule_evaluator_ruleevaluationerror"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_test_rule_evaluator",
+      "target": "changelog_002_rule_evaluator_rule_evaluator_py"
+    },
+    {
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_rule_evaluator_py",
+      "target": "specs_002_rule_evaluator_rule_evaluator_py"
+    },
+    {
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_ruledecision",
+      "target": "specs_002_rule_evaluator_ruledecision"
+    },
+    {
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_ruleevaluationerror",
+      "target": "specs_002_rule_evaluator_ruleevaluationerror"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "fork mantido em qubitproducts/json-logic-py",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_json_logic_qubit",
+      "target": "changelog_002_rule_evaluator_json_logic"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_json_logic_qubit",
+      "target": "specs_002_rule_evaluator_json_logic_qubit"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/changelog/002-rule-evaluator.md",
+      "source_location": "first-match-wins com duas regras conflitantes",
+      "weight": 1.0,
+      "source": "changelog_002_rule_evaluator_test_rule_evaluator",
+      "target": "specs_002_rule_evaluator_first_match_wins"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator",
+      "target": "specs_002_rule_evaluator_rule_evaluator_py"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "Fora de escopo",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator",
+      "target": "specs_002_rule_evaluator_interceptor_py"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "Fora de escopo",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator",
+      "target": "specs_002_rule_evaluator_yamlruleprovider"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "json_logic.jsonLogic(rule.condition, facts)",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_rule_evaluator_py",
+      "target": "specs_002_rule_evaluator_json_logic_qubit"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "evaluate(ruleset: RuleSet, facts) -> RuleDecision",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_rule_evaluator_py",
+      "target": "specs_002_rule_evaluator_ruleset"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "evaluate(...) -> RuleDecision",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_rule_evaluator_py",
+      "target": "specs_002_rule_evaluator_ruledecision"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_rule_evaluator_py",
+      "target": "specs_002_rule_evaluator_ruleevaluationerror"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "Decis\u00f5es",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_sandbox_sem_eval",
+      "target": "specs_002_rule_evaluator_rule_evaluator_py"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "Decis\u00f5es",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_first_match_wins",
+      "target": "specs_002_rule_evaluator_rule_evaluator_py"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "Decis\u00f5es",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_default_allow",
+      "target": "specs_002_rule_evaluator_rule_evaluator_py"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "AuditEvent do passo 001 j\u00e1 tem rule_id: str | None",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_ruledecision",
+      "target": "specs_002_rule_evaluator_auditevent"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "implementa\u00e7\u00e3o de JsonLogic em Python",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_json_logic_qubit",
+      "target": "specs_002_rule_evaluator_jsonlogic"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "O item 3 da spec fala em 3-5 Hard Rules",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_default_allow",
+      "target": "specs_002_rule_evaluator_hard_rules"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "quando o interceptor registrar a decis\u00e3o",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_interceptor_py",
+      "target": "specs_002_rule_evaluator_auditevent"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/specs/002-rule-evaluator.md",
+      "source_location": "nenhuma implementa\u00e7\u00e3o concreta de RuleProvider",
+      "weight": 1.0,
+      "source": "specs_002_rule_evaluator_yamlruleprovider",
+      "target": "specs_002_rule_evaluator_ruleprovider"
     }
   ],
   "hyperedges": [
     {
-      "id": "phase1_contract_model_layer",
-      "label": "Phase 1 contract + model layer (Protocols over versioned Pydantic models)",
+      "id": "ciclo_documentacao_por_passo",
+      "label": "Ciclo de documenta\u00e7\u00e3o por passo (spec \u2192 changelog \u2192 graphify)",
       "nodes": [
-        "core_contracts_ruleprovider",
-        "core_contracts_skillprovider",
-        "core_contracts_auditsink",
-        "core_models_ruleset",
-        "core_models_skillset",
-        "core_models_auditevent"
+        "docs_readme_specs_dir",
+        "docs_readme_changelog_dir",
+        "docs_readme_graphify",
+        "docs_readme_ciclo_por_passo"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md"
+    },
+    {
+      "id": "motor_avaliacao_regras_002",
+      "label": "Motor de avalia\u00e7\u00e3o de regras (passo 002)",
+      "nodes": [
+        "specs_002_rule_evaluator_rule_evaluator_py",
+        "specs_002_rule_evaluator_ruleset",
+        "specs_002_rule_evaluator_ruledecision",
+        "specs_002_rule_evaluator_ruleevaluationerror",
+        "specs_002_rule_evaluator_json_logic_qubit"
       ],
       "relation": "form",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/changelog/001-contracts.md"
+      "source_file": "docs/specs/002-rule-evaluator.md"
     },
     {
-      "id": "protocol_conformance_testing_pattern",
-      "label": "In-memory fakes proven against runtime_checkable Protocols via isinstance",
+      "id": "pipeline_auditoria_decisao",
+      "label": "Pipeline de auditoria da decis\u00e3o (RuleDecision \u2192 interceptor \u2192 AuditEvent)",
       "nodes": [
-        "test_contracts_inmemoryruleprovider",
-        "test_contracts_inmemoryskillprovider",
-        "test_contracts_inmemoryauditsink",
-        "core_contracts_ruleprovider",
-        "core_contracts_skillprovider",
-        "core_contracts_auditsink"
+        "specs_002_rule_evaluator_ruledecision",
+        "specs_002_rule_evaluator_interceptor_py",
+        "specs_002_rule_evaluator_auditevent"
       ],
       "relation": "participate_in",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "tests/test_contracts.py"
-    },
-    {
-      "id": "spec_changelog_documentation_cycle",
-      "label": "Numbered spec-then-changelog documentation cycle applied to step 001",
-      "nodes": [
-        "docs_readme_documentation_cycle",
-        "specs_001_contracts",
-        "changelog_001_contracts"
-      ],
-      "relation": "participate_in",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "source_file": "docs/README.md"
+      "source_file": "docs/specs/002-rule-evaluator.md"
     }
   ],
-  "built_at_commit": "28ad499c5343be55eff256443e2d41369f58a749"
+  "built_at_commit": "0cd23c2ec4448dbc74b6ebd7f1fe38c4c13c91de"
 }
