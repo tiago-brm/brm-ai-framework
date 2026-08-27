@@ -1,0 +1,15 @@
+client_id: example
+block_private_ip: true
+
+domain_allowlist:
+  - mail.example.com
+  - erp-internal.example.com
+  - sistema-registros.example.com
+
+dlp_patterns:
+  - pattern: '\d{3}\.\d{3}\.\d{3}-\d{2}'
+    label: CPF
+    action: deny
+  - pattern: 'ACCT-\d{6}'
+    label: Account
+    action: mask

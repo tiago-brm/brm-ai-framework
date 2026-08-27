@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Protocol, runtime_checkable
 
-from mcp_engine.core.models import AuditEvent, RuleSet, SkillSet
+from mcp_engine.core.models import AuditEvent, ClientConfig, RuleSet, SkillSet
 
 
 @runtime_checkable
@@ -13,6 +13,11 @@ class RuleProvider(Protocol):
 @runtime_checkable
 class SkillProvider(Protocol):
     def get_skills(self, client_id: str) -> SkillSet: ...
+
+
+@runtime_checkable
+class ClientConfigProvider(Protocol):
+    def get_client_config(self, client_id: str) -> ClientConfig: ...
 
 
 @runtime_checkable

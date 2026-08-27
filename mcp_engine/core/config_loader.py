@@ -6,7 +6,7 @@ from typing import TypeVar
 import yaml
 from pydantic import BaseModel
 
-from mcp_engine.core.models import RuleSet, SkillSet
+from mcp_engine.core.models import ClientConfig, RuleSet, SkillSet
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -57,3 +57,11 @@ class FileSystemSkillProvider:
 
     def get_skills(self, client_id: str) -> SkillSet:
         return _load(self._config_root, client_id, "skills.yaml", SkillSet)
+
+
+class FileSystemClientConfigProvider:
+    def __init__(self, config_root: Path) -> None:
+        self._config_root = Path(config_root)
+
+    def get_client_config(self, client_id: str) -> ClientConfig:
+        return _load(self._config_root, client_id, "client_config.yaml", ClientConfig)
