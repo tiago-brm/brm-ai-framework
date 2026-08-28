@@ -18,6 +18,7 @@ from mcp_engine.core.config_loader import (
 from mcp_engine.core.interceptor import intercept
 from mcp_engine.core.models import AuditDecision, AuditEvent, RuleEffect, SkillCall
 from mcp_engine.core.rule_evaluator import evaluate
+from mcp_engine.vault.obsidian_adapter import ObsidianVaultProvider
 
 DEFAULT_ACTOR = "claude"
 
@@ -36,6 +37,7 @@ class BRMEngine:
         config_root: Path,
         data_root: Path,
         vault_provider: Any | None = None,
+        vault_watch: bool = False,
     ) -> None:
         self.client_id = client_id
         self._config_root = Path(config_root)
@@ -45,7 +47,15 @@ class BRMEngine:
         self._skill_provider = FileSystemSkillProvider(self._config_root)
         self._client_config_provider = FileSystemClientConfigProvider(self._config_root)
         self._audit_sink = FileSystemAuditSink(self._data_root)
-        self._vault_provider = vault_provider  # unused until Fase 2
+        self._vault_provider = vault_provider or ObsidianVaultProvider(
+            self._config_root, self._data_root, self._audit_sink
+        )
+
+        if vault_watch and hasattr(self._vault_provider, "start_watching"):
+            try:
+                self._vault_provider.start_watching(client_id)
+            except Exception:
+                pass
 
         # Eagerly load to catch config errors early
         self._ruleset = self._rule_provider.get_rules(client_id)
@@ -195,6 +205,21 @@ class BRMEngine:
 
         return {"total": len(events), "events": events}
 
+    def vault_search(self, query: str, limit: int = 10) -> dict[str, Any]:
+        notes = self._vault_provider.search(self.client_id, query, limit)
+        return {"total": len(notes), "notes": [n.model_dump(mode="json") for n in notes]}
+
+    def vault_add_note(
+        self, title: str, content: str, tags: list[str] | None = None
+    ) -> dict[str, Any]:
+        frontmatter = {"tags": tags} if tags else None
+        note = self._vault_provider.add_note(self.client_id, title, content, frontmatter)
+        return note.model_dump(mode="json")
+
+    def vault_get_related(self, note_id: str) -> dict[str, Any]:
+        notes = self._vault_provider.get_related(self.client_id, note_id)
+        return {"total": len(notes), "notes": [n.model_dump(mode="json") for n in notes]}
+
 
 def build_server(engine: BRMEngine) -> FastMCP:
     server = FastMCP("brm-engine")
@@ -216,6 +241,20 @@ def build_server(engine: BRMEngine) -> FastMCP:
             action=action,
             decision=decision,
         )
+
+    @server.tool()
+    def vault_search(query: str, limit: int = 10) -> dict[str, Any]:
+        return engine.vault_search(query, limit)
+
+    @server.tool()
+    def vault_add_note(
+        title: str, content: str, tags: list[str] | None = None
+    ) -> dict[str, Any]:
+        return engine.vault_add_note(title, content, tags)
+
+    @server.tool()
+    def vault_get_related(note_id: str) -> dict[str, Any]:
+        return engine.vault_get_related(note_id)
 
     return server
 

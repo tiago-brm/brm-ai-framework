@@ -92,6 +92,7 @@ class ClientConfig(_StrictModel):
     domain_allowlist: tuple[str, ...] = Field(min_length=1)
     block_private_ip: bool = True
     dlp_patterns: tuple[DLPPattern, ...] = ()
+    vault_root: str | None = None
 
 
 class SkillCall(_StrictModel):
@@ -108,3 +109,16 @@ class InterceptDecision(_StrictModel):
     allowed: bool
     reason: str | None = None
     dlp_matches: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class VaultNote(_StrictModel):
+    schema_version: Literal[1] = SCHEMA_VERSION
+    note_id: str
+    client_id: str
+    title: str
+    content: str
+    frontmatter: dict[str, Any] = Field(default_factory=dict)
+    links: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()
+    updated_at: datetime
+    content_hash: str

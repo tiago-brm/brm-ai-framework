@@ -1,5 +1,6 @@
 client_id: example
 block_private_ip: true
+vault_root: /Users/tiagopereiraramos/vault/brm-framework-vault
 
 domain_allowlist:
   - mail.example.com
