@@ -326,6 +326,7 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 # Claude Code worktrees (local, não versionar)
 .claude/worktrees/
+.claude/settings.local.json
 
 # DATA_ROOT: audit trail + vault index, per spec 008 (client data, never in git)
 data/

@@ -5,6 +5,8 @@ description = "BRM Framework — MCP engine, rule evaluator, and vault for BRM S
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "agno>=3.0.1",
+    "anthropic>=1.2.0",
     "json-logic-qubit>=0.9.1",
     "mcp>=0.8.0,<2",
     "pydantic>=2.13.4",

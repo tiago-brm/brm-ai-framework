@@ -43,12 +43,22 @@ def _load(config_root: Path, client_id: str, filename: str, model: type[ModelT])
     return config
 
 
+def _save(config_root: Path, client_id: str, filename: str, config: BaseModel) -> None:
+    path = config_root / client_id / "config" / filename
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = config.model_dump(mode="json")
+    path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
+
+
 class FileSystemRuleProvider:
     def __init__(self, config_root: Path) -> None:
         self._config_root = Path(config_root)
 
     def get_rules(self, client_id: str) -> RuleSet:
         return _load(self._config_root, client_id, "rules.yaml", RuleSet)
+
+    def save_rules(self, ruleset: RuleSet) -> None:
+        _save(self._config_root, ruleset.client_id, "rules.yaml", ruleset)
 
 
 class FileSystemSkillProvider:
@@ -57,6 +67,9 @@ class FileSystemSkillProvider:
 
     def get_skills(self, client_id: str) -> SkillSet:
         return _load(self._config_root, client_id, "skills.yaml", SkillSet)
+
+    def save_skills(self, skillset: SkillSet) -> None:
+        _save(self._config_root, skillset.client_id, "skills.yaml", skillset)
 
 
 class FileSystemClientConfigProvider:

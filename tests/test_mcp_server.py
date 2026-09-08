@@ -1,11 +1,13 @@
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from mcp_engine.core.mcp_server import BRMEngine
-from mcp_engine.core.models import AuditDecision
+from mcp_engine.core.models import AuditDecision, Rule, RuleEffect
+from mcp_engine.vault.interpreter import InterpreterResult
 
 
 class TestBRMEngine:
@@ -346,3 +348,118 @@ dlp_patterns:
 
         assert result["allowed"] is True
         assert result["reason"] is None
+
+
+class FakeInterpreterAgent:
+    def __init__(self, result: InterpreterResult) -> None:
+        self.result = result
+        self.prompts: list[str] = []
+
+    def run(self, input: str, *, output_schema=None):
+        self.prompts.append(input)
+        return SimpleNamespace(content=self.result)
+
+
+class TestVaultInterpreterWiring:
+    """End-to-end through BRMEngine + the MCP tool return-shape conventions."""
+
+    @pytest.fixture
+    def roots(self, tmp_path: Path) -> tuple[Path, Path]:
+        config_root = tmp_path / "config"
+        data_root = tmp_path / "data"
+        config_dir = config_root / "example" / "config"
+        config_dir.mkdir(parents=True)
+        config_dir.joinpath("rules.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nrules: []\n"
+        )
+        config_dir.joinpath("skills.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nskills: []\n"
+        )
+        config_dir.joinpath("client_config.yaml").write_text(
+            "client_id: example\nblock_private_ip: true\ndomain_allowlist:\n"
+            "  - api.example.com\n"
+        )
+        return config_root, data_root
+
+    def _write_note(self, config_root: Path, relpath: str, title: str, content: str) -> None:
+        path = config_root / "example" / "vault" / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"---\ntitle: {title}\ntags: []\n---\n\n{content}\n")
+
+    def test_vault_interpret_and_propose_generates_pending_draft(
+        self, roots: tuple[Path, Path]
+    ) -> None:
+        config_root, data_root = roots
+        self._write_note(
+            config_root, "config_drafts/regra.md", "Bloqueia valor alto",
+            "Bloquear consultas acima de R$ 50.000",
+        )
+        rule = Rule(
+            id="bloqueia-valor-alto",
+            description="Bloqueia consultas acima de 50000",
+            condition={">": [{"var": "valor"}, 50000]},
+            effect=RuleEffect.DENY,
+        )
+        agent = FakeInterpreterAgent(
+            InterpreterResult(success=True, kind="rule", rule=rule)
+        )
+        engine = BRMEngine(
+            client_id="example", config_root=config_root, data_root=data_root,
+            interpreter_agent=agent,
+        )
+
+        result = engine.vault_interpret_and_propose("config_drafts/regra.md")
+
+        assert result["kind"] == "rule"
+        assert "draft_id" in result
+
+        listing = engine.vault_list_drafts()
+        assert listing["total"] == 1
+        assert listing["drafts"][0]["status"] == "pending"
+
+    def test_vault_interpret_and_propose_rejects_outside_folder_convention(
+        self, roots: tuple[Path, Path]
+    ) -> None:
+        config_root, data_root = roots
+        self._write_note(config_root, "faq/duvida.md", "Dúvida comum", "Resposta aqui")
+        agent = FakeInterpreterAgent(InterpreterResult(success=True))
+        engine = BRMEngine(
+            client_id="example", config_root=config_root, data_root=data_root,
+            interpreter_agent=agent,
+        )
+
+        result = engine.vault_interpret_and_propose("faq/duvida.md")
+
+        assert result["allowed"] is False
+        assert agent.prompts == []
+
+    def test_vault_promote_draft_writes_to_active_rules(
+        self, roots: tuple[Path, Path]
+    ) -> None:
+        config_root, data_root = roots
+        self._write_note(
+            config_root, "config_drafts/regra.md", "Bloqueia valor alto",
+            "Bloquear consultas acima de R$ 50.000",
+        )
+        rule = Rule(
+            id="bloqueia-valor-alto",
+            description="Bloqueia consultas acima de 50000",
+            condition={">": [{"var": "valor"}, 50000]},
+            effect=RuleEffect.DENY,
+        )
+        agent = FakeInterpreterAgent(
+            InterpreterResult(success=True, kind="rule", rule=rule)
+        )
+        engine = BRMEngine(
+            client_id="example", config_root=config_root, data_root=data_root,
+            interpreter_agent=agent,
+        )
+        proposal = engine.vault_interpret_and_propose("config_drafts/regra.md")
+
+        result = engine.vault_promote_draft(proposal["draft_id"], "rule")
+
+        assert result["promoted"] is True
+
+        # Reflects immediately for a freshly constructed engine reading the same config_root.
+        second_engine = BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
+        assert any(r.id == "bloqueia-valor-alto" for r in second_engine._ruleset.rules)

@@ -18,6 +18,12 @@ from mcp_engine.core.config_loader import (
 from mcp_engine.core.interceptor import intercept
 from mcp_engine.core.models import AuditDecision, AuditEvent, RuleEffect, SkillCall
 from mcp_engine.core.rule_evaluator import evaluate
+from mcp_engine.vault.draft_store import DraftStore
+from mcp_engine.vault.interpreter import (
+    build_interpreter_agent,
+    promote_draft,
+    propose_draft,
+)
 from mcp_engine.vault.obsidian_adapter import ObsidianVaultProvider
 
 DEFAULT_ACTOR = "claude"
@@ -38,6 +44,7 @@ class BRMEngine:
         data_root: Path,
         vault_provider: Any | None = None,
         vault_watch: bool = False,
+        interpreter_agent: Any | None = None,
     ) -> None:
         self.client_id = client_id
         self._config_root = Path(config_root)
@@ -50,6 +57,11 @@ class BRMEngine:
         self._vault_provider = vault_provider or ObsidianVaultProvider(
             self._config_root, self._data_root, self._audit_sink
         )
+        self._draft_store = DraftStore(self._config_root)
+        # Built lazily on first interpreter call: constructing agno's Agent is
+        # cheap, but there's no reason to import agno/anthropic for engines
+        # that never touch the interpreter.
+        self._interpreter_agent = interpreter_agent
 
         if vault_watch and hasattr(self._vault_provider, "start_watching"):
             try:
@@ -220,6 +232,42 @@ class BRMEngine:
         notes = self._vault_provider.get_related(self.client_id, note_id)
         return {"total": len(notes), "notes": [n.model_dump(mode="json") for n in notes]}
 
+    def _get_interpreter_agent(self) -> Any:
+        if self._interpreter_agent is None:
+            self._interpreter_agent = build_interpreter_agent()
+        return self._interpreter_agent
+
+    def vault_interpret_and_propose(self, note_id: str) -> dict[str, Any]:
+        return propose_draft(
+            self.client_id,
+            note_id,
+            self._vault_provider,
+            self._client_config,
+            self._audit_sink,
+            self._draft_store,
+            self._get_interpreter_agent(),
+        )
+
+    def vault_list_drafts(
+        self, kind: str | None = None, status: str | None = None
+    ) -> dict[str, Any]:
+        kinds = [kind] if kind else ["rule", "skill"]
+        drafts: list[dict[str, Any]] = []
+        for k in kinds:
+            drafts.extend(self._draft_store.list_drafts(self.client_id, k, status))
+        return {"total": len(drafts), "drafts": drafts}
+
+    def vault_promote_draft(self, draft_id: str, kind: str) -> dict[str, Any]:
+        return promote_draft(
+            self.client_id,
+            draft_id,
+            kind,
+            self._draft_store,
+            self._rule_provider,
+            self._skill_provider,
+            self._audit_sink,
+        )
+
 
 def build_server(engine: BRMEngine) -> FastMCP:
     server = FastMCP("brm-engine")
@@ -255,6 +303,18 @@ def build_server(engine: BRMEngine) -> FastMCP:
     @server.tool()
     def vault_get_related(note_id: str) -> dict[str, Any]:
         return engine.vault_get_related(note_id)
+
+    @server.tool()
+    def vault_interpret_and_propose(note_id: str) -> dict[str, Any]:
+        return engine.vault_interpret_and_propose(note_id)
+
+    @server.tool()
+    def vault_list_drafts(kind: str | None = None, status: str | None = None) -> dict[str, Any]:
+        return engine.vault_list_drafts(kind, status)
+
+    @server.tool()
+    def vault_promote_draft(draft_id: str, kind: str) -> dict[str, Any]:
+        return engine.vault_promote_draft(draft_id, kind)
 
     return server
 

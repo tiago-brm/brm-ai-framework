@@ -13,6 +13,7 @@ from mcp_engine.core.models import (
     AuditDecision,
     AuditEvent,
     ClientConfig,
+    DLPPattern,
     InterceptDecision,
     SkillCall,
 )
@@ -58,6 +59,25 @@ def _emit_audit(
     audit_sink.record(event)
 
 
+def _scan_dlp_matches(
+    text: str, dlp_patterns: tuple[DLPPattern, ...]
+) -> tuple[dict[str, list[str]], str | None]:
+    """Scans text against configured DLP patterns.
+
+    Returns (matches by label, label of first `deny`-action pattern that matched).
+    """
+    matches: dict[str, list[str]] = {}
+    deny_label: str | None = None
+    for dlp in dlp_patterns:
+        found = _compile(dlp.pattern).findall(text)
+        if not found:
+            continue
+        matches[dlp.label] = list(found)
+        if dlp.action == "deny" and deny_label is None:
+            deny_label = dlp.label
+    return matches, deny_label
+
+
 def intercept(
     skill_call: SkillCall,
     client_config: ClientConfig,
@@ -81,15 +101,9 @@ def intercept(
         _emit_audit(audit_sink, skill_call, client_config, decision, hostname)
         return decision
 
-    dlp_matches: dict[str, list[str]] = {}
-    deny_label: str | None = None
-    for dlp in client_config.dlp_patterns:
-        found = _compile(dlp.pattern).findall(skill_call.response_text)
-        if not found:
-            continue
-        dlp_matches[dlp.label] = list(found)
-        if dlp.action == "deny" and deny_label is None:
-            deny_label = dlp.label
+    dlp_matches, deny_label = _scan_dlp_matches(
+        skill_call.response_text, client_config.dlp_patterns
+    )
 
     if deny_label is not None:
         decision = InterceptDecision(
@@ -101,3 +115,23 @@ def intercept(
     decision = InterceptDecision(allowed=True, dlp_matches=dlp_matches)
     _emit_audit(audit_sink, skill_call, client_config, decision, hostname)
     return decision
+
+
+def check_vault_egress(text: str, client_config: ClientConfig) -> InterceptDecision:
+    """DLP gate for content leaving the client machine outside the skill-call path.
+
+    Used before vault note content reaches an external LLM call (spec 009's
+    interpreter agent). Stricter than `intercept()`: any DLP match blocks,
+    `mask`-action patterns included, since there is no redact-and-continue
+    here — a partial leak into an LLM call cannot be recalled the way a
+    same-session tool response can.
+    """
+    dlp_matches, _ = _scan_dlp_matches(text, client_config.dlp_patterns)
+
+    if dlp_matches:
+        labels = ", ".join(dlp_matches)
+        return InterceptDecision(
+            allowed=False, reason=f"DLP: found {labels}", dlp_matches=dlp_matches
+        )
+
+    return InterceptDecision(allowed=True)

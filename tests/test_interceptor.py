@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from mcp_engine.core.contracts import AuditSink
-from mcp_engine.core.interceptor import intercept
+from mcp_engine.core.interceptor import check_vault_egress, intercept
 from mcp_engine.core.models import (
     AuditDecision,
     AuditEvent,
@@ -292,3 +292,54 @@ def test_client_config_requires_at_least_one_allowed_domain():
 def test_dlp_pattern_rejects_unknown_action():
     with pytest.raises(ValidationError):
         DLPPattern(pattern=r"\d+", label="Num", action="redact")
+
+
+class TestCheckVaultEgress:
+    def test_allows_clean_text(self):
+        config = _config(dlp_patterns=(CPF_DENY, ACCOUNT_MASK))
+
+        decision = check_vault_egress("nada sensivel aqui", config)
+
+        assert decision.allowed is True
+        assert decision.dlp_matches == {}
+
+    def test_blocks_on_deny_pattern(self):
+        config = _config(dlp_patterns=(CPF_DENY,))
+
+        decision = check_vault_egress("cliente CPF 123.456.789-00", config)
+
+        assert decision.allowed is False
+        assert "CPF" in decision.reason
+        assert decision.dlp_matches == {"CPF": ["123.456.789-00"]}
+
+    def test_blocks_on_mask_pattern_too(self):
+        """Unlike intercept(), a `mask` action still blocks vault egress.
+
+        There is no redact-and-continue for this path: the text is headed
+        to an external LLM call whose output becomes a proposed rule.
+        """
+        config = _config(dlp_patterns=(ACCOUNT_MASK,))
+
+        decision = check_vault_egress("conta ACCT-123456", config)
+
+        assert decision.allowed is False
+        assert "Account" in decision.reason
+        assert decision.dlp_matches == {"Account": ["ACCT-123456"]}
+
+    def test_reports_all_matching_labels(self):
+        config = _config(dlp_patterns=(ACCOUNT_MASK, CPF_DENY))
+
+        decision = check_vault_egress("ACCT-123456 / 123.456.789-00", config)
+
+        assert decision.allowed is False
+        assert decision.dlp_matches == {
+            "Account": ["ACCT-123456"],
+            "CPF": ["123.456.789-00"],
+        }
+
+    def test_no_patterns_configured_allows(self):
+        config = _config()
+
+        decision = check_vault_egress("anything at all", config)
+
+        assert decision.allowed is True
