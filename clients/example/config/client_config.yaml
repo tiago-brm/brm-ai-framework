@@ -2,6 +2,13 @@ client_id: example
 block_private_ip: true
 vault_root: /Users/tiagopereiraramos/vault/brm-framework-vault
 
+# Vault no Notion (spec 015) — página raiz "BRM Vault" no workspace
+# pessoal do usuário, clonada do Obsidian em 2026-09-10. O token fica em
+# NOTION_TOKEN no .env (nunca neste arquivo commitável — mesma convenção
+# de SMTP_*/RESEND_BRM_API_KEY em email_sender.py).
+vault_provider: notion
+notion_root_page_id: 3d72ec0b00038134b312f66646ac8182
+
 domain_allowlist:
   - mail.example.com
   - erp-internal.example.com

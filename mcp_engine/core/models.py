@@ -93,6 +93,9 @@ class ClientConfig(_StrictModel):
     block_private_ip: bool = True
     dlp_patterns: tuple[DLPPattern, ...] = ()
     vault_root: str | None = None
+    vault_provider: Literal["obsidian", "notion"] = "obsidian"
+    notion_token: str | None = None
+    notion_root_page_id: str | None = None
 
 
 class SkillCall(_StrictModel):

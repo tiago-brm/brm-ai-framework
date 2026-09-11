@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Literal, Protocol
+from typing import Any, Literal
 
 from json_logic import jsonLogic
 from pydantic import BaseModel
@@ -12,7 +12,6 @@ from mcp_engine.core.contracts import AuditSink
 from mcp_engine.core.interceptor import check_vault_egress
 from mcp_engine.core.models import (
     AuditDecision,
-    AuditEvent,
     ClientConfig,
     Rule,
     RuleSet,
@@ -20,11 +19,11 @@ from mcp_engine.core.models import (
     SkillSet,
     VaultNote,
 )
+from mcp_engine.vault._agent_common import AgnoAgentLike, record_audit, resolve_agent_model
 from mcp_engine.vault.draft_store import DraftKind, DraftNotFoundError, DraftStore
 
 CONFIG_DRAFTS_PREFIX = "config_drafts/"
 MAX_RELATED_NOTES = 5
-DEFAULT_MODEL_ID = "claude-sonnet-4-5-20250929"
 
 INTERPRETER_ACTOR = "interpreter_agent"
 PROMOTER_ACTOR = "claude"
@@ -59,19 +58,17 @@ class InterpreterResult(BaseModel):
     error: str | None = None
 
 
-class AgnoAgentLike(Protocol):
-    def run(self, input: str, *, output_schema: type[BaseModel] | None = None) -> Any: ...
-
-
-def build_interpreter_agent(model_id: str = DEFAULT_MODEL_ID) -> AgnoAgentLike:
+def build_interpreter_agent(model_id: str | None = None) -> AgnoAgentLike:
     from agno.agent import Agent
-    from agno.models.anthropic import Claude
+
+    model, use_json_mode = resolve_agent_model(model_id)
 
     return Agent(
         name="Vault Interpreter",
-        model=Claude(id=model_id),
+        model=model,
         instructions=INSTRUCTIONS,
         output_schema=InterpreterResult,
+        use_json_mode=use_json_mode,
     )
 
 
@@ -133,7 +130,7 @@ def propose_draft(
 
     egress_text = note.content + "\n".join(n.content for n in related)
     egress_decision = check_vault_egress(egress_text, client_config)
-    _record_audit(
+    record_audit(
         audit_sink,
         client_id,
         INTERPRETER_ACTOR,
@@ -147,7 +144,7 @@ def propose_draft(
     result = interpret_note(agent, note, related)
 
     if not result.success or result.kind is None:
-        _record_audit(
+        record_audit(
             audit_sink,
             client_id,
             INTERPRETER_ACTOR,
@@ -165,7 +162,7 @@ def propose_draft(
 
     if content is None:
         error = f"interpreter reported kind={result.kind!r} but returned no content"
-        _record_audit(
+        record_audit(
             audit_sink,
             client_id,
             INTERPRETER_ACTOR,
@@ -178,7 +175,7 @@ def propose_draft(
     if isinstance(content, Rule):
         jsonlogic_error = _validate_jsonlogic(content)
         if jsonlogic_error is not None:
-            _record_audit(
+            record_audit(
                 audit_sink,
                 client_id,
                 INTERPRETER_ACTOR,
@@ -200,7 +197,7 @@ def propose_draft(
         content=content.model_dump(mode="json"),
     )
 
-    _record_audit(
+    record_audit(
         audit_sink,
         client_id,
         INTERPRETER_ACTOR,
@@ -225,7 +222,7 @@ def promote_draft(
     try:
         draft = draft_store.get_draft(client_id, kind, draft_id)
     except DraftNotFoundError as exc:
-        _record_audit(
+        record_audit(
             audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": str(exc)},
         )
@@ -233,7 +230,7 @@ def promote_draft(
 
     if draft is None:
         error = f"draft not found: {draft_id}"
-        _record_audit(
+        record_audit(
             audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": error},
         )
@@ -241,7 +238,7 @@ def promote_draft(
 
     if draft["status"] != "pending":
         error = f"draft {draft_id} is not pending (status={draft['status']!r})"
-        _record_audit(
+        record_audit(
             audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": error},
         )
@@ -263,7 +260,7 @@ def promote_draft(
             )
             skill_provider.save_skills(new_skillset)
     except Exception as exc:
-        _record_audit(
+        record_audit(
             audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": str(exc)},
         )
@@ -274,29 +271,9 @@ def promote_draft(
         client_id, kind, draft_id, "approved", reviewed_by=approved_by, reviewed_at=reviewed_at
     )
 
-    _record_audit(
+    record_audit(
         audit_sink, client_id, approved_by, "vault_promote_draft", AuditDecision.ALLOWED,
         {"draft_id": draft_id, "kind": kind, "from_note": draft["from_note_id"]},
     )
 
     return {"promoted": True, "draft_id": draft_id, "kind": kind}
-
-
-def _record_audit(
-    audit_sink: AuditSink,
-    client_id: str,
-    actor: str,
-    action: str,
-    decision: AuditDecision,
-    details: dict[str, Any],
-) -> None:
-    audit_sink.record(
-        AuditEvent(
-            client_id=client_id,
-            occurred_at=datetime.now(UTC),
-            actor=actor,
-            action=action,
-            decision=decision,
-            details=details,
-        )
-    )

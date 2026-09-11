@@ -5,6 +5,7 @@ import pytest
 from audit.sink import FileSystemAuditSink
 from mcp_engine.vault.index import VaultIndex
 from mcp_engine.vault.markdown import NoteParseError, parse_note, serialize_note
+from mcp_engine.vault.note_source import FilesystemNoteSource
 from mcp_engine.vault.obsidian_adapter import ObsidianVaultProvider, VaultRootNotFoundError
 
 
@@ -87,7 +88,8 @@ class TestVaultIndex:
         vault_root.mkdir()
         db_path = tmp_path / "index.sqlite3"
         embedding_provider = FakeEmbeddingProvider()
-        return VaultIndex(vault_root, db_path, embedding_provider, "example")
+        note_source = FilesystemNoteSource(vault_root, "example")
+        return VaultIndex(note_source, db_path, embedding_provider, "example")
 
     def test_reindex_scans_vault(self, index: VaultIndex, tmp_path: Path) -> None:
         vault_root = tmp_path / "vault"

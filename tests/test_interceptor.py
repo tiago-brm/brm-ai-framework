@@ -4,8 +4,9 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from mcp_engine.core.auth import Role
 from mcp_engine.core.contracts import AuditSink
-from mcp_engine.core.interceptor import check_vault_egress, intercept
+from mcp_engine.core.interceptor import check_vault_egress, intercept, redact_for_role
 from mcp_engine.core.models import (
     AuditDecision,
     AuditEvent,
@@ -292,6 +293,38 @@ def test_client_config_requires_at_least_one_allowed_domain():
 def test_dlp_pattern_rejects_unknown_action():
     with pytest.raises(ValidationError):
         DLPPattern(pattern=r"\d+", label="Num", action="redact")
+
+
+class TestRedactForRole:
+    def test_viewer_gets_mask_pattern_redacted(self):
+        text = redact_for_role("saldo ACCT-123456 ok", (ACCOUNT_MASK,), Role.VIEWER)
+
+        assert text == "saldo [REDACTED:Account] ok"
+
+    @pytest.mark.parametrize("role", [Role.ADMIN, Role.SUPER_ADMIN])
+    def test_trusted_roles_see_unredacted_text(self, role: Role):
+        text = redact_for_role("saldo ACCT-123456 ok", (ACCOUNT_MASK,), role)
+
+        assert text == "saldo ACCT-123456 ok"
+
+    def test_deny_action_patterns_are_left_alone(self):
+        # deny-action matches never reach redact_for_role in practice —
+        # intercept() already blocked the call before a response exists —
+        # but this documents that redact_for_role itself only ever touches
+        # `mask`-action patterns, never `deny`.
+        text = redact_for_role("CPF 123.456.789-00", (CPF_DENY,), Role.VIEWER)
+
+        assert text == "CPF 123.456.789-00"
+
+    def test_no_patterns_configured_returns_text_unchanged(self):
+        text = redact_for_role("nada sensivel aqui", (), Role.VIEWER)
+
+        assert text == "nada sensivel aqui"
+
+    def test_multiple_matches_of_same_pattern_all_redacted(self):
+        text = redact_for_role("ACCT-111111 ACCT-222222", (ACCOUNT_MASK,), Role.VIEWER)
+
+        assert text == "[REDACTED:Account] [REDACTED:Account]"
 
 
 class TestCheckVaultEgress:

@@ -8,6 +8,7 @@ from fnmatch import fnmatch
 from functools import lru_cache
 from urllib.parse import urlparse
 
+from mcp_engine.core.auth import Role
 from mcp_engine.core.contracts import AuditSink
 from mcp_engine.core.models import (
     AuditDecision,
@@ -17,6 +18,8 @@ from mcp_engine.core.models import (
     InterceptDecision,
     SkillCall,
 )
+
+TRUSTED_ROLES = (Role.ADMIN, Role.SUPER_ADMIN)
 
 
 @lru_cache(maxsize=256)
@@ -76,6 +79,28 @@ def _scan_dlp_matches(
         if dlp.action == "deny" and deny_label is None:
             deny_label = dlp.label
     return matches, deny_label
+
+
+def redact_for_role(text: str, dlp_patterns: tuple[DLPPattern, ...], role: Role) -> str:
+    """Redacts `mask`-action DLP matches for roles other than admin/super_admin.
+
+    `deny`-action patterns never reach here — `intercept()` already blocked
+    the call entirely before a response is returned to anyone, regardless of
+    role. This only covers the softer `mask` action, which `intercept()`
+    itself leaves untouched (it only decides allow/deny, see
+    `test_dlp_mask_pattern_reports_without_blocking`) — callers that want to
+    keep serving the response but hide sensitive substrings from lower-
+    privileged roles call this afterward, on the text they're about to
+    return.
+    """
+    if role in TRUSTED_ROLES:
+        return text
+
+    redacted = text
+    for dlp in dlp_patterns:
+        if dlp.action == "mask":
+            redacted = _compile(dlp.pattern).sub(f"[REDACTED:{dlp.label}]", redacted)
+    return redacted
 
 
 def intercept(

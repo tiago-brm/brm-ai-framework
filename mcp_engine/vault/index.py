@@ -9,7 +9,8 @@ import sqlite_vec
 
 from mcp_engine.core.models import VaultNote
 from mcp_engine.vault.embeddings import EmbeddingProvider
-from mcp_engine.vault.markdown import NoteParseError, link_key, parse_note
+from mcp_engine.vault.markdown import link_key
+from mcp_engine.vault.note_source import NoteSource
 
 RRF_CONSTANT = 60
 
@@ -21,12 +22,12 @@ class VaultIndexError(Exception):
 class VaultIndex:
     def __init__(
         self,
-        vault_root: Path,
+        note_source: NoteSource,
         vault_db_path: Path,
         embedding_provider: EmbeddingProvider,
         client_id: str,
     ) -> None:
-        self._vault_root = Path(vault_root)
+        self._note_source = note_source
         self._db_path = Path(vault_db_path)
         self._embedding_provider = embedding_provider
         self._client_id = client_id
@@ -105,23 +106,15 @@ class VaultIndex:
 
     def reindex(self) -> int:
         with self._lock:
-            if not self._vault_root.exists():
-                return 0
+            source_note_ids: set[str] = set()
 
-            note_files = list(self._vault_root.rglob("*.md"))
-            disk_note_ids: set[str] = set()
-
-            for note_file in note_files:
-                try:
-                    note = parse_note(note_file, self._vault_root, self._client_id)
-                    disk_note_ids.add(note.note_id)
-                    self._index_note(note)
-                except NoteParseError:
-                    pass
+            for note in self._note_source.list_notes():
+                source_note_ids.add(note.note_id)
+                self._index_note(note)
 
             cursor = self._conn.execute("SELECT id, note_id FROM notes_meta")
             for row in cursor.fetchall():
-                if row["note_id"] not in disk_note_ids:
+                if row["note_id"] not in source_note_ids:
                     self._remove_note(row["id"], row["note_id"])
 
             self._conn.commit()
@@ -239,14 +232,7 @@ class VaultIndex:
         return [(rowid, scores[rowid]) for rowid in sorted_rowids]
 
     def get_note(self, note_id: str) -> VaultNote | None:
-        note_path = self._vault_root / note_id
-        if not note_path.exists():
-            return None
-
-        try:
-            return parse_note(note_path, self._vault_root, self._client_id)
-        except NoteParseError:
-            return None
+        return self._note_source.get_note(note_id)
 
     def get_indexed_content_hash(self, note_id: str) -> str | None:
         with self._lock:

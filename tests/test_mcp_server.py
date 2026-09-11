@@ -5,9 +5,19 @@ from types import SimpleNamespace
 
 import pytest
 
+from mcp_engine.core.auth import Role, UserProfile, current_user_var, set_current_user
 from mcp_engine.core.mcp_server import BRMEngine
 from mcp_engine.core.models import AuditDecision, Rule, RuleEffect
 from mcp_engine.vault.interpreter import InterpreterResult
+from mcp_engine.vault.notion_adapter import NotionVaultProvider
+from mcp_engine.vault.obsidian_adapter import ObsidianVaultProvider
+
+
+@pytest.fixture(autouse=True)
+def _reset_current_user():
+    token = current_user_var.set(None)
+    yield
+    current_user_var.reset(token)
 
 
 class TestBRMEngine:
@@ -171,6 +181,55 @@ domain_allowlist:
 
         assert result["allowed"] is False
         assert "domain not in allowlist" in result["reason"]
+
+    def test_call_skill_rule_can_condition_on_actor_role(
+        self, engine: BRMEngine, tmp_path: Path
+    ) -> None:
+        config_root = tmp_path / "config-role-rule"
+        data_root = tmp_path / "data-role-rule"
+        config_dir = config_root / "acme" / "config"
+        config_dir.mkdir(parents=True)
+
+        (config_dir / "rules.yaml").write_text(
+            """\
+schema_version: 1
+client_id: acme
+rules:
+  - id: viewer-nao-consulta-saldo
+    description: viewer não pode chamar consultar_saldo
+    condition: { "==": [{"var": "actor_role"}, "viewer"] }
+    effect: deny
+    message: perfil viewer não pode executar esta skill
+"""
+        )
+        (config_dir / "skills.yaml").write_text(
+            """\
+schema_version: 1
+client_id: acme
+skills:
+  - name: consultar_saldo
+    description: Queries account balance
+    method: GET
+    url_template: https://api.acme.com/balance
+    allowed_domains:
+      - api.acme.com
+    timeout_seconds: 30.0
+"""
+        )
+        (config_dir / "client_config.yaml").write_text(
+            "client_id: acme\nblock_private_ip: true\ndomain_allowlist:\n  - api.acme.com\n"
+        )
+
+        role_engine = BRMEngine(client_id="acme", config_root=config_root, data_root=data_root)
+
+        set_current_user(UserProfile(identity="estagiario@escritorio.com.br", role=Role.VIEWER))
+        viewer_result = role_engine.call_skill("consultar_saldo", {})
+        assert viewer_result["allowed"] is False
+        assert viewer_result["rule_id"] == "viewer-nao-consulta-saldo"
+
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
+        admin_result = role_engine.call_skill("consultar_saldo", {})
+        assert admin_result["allowed"] is True
 
     def test_call_skill_blocked_by_dlp(self, engine: BRMEngine) -> None:
         cpf_number = "123.456.789-00"
@@ -348,6 +407,243 @@ dlp_patterns:
 
         assert result["allowed"] is True
         assert result["reason"] is None
+
+    def test_dlp_mask_pattern_is_redacted_for_viewer_but_not_for_admin(
+        self, tmp_path: Path
+    ) -> None:
+        config_root = tmp_path / "config-mask-role"
+        data_root = tmp_path / "data-mask-role"
+        config_dir = config_root / "acme3" / "config"
+        config_dir.mkdir(parents=True)
+
+        (config_dir / "rules.yaml").write_text("schema_version: 1\nclient_id: acme3\nrules: []")
+        (config_dir / "skills.yaml").write_text(
+            """\
+schema_version: 1
+client_id: acme3
+skills:
+  - name: get_account
+    description: Gets account info
+    method: GET
+    url_template: https://api.example.com/account
+    allowed_domains:
+      - api.example.com
+    timeout_seconds: 30.0
+"""
+        )
+        (config_dir / "client_config.yaml").write_text(
+            """\
+client_id: acme3
+block_private_ip: true
+domain_allowlist:
+  - api.example.com
+dlp_patterns:
+  - pattern: 'ACCT-\\d{6}'
+    label: Account
+    action: mask
+"""
+        )
+
+        engine = BRMEngine(client_id="acme3", config_root=config_root, data_root=data_root)
+
+        set_current_user(UserProfile(identity="estagiario@escritorio.com.br", role=Role.VIEWER))
+        viewer_result = engine.call_skill("get_account", {"acct": "ACCT-123456"})
+        assert viewer_result["allowed"] is True
+        assert "ACCT-123456" not in viewer_result["result"]
+        assert "[REDACTED:Account]" in viewer_result["result"]
+
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
+        admin_result = engine.call_skill("get_account", {"acct": "ACCT-123456"})
+        assert admin_result["allowed"] is True
+        assert "ACCT-123456" in admin_result["result"]
+        assert "[REDACTED:Account]" not in admin_result["result"]
+
+
+class TestUserManagement:
+    @pytest.fixture
+    def engine(self, tmp_path: Path) -> BRMEngine:
+        config_root = tmp_path / "config"
+        data_root = tmp_path / "data"
+        config_dir = config_root / "example" / "config"
+        config_dir.mkdir(parents=True)
+
+        (config_dir / "rules.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nrules: []\n"
+        )
+        (config_dir / "skills.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nskills: []\n"
+        )
+        (config_dir / "client_config.yaml").write_text(
+            "client_id: example\nblock_private_ip: true\n"
+            "domain_allowlist:\n  - api.example.com\n"
+        )
+
+        return BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
+
+    def test_criar_usuario_creates_and_returns_token(self, engine: BRMEngine) -> None:
+        result = engine.criar_usuario("nova@escritorio.com.br", "viewer")
+
+        assert result["allowed"] is True
+        assert result["identity"] == "nova@escritorio.com.br"
+        assert result["role"] == "viewer"
+        assert result["api_token"]
+
+    def test_criar_usuario_with_explicit_token(self, engine: BRMEngine) -> None:
+        result = engine.criar_usuario("nova@escritorio.com.br", "admin", api_token="tok-123")
+
+        assert result["api_token"] == "tok-123"
+
+    def test_criar_usuario_rejects_duplicate_email(self, engine: BRMEngine) -> None:
+        engine.criar_usuario("dup@escritorio.com.br", "viewer")
+
+        result = engine.criar_usuario("dup@escritorio.com.br", "admin")
+
+        assert result["allowed"] is False
+        assert "já existe" in result["reason"]
+
+    def test_criar_usuario_rejects_invalid_role(self, engine: BRMEngine) -> None:
+        result = engine.criar_usuario("x@escritorio.com.br", "super-admin")
+
+        assert result["allowed"] is False
+        assert "inválido" in result["reason"]
+
+    def test_listar_usuarios_never_includes_token(self, engine: BRMEngine) -> None:
+        engine.criar_usuario("a@escritorio.com.br", "admin", api_token="secret-a")
+        engine.criar_usuario("b@escritorio.com.br", "viewer", api_token="secret-b")
+
+        result = engine.listar_usuarios()
+
+        assert result["total"] == 2
+        for user in result["users"]:
+            assert "api_token" not in user
+
+    def test_non_super_admin_cannot_create_super_admin(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
+
+        result = engine.criar_usuario("novo-brm@brm.com.br", "super_admin")
+
+        assert result["allowed"] is False
+        assert "super_admin" in result["reason"]
+
+    def test_super_admin_can_create_super_admin(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="brm@brm.com.br", role=Role.SUPER_ADMIN))
+
+        result = engine.criar_usuario("novo-brm@brm.com.br", "super_admin")
+
+        assert result["allowed"] is True
+        assert result["role"] == "super_admin"
+
+    def test_atualizar_perfil_usuario_changes_role(self, engine: BRMEngine) -> None:
+        engine.criar_usuario("x@escritorio.com.br", "viewer")
+
+        result = engine.atualizar_perfil_usuario("x@escritorio.com.br", "admin")
+
+        assert result["allowed"] is True
+        assert result["role"] == "admin"
+
+    def test_atualizar_perfil_usuario_unknown_email(self, engine: BRMEngine) -> None:
+        result = engine.atualizar_perfil_usuario("nao-existe@escritorio.com.br", "admin")
+
+        assert result["allowed"] is False
+        assert "não encontrado" in result["reason"]
+
+    def test_atualizar_perfil_usuario_rejects_invalid_role(self, engine: BRMEngine) -> None:
+        engine.criar_usuario("x@escritorio.com.br", "viewer")
+
+        result = engine.atualizar_perfil_usuario("x@escritorio.com.br", "super-admin")
+
+        assert result["allowed"] is False
+        assert "inválido" in result["reason"]
+
+    def test_non_super_admin_cannot_promote_to_super_admin(self, engine: BRMEngine) -> None:
+        engine.criar_usuario("x@escritorio.com.br", "viewer")
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
+
+        result = engine.atualizar_perfil_usuario("x@escritorio.com.br", "super_admin")
+
+        assert result["allowed"] is False
+        assert "super_admin" in result["reason"]
+
+    def test_listar_permissoes_includes_seeded_defaults(self, engine: BRMEngine) -> None:
+        result = engine.listar_permissoes()
+
+        assert result["total"] > 0
+        assert {"role": "admin", "tool_name": "deletar_banco", "allowed": True} in result[
+            "permissions"
+        ]
+
+    def test_atualizar_permissao_toggles_access(self, engine: BRMEngine) -> None:
+        result = engine.atualizar_permissao("viewer", "deletar_banco", True)
+
+        assert result["allowed"] is True
+        assert result["is_allowed"] is True
+        assert engine.user_store.is_tool_allowed(Role.VIEWER, "deletar_banco") is True
+
+    def test_atualizar_permissao_rejects_invalid_role(self, engine: BRMEngine) -> None:
+        result = engine.atualizar_permissao("gerente", "deletar_banco", True)
+
+        assert result["allowed"] is False
+        assert "inválido" in result["reason"]
+
+
+class TestVaultProviderFactory:
+    def _write_config(self, config_root: Path, extra_client_config_lines: str = "") -> None:
+        config_dir = config_root / "example" / "config"
+        config_dir.mkdir(parents=True)
+        config_dir.joinpath("rules.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nrules: []\n"
+        )
+        config_dir.joinpath("skills.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nskills: []\n"
+        )
+        config_dir.joinpath("client_config.yaml").write_text(
+            "client_id: example\n"
+            "block_private_ip: true\n"
+            "domain_allowlist:\n  - api.example.com\n" + extra_client_config_lines
+        )
+
+    def test_defaults_to_obsidian_provider(self, tmp_path: Path) -> None:
+        config_root = tmp_path / "config"
+        data_root = tmp_path / "data"
+        self._write_config(config_root)
+
+        engine = BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
+
+        assert isinstance(engine._vault_provider, ObsidianVaultProvider)
+
+    def test_picks_notion_provider_from_client_config(self, tmp_path: Path) -> None:
+        config_root = tmp_path / "config"
+        data_root = tmp_path / "data"
+        self._write_config(
+            config_root,
+            "vault_provider: notion\n"
+            "notion_token: secret-token\n"
+            "notion_root_page_id: root-id\n",
+        )
+
+        engine = BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
+
+        assert isinstance(engine._vault_provider, NotionVaultProvider)
+
+    def test_explicit_vault_provider_argument_wins_over_config(self, tmp_path: Path) -> None:
+        config_root = tmp_path / "config"
+        data_root = tmp_path / "data"
+        self._write_config(
+            config_root,
+            "vault_provider: notion\n"
+            "notion_token: secret-token\n"
+            "notion_root_page_id: root-id\n",
+        )
+
+        fake_provider = object()
+        engine = BRMEngine(
+            client_id="example",
+            config_root=config_root,
+            data_root=data_root,
+            vault_provider=fake_provider,
+        )
+
+        assert engine._vault_provider is fake_provider
 
 
 class FakeInterpreterAgent:

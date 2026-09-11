@@ -1,33 +1,138 @@
 schema_version: 1
 client_id: example
-
 rules:
-  - id: max-valor-consulta
-    description: Denies requests querying more than R$ 100,000
-    condition:
-      ">":
-        - var: valor_consultado
-        - 100000
-    effect: deny
-    message: Valor consultado acima do limite permitido
-
-  - id: envio-externo-requer-aprovacao
-    description: Requires human approval for external API calls
-    condition:
-      "==":
-        - var: tipo_acao
-        - enviar_para_sistema_externo
-    effect: require_approval
-    message: Esta ação envolve envio para sistema externo
-
-  - id: acesso-permitido-horario
-    description: Allows access only during business hours
-    condition:
-      and:
-        - ">=":
-            - var: hora_local
-            - 8
-        - "<":
-            - var: hora_local
-            - 18
-    effect: allow
+- id: max-valor-consulta
+  description: Denies requests querying more than R$ 100,000
+  condition:
+    '>':
+    - var: valor_consultado
+    - 100000
+  effect: deny
+  message: Valor consultado acima do limite permitido
+- id: envio-externo-requer-aprovacao
+  description: Requires human approval for external API calls
+  condition:
+    ==:
+    - var: tipo_acao
+    - enviar_para_sistema_externo
+  effect: require_approval
+  message: Esta ação envolve envio para sistema externo
+- id: acesso-permitido-horario
+  description: Allows access only during business hours
+  condition:
+    and:
+    - '>=':
+      - var: hora_local
+      - 8
+    - <:
+      - var: hora_local
+      - 18
+  effect: allow
+  message: null
+- id: revisao-socio-causas-alto-valor
+  description: Petições iniciais com valor da causa acima de R$ 50.000 exigem aprovação
+    de sócio sênior, exceto quando o próprio sócio está executando a ação
+  condition:
+    and:
+    - '>':
+      - var: valor_causa
+      - 50000
+    - '!=':
+      - var: actor_role
+      - super_admin
+  effect: require_approval
+  message: Esta petição envolve valor de causa superior a R$ 50.000 e requer aprovação
+    de um sócio sênior antes do protocolo.
+- id: deny-protocolar-peca-viewer
+  description: Bloqueia o protocolo de peças processuais para usuários com perfil
+    viewer (estagiários/consulta). Apenas advogados responsáveis (admin/super_admin)
+    podem protocolar.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - protocolar_peca_processual
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: deny
+  message: Perfil viewer não pode protocolar peças processuais — apenas advogados
+    responsáveis.
+- id: arquivamento-prazo-critico-requer-aprovacao
+  description: Exige aprovação humana para arquivar processo quando há prazo processual
+    crítico (2 dias ou menos)
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - arquivar_processo
+    - <=:
+      - var: prazo_dias_restantes
+      - 2
+  effect: require_approval
+  message: Este processo tem um prazo crítico em aberto — confirme que não há manifestação
+    pendente antes de arquivar.
+- id: deny-payment-registration-for-viewer
+  description: Registrar a baixa de um pagamento de honorário é uma alteração financeira
+    e não pode ser feita por quem tem perfil viewer (estagiário) — apenas admin ou
+    super_admin.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - registrar_pagamento_honorario
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: deny
+  message: Perfil viewer não pode registrar pagamentos de honorários — apenas advogados
+    responsáveis.
+- id: deny-cobranca-honorario-viewer
+  description: Impede que usuários com perfil viewer disparem a ação de cobrança de
+    honorário atrasado, restringindo a operação a advogados (admin ou super_admin)
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - cobrar_honorario_atrasado
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: deny
+  message: Perfil viewer não pode disparar cobrança de honorários — apenas advogados
+    responsáveis.
+- id: deny-erp-financeiro-para-viewer
+  description: Bloqueia consulta ao ERP financeiro para usuários com perfil viewer,
+    permitindo apenas admin ou super_admin
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - consultar_erp
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: deny
+  message: Perfil viewer não tem acesso a dados financeiros do ERP.
+- id: notificacao-cliente-movimentacao-requer-aprovacao
+  description: Notificações de movimentação processual ao cliente sempre exigem aprovação
+    humana, independente do perfil do usuário
+  condition:
+    ==:
+    - var: skill_name
+    - notificar_cliente_movimentacao
+  effect: require_approval
+  message: Revise o resumo da movimentação antes de enviar ao cliente.
+- id: reagendamento-audiencia-requer-aprovacao-viewer
+  description: Reagendamento de audiência por usuário com perfil viewer (estagiário)
+    exige aprovação do advogado responsável
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - reagendar_audiencia
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: require_approval
+  message: Reagendamento de audiência por estagiário exige aprovação do advogado responsável.

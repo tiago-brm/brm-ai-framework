@@ -11,6 +11,7 @@ from mcp_engine.core.models import AuditDecision, AuditEvent, VaultNote
 from mcp_engine.vault.embeddings import EmbeddingProvider, LocalEmbeddingProvider
 from mcp_engine.vault.index import VaultIndex
 from mcp_engine.vault.markdown import parse_note, serialize_note
+from mcp_engine.vault.note_source import FilesystemNoteSource
 from mcp_engine.vault.watcher import VaultWatcher
 
 
@@ -68,8 +69,9 @@ class ObsidianVaultProvider:
 
             vault_root.mkdir(parents=True, exist_ok=True)
             db_path = self._data_root / client_id / "vault_index.sqlite3"
+            note_source = FilesystemNoteSource(vault_root, client_id)
             self._indices[client_id] = VaultIndex(
-                vault_root, db_path, self._embedding_provider, client_id
+                note_source, db_path, self._embedding_provider, client_id
             )
         return self._indices[client_id]
 

@@ -330,3 +330,8 @@ graphify-out/.graphify_root
 
 # DATA_ROOT: audit trail + vault index, per spec 008 (client data, never in git)
 data/
+
+# users.db (SQLUserStore, spec 011): regenerable via
+# `uv run python -m mcp_engine.core.user_store` — binary, unlike the
+# versioned rules.yaml/skills.yaml it sits next to.
+clients/*/config/*.db
