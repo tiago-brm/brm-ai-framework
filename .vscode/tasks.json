@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Preparar perfis da demo",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python scripts/preparar_demo_chat.py wagner > /dev/null && echo 'Perfis da demo prontos.'",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Pré-voo da demo",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python scripts/preflight_demo.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Abrir painel no navegador",
+      "type": "shell",
+      "command": "open http://localhost:4173/#/simulador",
+      "problemMatcher": []
+    }
+  ]
+}

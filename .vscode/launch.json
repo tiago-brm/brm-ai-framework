@@ -1,0 +1,128 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "1. Pré-voo (confere as duas demos)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/preflight_demo.py",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "2. Demo: clínica + Instituto (11 cenas)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/demo_clinica.py",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "2b. Demo: só a clínica (6 cenas)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/demo_clinica.py",
+      "args": ["--parte1"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "3. Demo: casos de uso da carteira (7 cenas)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/demo_casos_de_uso.py",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "4. Preparar perfis da demo (escolher perfil)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/preparar_demo_chat.py",
+      "args": ["${input:perfilDemo}"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "5. Motor HTTP (instituto-afw, porta 8000)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["mcp_engine.core.http_app:app", "--port", "8000"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "CLIENT_ID": "instituto-afw",
+        "CONFIG_ROOT": "clients",
+        "DATA_ROOT": "data"
+      }
+    },
+    {
+      "name": "6. Painel (build + preview, porta 4173)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "cd dashboard && npm run build && npx vite preview --port 4173 --open",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "7. Servidor MCP stdio (como um perfil)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "mcp_engine.core.mcp_server",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "CLIENT_ID": "instituto-afw",
+        "CONFIG_ROOT": "clients",
+        "DATA_ROOT": "data",
+        "MCP_USER_EMAIL": "${input:emailDemo}"
+      }
+    },
+    {
+      "name": "Testes (pytest)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Demo no painel: perfis + motor + painel",
+      "configurations": ["5. Motor HTTP (instituto-afw, porta 8000)", "6. Painel (build + preview, porta 4173)"],
+      "preLaunchTask": "Preparar perfis da demo",
+      "stopAll": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "perfilDemo",
+      "type": "pickString",
+      "description": "Perfil da demo",
+      "options": ["wagner", "camila", "helena", "lucas", "paulo", "beatriz", "rodrigo"],
+      "default": "wagner"
+    },
+    {
+      "id": "emailDemo",
+      "type": "pickString",
+      "description": "Entrar no servidor MCP como",
+      "options": [
+        "wagner@clinica-demo.com.br",
+        "camila.souza@clinica-demo.com.br",
+        "helena.prado@clinica-demo.com.br",
+        "lucas.ribeiro@clinica-demo.com.br"
+      ],
+      "default": "wagner@clinica-demo.com.br"
+    }
+  ]
+}
