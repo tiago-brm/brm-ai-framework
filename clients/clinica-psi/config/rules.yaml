@@ -1,0 +1,90 @@
+schema_version: 1
+client_id: clinica-psi
+rules:
+- id: prontuario-somente-psicologo-vinculado
+  description: Prontuário só pode ser consultado por quem tem vínculo com o paciente (psicólogo responsável
+    ou estagiário supervisionado). Apenas o responsável técnico (super_admin) acessa qualquer prontuário,
+    sempre com registro em auditoria.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - consultar_prontuario
+    - ==:
+      - var: vinculo_com_paciente
+      - nao
+    - '!=':
+      - var: actor_role
+      - super_admin
+  effect: deny
+  message: Sem vínculo com este paciente — o prontuário é sigiloso (Res. CFP 001/2009). Peça ao psicólogo
+    responsável.
+  next_step: Peça ao psicólogo responsável pelo paciente ou à responsável técnica.
+- id: declaracao-sem-sintomas
+  description: Declaração psicológica registra apenas comparecimento, dia, horário e duração. Nunca sintomas
+    ou estado psicológico (Res. CFP 06/2019, art. 9º).
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - emitir_declaracao_comparecimento
+    - ==:
+      - var: incluir_sintomas
+      - true
+  effect: deny
+  message: Declaração não pode conter sintomas ou estado psicológico (Res. CFP 06/2019, art. 9º). Para
+    isso é preciso um relatório ou atestado do psicólogo.
+  next_step: Se o paciente precisa de um documento com essa informação, o psicólogo deve emitir um relatório
+    ou atestado.
+- id: relatorio-recepcao-bloqueado
+  description: Relatório psicológico é documento técnico — perfil viewer (recepção/estagiário) não emite.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - emitir_relatorio_psicologico
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: deny
+  message: Relatório psicológico só pode ser emitido pelo psicólogo responsável.
+  next_step: Encaminhe o pedido ao psicólogo responsável pelo paciente.
+- id: relatorio-exige-devolutiva
+  description: Todo relatório exige revisão do psicólogo e entrevista devolutiva antes da entrega (Res.
+    CFP 06/2019, art. 18).
+  condition:
+    ==:
+    - var: skill_name
+    - emitir_relatorio_psicologico
+  effect: require_approval
+  message: Relatório gerado como rascunho — revise e realize a entrevista devolutiva antes de entregar
+    (Res. CFP 06/2019, art. 18).
+  next_step: O psicólogo revisa o rascunho e agenda a entrevista devolutiva antes de entregar.
+- id: prontuario-menor-exige-validacao-responsavel
+  description: Entrega de prontuário de menor de idade ao responsável exige conferência de responsável
+    legal e aprovação do psicólogo.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - entregar_prontuario_responsavel
+    - ==:
+      - var: paciente_menor
+      - true
+  effect: require_approval
+  message: Paciente menor de idade — confirme o responsável legal e revise o que será entregue (hipóteses
+    ficam no registro documental, não no prontuário).
+  next_step: O psicólogo confere o responsável legal e revisa o que será entregue.
+- id: cobranca-mensalidade-recepcao-bloqueada
+  description: Cobrança de mensalidade é ação financeira — recepção (viewer) não dispara sozinha.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - cobrar_mensalidade
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: require_approval
+  message: Cobrança enviada pela recepção precisa de aprovação da gestão.
+  next_step: A gestão aprova a cobrança antes do envio.

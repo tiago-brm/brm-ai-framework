@@ -1,0 +1,156 @@
+schema_version: 1
+client_id: instituto-afw
+profiles:
+  camila.souza@clinica-demo.com.br: Camila Souza · recepção
+  lucas.ribeiro@clinica-demo.com.br: Lucas Ribeiro · psicólogo
+  wagner@clinica-demo.com.br: Wagner Massaranduba · psicólogo
+  paulo.tavares@clinica-demo.com.br: Paulo Tavares · psicólogo
+  helena.prado@clinica-demo.com.br: Dra. Helena Prado · responsável técnica
+  beatriz.lima@aluno-demo.com.br: Beatriz Lima · aluna da pós
+  rodrigo.azevedo@clinica-demo.com.br: Prof. Rodrigo Azevedo · supervisor
+scenarios:
+- id: prontuario-proprio
+  title: Abrir o prontuário do PAC-001
+  skill: consultar_prontuario
+  arguments:
+    paciente_id: PAC-001
+  profile: lucas.ribeiro@clinica-demo.com.br
+  note: O vínculo vem do cadastro no vault.
+- id: prontuario-outro
+  title: Abrir o prontuário do PAC-005
+  skill: consultar_prontuario
+  arguments:
+    paciente_id: PAC-005
+  profile: camila.souza@clinica-demo.com.br
+- id: declaracao
+  title: Declaração de comparecimento (sem sintomas)
+  skill: emitir_declaracao_comparecimento
+  arguments:
+    paciente_id: PAC-001
+    finalidade: trabalho
+    incluir_sintomas: false
+  profile: camila.souza@clinica-demo.com.br
+- id: declaracao-sintomas
+  title: Declaração pedindo para incluir sintomas
+  skill: emitir_declaracao_comparecimento
+  arguments:
+    paciente_id: PAC-001
+    finalidade: trabalho
+    incluir_sintomas: true
+  profile: camila.souza@clinica-demo.com.br
+  note: Res. CFP 06/2019, art. 9º.
+- id: relatorio-escola
+  title: Relatório psicológico para a escola (PAC-002)
+  skill: emitir_relatorio_psicologico
+  arguments:
+    paciente_id: PAC-002
+    solicitante: escola
+    finalidade: acompanhamento
+  profile: wagner@clinica-demo.com.br
+- id: entrega-menor
+  title: Pai pede o prontuário do adolescente (PAC-002)
+  skill: entregar_prontuario_responsavel
+  arguments:
+    paciente_id: PAC-002
+    responsavel: Marcos (pai)
+  profile: wagner@clinica-demo.com.br
+- id: entrega-adulto
+  title: Adulto pede o próprio prontuário (PAC-001)
+  skill: entregar_prontuario_responsavel
+  arguments:
+    paciente_id: PAC-001
+    responsavel: o próprio paciente
+  profile: lucas.ribeiro@clinica-demo.com.br
+- id: lembrete-cid
+  title: Lembrete de sessão com CID no texto
+  skill: enviar_lembrete_sessao
+  arguments:
+    telefone: +55 67 90000-0000
+    mensagem: 'Lembrete: sessão amanhã às 15h (acompanhamento F41.1).'
+  profile: camila.souza@clinica-demo.com.br
+  note: O DLP mascara o CID para a recepção.
+  in_matrix: false
+- id: cobranca
+  title: Cobrança de mensalidade atrasada (PAC-005)
+  skill: cobrar_mensalidade
+  arguments:
+    destinatario: responsavel.pac005@exemplo.com.br
+    valor: R$ 480,00
+    dias_atraso: 10
+    mensagem: Lembrete de mensalidade em aberto.
+  profile: camila.souza@clinica-demo.com.br
+- id: cobranca-cpf
+  title: Cobrança com CPF no texto
+  skill: cobrar_mensalidade
+  arguments:
+    destinatario: responsavel@exemplo.com.br
+    valor: R$ 480,00
+    dias_atraso: 10
+    mensagem: Titular CPF 123.456.789-09
+  profile: helena.prado@clinica-demo.com.br
+  note: O DLP bloqueia CPF para qualquer perfil.
+  in_matrix: false
+- id: painel
+  title: Painel da clínica (sessões e faltas por psicólogo)
+  skill: consultar_painel_clinica
+  arguments:
+    periodo: 2026-09
+  profile: camila.souza@clinica-demo.com.br
+- id: caso-supervisao
+  title: Aluna envia caso anonimizado para a supervisão
+  skill: enviar_caso_supervisao
+  arguments:
+    aluno_id: ALU-017
+    trilha: tcc
+    caso_texto: Paciente P., adulto, ansiedade em avaliações no trabalho.
+  profile: beatriz.lima@aluno-demo.com.br
+- id: caso-grupo
+  title: Levar o caso ao grupo de supervisão
+  skill: compartilhar_caso_grupo
+  arguments:
+    caso_id: CASO-042
+  profile: beatriz.lima@aluno-demo.com.br
+  note: O supervisor confere a anonimização.
+- id: aulas-ativa
+  title: Pergunta sobre as aulas (matrícula ativa)
+  skill: buscar_aulas
+  arguments:
+    pergunta: o que é o modo Criança Vulnerável
+    aluno_id: ALU-017
+  profile: beatriz.lima@aluno-demo.com.br
+- id: aulas-inativa
+  title: Pergunta sobre as aulas (matrícula trancada)
+  skill: buscar_aulas
+  arguments:
+    pergunta: o que é o modo Criança Vulnerável
+    aluno_id: ALU-023
+  profile: beatriz.lima@aluno-demo.com.br
+- id: horas-baixa
+  title: Declaração de horas com frequência baixa (ALU-023)
+  skill: emitir_declaracao_horas
+  arguments:
+    aluno_id: ALU-023
+  profile: camila.souza@clinica-demo.com.br
+  note: A frequência vem do cadastro do aluno.
+- id: horas-ok
+  title: Declaração de horas com frequência ok (ALU-017)
+  skill: emitir_declaracao_horas
+  arguments:
+    aluno_id: ALU-017
+  profile: camila.souza@clinica-demo.com.br
+- id: lead-valor
+  title: Interessado pergunta valor e vaga
+  skill: responder_lead_whatsapp
+  arguments:
+    telefone: +55 67 90000-0000
+    mensagem: Quanto custa e ainda tem vaga?
+    menciona_valor_ou_vaga: true
+  profile: camila.souza@clinica-demo.com.br
+- id: post-promessa
+  title: Post que promete resultado
+  skill: publicar_post_turma
+  arguments:
+    trilha: terapia-do-esquema
+    texto: Faça a pós e fique livre da ansiedade para sempre!
+    promete_resultado: true
+  profile: camila.souza@clinica-demo.com.br

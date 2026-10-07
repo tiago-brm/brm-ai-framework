@@ -1,0 +1,163 @@
+schema_version: 1
+client_id: clinica-psi
+skills:
+- name: consultar_prontuario
+  description: Abre o prontuário de um paciente para o profissional com vínculo (consulta, resumo das
+    últimas sessões, tarefa pendente). Use quando o usuário pedir histórico, evolução ou resumo de um
+    paciente.
+  method: GET
+  url_template: https://sistema-clinica.example.com/api/pacientes/{paciente_id}/prontuario
+  allowed_domains:
+  - sistema-clinica.example.com
+  parameters:
+    paciente_id:
+      description: ID do paciente, por exemplo PAC-001. Se o usuário citar só o nome, a queixa ou o psicólogo,
+        ache o ID com vault_search.
+      required: true
+      type: string
+  timeout_seconds: 30.0
+  derived_facts:
+    vinculo_com_paciente:
+      vault_match:
+        paciente_id: $paciente_id
+        tipo: prontuario
+      field: psicologo_responsavel
+      transform: equals_actor
+      if_true: sim
+      if_false: nao
+      if_missing: nao
+  examples:
+  - Resuma as últimas sessões do PAC-001
+  - Como está o paciente com ansiedade de avaliação?
+  - O que ficou de tarefa para a próxima sessão do PAC-005?
+- name: emitir_declaracao_comparecimento
+  description: Emite declaração de comparecimento (dia, horário e duração do atendimento). Nunca inclui
+    sintomas ou estado psicológico. Use para pedidos de comprovante de presença.
+  method: POST
+  url_template: https://sistema-clinica.example.com/api/pacientes/{paciente_id}/declaracoes
+  allowed_domains:
+  - sistema-clinica.example.com
+  parameters:
+    paciente_id:
+      description: ID do paciente, por exemplo PAC-001. Se o usuário citar só o nome, a queixa ou o psicólogo,
+        ache o ID com vault_search.
+      required: true
+      type: string
+    finalidade:
+      description: Para que o documento será usado, por exemplo trabalho ou escola.
+      required: true
+      type: string
+    incluir_sintomas:
+      description: true somente se o pedido incluir sintomas, diagnóstico ou estado psicológico; numa
+        declaração comum é false.
+      type: boolean
+  timeout_seconds: 30.0
+  examples:
+  - Preciso de uma declaração de comparecimento do PAC-001 para o trabalho
+  - Emita a declaração dizendo que ele está com ansiedade
+- name: emitir_relatorio_psicologico
+  description: Gera o rascunho de um relatório psicológico a partir do prontuário. Só o psicólogo responsável
+    emite, e o documento só é entregue depois da revisão e da entrevista devolutiva.
+  method: POST
+  url_template: https://sistema-clinica.example.com/api/pacientes/{paciente_id}/relatorios
+  allowed_domains:
+  - sistema-clinica.example.com
+  parameters:
+    paciente_id:
+      description: ID do paciente, por exemplo PAC-001. Se o usuário citar só o nome, a queixa ou o psicólogo,
+        ache o ID com vault_search.
+      required: true
+      type: string
+    solicitante:
+      description: 'Quem pediu o relatório: escola, convênio, médico ou família.'
+      required: true
+      type: string
+    finalidade:
+      description: Motivo do relatório.
+      required: true
+      type: string
+  timeout_seconds: 60.0
+  examples:
+  - Faça o rascunho do relatório do PAC-002 para a escola
+  - Preciso de um relatório de encaminhamento ao médico para o PAC-004
+- name: entregar_prontuario_responsavel
+  description: Entrega cópia do prontuário ao paciente adulto ou ao responsável legal. Para menor de idade
+    exige conferência do responsável e aprovação do psicólogo.
+  method: POST
+  url_template: https://sistema-clinica.example.com/api/pacientes/{paciente_id}/entregas
+  allowed_domains:
+  - sistema-clinica.example.com
+  parameters:
+    paciente_id:
+      description: ID do paciente, por exemplo PAC-001. Se o usuário citar só o nome, a queixa ou o psicólogo,
+        ache o ID com vault_search.
+      required: true
+      type: string
+    responsavel:
+      description: Quem está recebendo a cópia, por exemplo o próprio paciente ou o nome e vínculo do
+        responsável.
+      required: true
+      type: string
+  timeout_seconds: 30.0
+  derived_facts:
+    paciente_menor:
+      vault_match:
+        paciente_id: $paciente_id
+        tipo: prontuario
+      field: faixa_etaria
+      transform: in
+      values:
+      - crianca
+      - adolescente
+      if_true: true
+      if_false: false
+      if_missing: true
+  examples:
+  - O pai do PAC-002 pediu o prontuário do filho
+  - O PAC-001 quer uma cópia do próprio prontuário
+- name: enviar_lembrete_sessao
+  description: Envia mensagem por WhatsApp ao paciente (lembrete de sessão, convite para remarcar). Não
+    inclua dado clínico na mensagem.
+  method: POST
+  url_template: https://whatsapp-gateway.example.com/api/messages
+  allowed_domains:
+  - whatsapp-gateway.example.com
+  parameters:
+    telefone:
+      description: Telefone do paciente no formato +55 DDD número.
+      required: true
+      type: string
+    mensagem:
+      description: Texto da mensagem, sem dado clínico.
+      required: true
+      type: string
+  timeout_seconds: 30.0
+  examples:
+  - Avise o paciente que a sessão de amanhã às 15h está confirmada
+  - Convide quem faltou para remarcar a sessão
+- name: cobrar_mensalidade
+  description: Envia cobrança de mensalidade atrasada por e-mail ao responsável financeiro. A recepção
+    precisa de aprovação da gestão.
+  method: POST
+  url_template: https://mail.example.com/api/send
+  allowed_domains:
+  - mail.example.com
+  parameters:
+    destinatario:
+      description: E-mail do responsável financeiro.
+      required: true
+      type: string
+    valor:
+      description: Valor em aberto, por exemplo R$ 480,00.
+      required: true
+      type: string
+    dias_atraso:
+      description: Dias de atraso.
+      required: true
+      type: number
+    mensagem:
+      description: Texto da cobrança, sem CPF ou dado clínico.
+      type: string
+  timeout_seconds: 30.0
+  examples:
+  - Cobre a mensalidade em atraso do PAC-005

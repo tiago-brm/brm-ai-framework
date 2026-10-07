@@ -1,0 +1,37 @@
+schema_version: 1
+client_id: instituto-afw
+default: deny
+write_roles: [admin, super_admin]
+policies:
+- id: registro-documental-so-responsavel
+  when:
+    and:
+    - ==: [{var: note.tipo}, registro-documental]
+    - {var: vinculo}
+  effect: allow
+- id: prontuario-e-resumo-com-vinculo
+  when:
+    and:
+    - in: [{var: note.tipo}, [prontuario, resumo]]
+    - {var: vinculo}
+  effect: allow
+- id: responsavel-tecnica-audita
+  when:
+    ==: [{var: actor_role}, super_admin]
+  effect: allow
+  audit: acesso_privilegiado
+- id: ficha-de-identificacao
+  when:
+    ==: [{var: note.tipo}, prontuario]
+  effect: metadata_only
+  expose: [paciente_id, unidade, psicologo_responsavel]
+- id: conhecimento-geral
+  when:
+    in: [{var: note.tipo}, [faq, modelo]]
+  effect: allow
+- id: ensino-somente-equipe
+  when:
+    and:
+    - in: [{var: note.tipo}, [aula, aluno]]
+    - ==: [{var: actor_role}, admin]
+  effect: allow

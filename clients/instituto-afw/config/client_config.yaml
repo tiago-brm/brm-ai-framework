@@ -1,0 +1,22 @@
+client_id: instituto-afw
+block_private_ip: true
+domain_allowlist:
+- sistema-clinica.example.com
+- mail.example.com
+- whatsapp-gateway.example.com
+- plataforma-ensino.example.com
+- redes-sociais.example.com
+dlp_patterns:
+- pattern: \d{3}\.\d{3}\.\d{3}-\d{2}
+  label: CPF
+  action: deny
+- pattern: \bF\d{2}(\.\d)?\b
+  label: CID
+  action: mask
+- pattern: \(\d{2}\)\s?\d{4,5}-\d{4}
+  label: Telefone
+  action: deny
+context: Instituto de psicologia com unidades por faixa etária (adultos, terceira idade, adolescentes
+  e infantil), Clínica Escola e pós-graduação em TCC e Terapia do Esquema. Pacientes são identificados
+  por PAC-xxx e alunos por ALU-xxx. O vault guarda prontuários, resumos, aulas e FAQ. Dados de pacientes
+  são sigilosos (Res. CFP 001/2009 e 06/2019).

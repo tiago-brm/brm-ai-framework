@@ -1,0 +1,31 @@
+schema_version: 1
+client_id: clinica-psi
+default: deny
+write_roles: [admin, super_admin]
+policies:
+- id: registro-documental-so-responsavel
+  when:
+    and:
+    - ==: [{var: note.tipo}, registro-documental]
+    - {var: vinculo}
+  effect: allow
+- id: prontuario-com-vinculo
+  when:
+    and:
+    - ==: [{var: note.tipo}, prontuario]
+    - {var: vinculo}
+  effect: allow
+- id: responsavel-tecnica-audita
+  when:
+    ==: [{var: actor_role}, super_admin]
+  effect: allow
+  audit: acesso_privilegiado
+- id: ficha-de-identificacao
+  when:
+    ==: [{var: note.tipo}, prontuario]
+  effect: metadata_only
+  expose: [paciente_id, unidade, psicologo_responsavel]
+- id: conhecimento-geral
+  when:
+    ==: [{var: note.tipo}, modelo]
+  effect: allow

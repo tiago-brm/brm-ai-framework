@@ -1,0 +1,16 @@
+client_id: clinica-psi
+block_private_ip: true
+domain_allowlist:
+- sistema-clinica.example.com
+- mail.example.com
+- whatsapp-gateway.example.com
+dlp_patterns:
+- pattern: \d{3}\.\d{3}\.\d{3}-\d{2}
+  label: CPF
+  action: deny
+- pattern: \bF\d{2}(\.\d)?\b
+  label: CID
+  action: mask
+context: Clínica de psicologia com unidades por faixa etária. Pacientes são identificados por PAC-xxx.
+  O vault guarda prontuários e modelos de documento. Dados de pacientes são sigilosos (Res. CFP 001/2009
+  e 06/2019).
