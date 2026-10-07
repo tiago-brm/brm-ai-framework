@@ -9,6 +9,8 @@ export const NAV_ITEMS = [
   { path: "/regras", icon: "§", label: "Regras" },
   { path: "/vault", icon: "❏", label: "Vault" },
   { path: "/auditoria", icon: "≣", label: "Auditoria" },
+  { path: "/simulador", icon: "◉", label: "Simular" },
+  { path: "/governanca", icon: "▥", label: "Governança" },
 ] as const;
 
 function initials(identity: string): string {

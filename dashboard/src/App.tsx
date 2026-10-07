@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
 import { useHashRoute } from "@/lib/router";
 import { Auditoria } from "@/pages/Auditoria";
+import { Governanca } from "@/pages/Governanca";
 import { Overview } from "@/pages/Overview";
 import { Permissoes } from "@/pages/Permissoes";
 import { Regras } from "@/pages/Regras";
+import { Simulador } from "@/pages/Simulador";
 import { Tools } from "@/pages/Tools";
 import { Usuarios } from "@/pages/Usuarios";
 import { Vault } from "@/pages/Vault";
@@ -157,6 +159,8 @@ function Dashboard({ me, onLogout }: { me: Me; onLogout: () => void }) {
   else if (path === "/regras") page = <Regras />;
   else if (path === "/vault") page = <Vault />;
   else if (path === "/auditoria") page = <Auditoria />;
+  else if (path === "/simulador") page = <Simulador />;
+  else if (path === "/governanca") page = <Governanca />;
 
   return (
     <Shell me={me} path={path} onNavigate={navigate} onLogout={onLogout}>

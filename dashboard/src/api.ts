@@ -80,6 +80,52 @@ export type AuditEvent = {
   rule_id: string | null;
 };
 
+export type SimPerfil = { identity: string; role: string; rotulo: string };
+export type SimParam = { type: string; required: boolean; description: string | null };
+export type SimSkill = {
+  name: string;
+  description: string;
+  examples: string[];
+  parameters: Record<string, SimParam>;
+};
+export type SimCenario = {
+  id: string;
+  titulo: string;
+  skill: string;
+  argumentos: Record<string, unknown>;
+  perfil: string | null;
+  nota: string | null;
+};
+export type SimResultado = {
+  perfil: { identity: string; role: string };
+  decisao: string;
+  resultado: {
+    allowed: boolean;
+    reason: string | null;
+    rule_id?: string | null;
+    message?: string | null;
+    proximo_passo?: string | null;
+    result?: string;
+  };
+  fatos_derivados: Record<string, unknown>;
+  dlp: Record<string, string[]>;
+};
+export type SimVault = {
+  perfil: { identity: string; role: string };
+  total: number;
+  ocultas: number;
+  politicas: string[];
+  notas: { note_id: string; title: string; tipo: string | null; modo: string; trecho: string }[];
+};
+export type SimMatriz = {
+  perfis: SimPerfil[];
+  cenarios: {
+    id: string;
+    titulo: string;
+    celulas: { perfil: string; efeito: string; rule_id: string | null }[];
+  }[];
+};
+
 export const api = {
   me: () => request<Me>("/me"),
   listUsers: () => request<{ total: number; users: User[] }>("/users"),
@@ -104,4 +150,18 @@ export const api = {
   listRules: () => request<{ total: number; rules: Rule[] }>("/rules"),
   listVaultNotes: () => request<{ total: number; notes: VaultNote[] }>("/vault/notes"),
   listAudit: () => request<{ total: number; events: AuditEvent[] }>("/audit"),
+  simPerfis: () => request<{ total: number; perfis: SimPerfil[] }>("/simulador/perfis"),
+  simSkills: () => request<{ total: number; skills: SimSkill[] }>("/simulador/skills"),
+  simCenarios: () => request<{ total: number; cenarios: SimCenario[] }>("/simulador/cenarios"),
+  simExecutar: (perfil_email: string, skill: string, argumentos: Record<string, unknown>) =>
+    request<SimResultado>("/simulador/executar", {
+      method: "POST",
+      body: JSON.stringify({ perfil_email, skill, argumentos }),
+    }),
+  simVault: (perfil_email: string, consulta: string) =>
+    request<SimVault>("/simulador/vault", {
+      method: "POST",
+      body: JSON.stringify({ perfil_email, consulta }),
+    }),
+  simMatriz: () => request<SimMatriz>("/simulador/matriz"),
 };
