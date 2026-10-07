@@ -25,6 +25,7 @@ class Rule(_StrictModel):
     condition: dict[str, Any]
     effect: RuleEffect
     message: str | None = None
+    next_step: str | None = None
 
 
 class RuleSet(_StrictModel):
@@ -41,6 +42,47 @@ class HttpMethod(str, Enum):
     DELETE = "DELETE"
 
 
+class DerivedFact(_StrictModel):
+    """Fato calculado pelo motor a partir do vault, nunca informado pelo chamador.
+
+    `vault_match` mapeia chaves do frontmatter para um literal ou `$argumento`.
+    `transform`: `value` devolve o campo como está; `equals_actor` compara o
+    campo com a identidade logada; `in` testa se o campo está em `values`.
+    """
+
+    vault_match: dict[str, str]
+    field: str
+    transform: Literal["value", "equals_actor", "in"] = "value"
+    values: tuple[str, ...] = ()
+    if_true: Any = True
+    if_false: Any = False
+    if_missing: Any = None
+
+
+class VaultRead(_StrictModel):
+    """Leitura do vault mediada por uma skill, restrita a certos tipos de nota."""
+
+    types: tuple[str, ...] = Field(min_length=1)
+    query_from: str
+    limit: int = 3
+
+
+class VaultPolicy(_StrictModel):
+    id: str
+    when: dict[str, Any]
+    effect: Literal["allow", "metadata_only", "deny"]
+    expose: tuple[str, ...] = ()
+    audit: str | None = None
+
+
+class VaultAccess(_StrictModel):
+    schema_version: Literal[1]
+    client_id: str
+    default: Literal["allow", "deny"] = "deny"
+    write_roles: tuple[str, ...] = ("admin", "super_admin")
+    policies: tuple[VaultPolicy, ...] = ()
+
+
 class SkillDefinition(_StrictModel):
     name: str
     description: str
@@ -48,6 +90,9 @@ class SkillDefinition(_StrictModel):
     url_template: str
     allowed_domains: tuple[str, ...] = Field(min_length=1)
     parameters: dict[str, Any] = Field(default_factory=dict)
+    derived_facts: dict[str, DerivedFact] = Field(default_factory=dict)
+    examples: tuple[str, ...] = ()
+    vault_read: VaultRead | None = None
     timeout_seconds: float = 30.0
 
 
@@ -79,6 +124,7 @@ class RuleDecision(_StrictModel):
     effect: RuleEffect
     rule_id: str | None = None
     message: str | None = None
+    next_step: str | None = None
 
 
 class DLPPattern(_StrictModel):
@@ -89,6 +135,8 @@ class DLPPattern(_StrictModel):
 
 class ClientConfig(_StrictModel):
     client_id: str
+    context: str | None = None
+    simulador: bool = True
     domain_allowlist: tuple[str, ...] = Field(min_length=1)
     block_private_ip: bool = True
     dlp_patterns: tuple[DLPPattern, ...] = ()
@@ -125,3 +173,20 @@ class VaultNote(_StrictModel):
     tags: tuple[str, ...] = ()
     updated_at: datetime
     content_hash: str
+
+
+class DemoScenario(_StrictModel):
+    id: str
+    title: str
+    skill: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    profile: str | None = None
+    note: str | None = None
+    in_matrix: bool = True
+
+
+class DemoScenarios(_StrictModel):
+    schema_version: Literal[1]
+    client_id: str
+    profiles: dict[str, str] = Field(default_factory=dict)
+    scenarios: tuple[DemoScenario, ...] = ()

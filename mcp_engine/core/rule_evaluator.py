@@ -24,6 +24,11 @@ def evaluate(ruleset: RuleSet, facts: dict[str, Any]) -> RuleDecision:
             raise RuleEvaluationError(rule.id, exc) from exc
 
         if matched:
-            return RuleDecision(effect=rule.effect, rule_id=rule.id, message=rule.message)
+            return RuleDecision(
+                effect=rule.effect,
+                rule_id=rule.id,
+                message=rule.message,
+                next_step=rule.next_step,
+            )
 
     return RuleDecision(effect=DEFAULT_EFFECT)

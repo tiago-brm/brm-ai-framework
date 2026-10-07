@@ -52,6 +52,13 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
     # registro de tools para os dois transportes (ver spec 010).
     mcp_server = build_server(engine)
 
+    # Aquece o índice do vault no startup: a primeira indexação carrega o modelo
+    # de embeddings e, sem isso, o primeiro pedido do painel demora vários segundos.
+    try:
+        engine._vault_provider.reindex(engine.client_id)
+    except Exception:
+        pass
+
     app = FastAPI(title="BRM Engine (remoto)")
 
     # Dashboard React/Vite roda em outra origem (localhost:5173 em dev) e

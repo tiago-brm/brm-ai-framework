@@ -6,7 +6,13 @@ from typing import TypeVar
 import yaml
 from pydantic import BaseModel
 
-from mcp_engine.core.models import ClientConfig, RuleSet, SkillSet
+from mcp_engine.core.models import (
+    ClientConfig,
+    DemoScenarios,
+    RuleSet,
+    SkillSet,
+    VaultAccess,
+)
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -78,3 +84,30 @@ class FileSystemClientConfigProvider:
 
     def get_client_config(self, client_id: str) -> ClientConfig:
         return _load(self._config_root, client_id, "client_config.yaml", ClientConfig)
+
+
+class FileSystemVaultAccessProvider:
+    """Política de leitura/escrita do vault. Sem o arquivo, o vault fica aberto
+    (comportamento anterior à spec 017)."""
+
+    def __init__(self, config_root: Path) -> None:
+        self._config_root = Path(config_root)
+
+    def get_vault_access(self, client_id: str) -> VaultAccess | None:
+        path = self._config_root / client_id / "config" / "vault_access.yaml"
+        if not path.exists():
+            return None
+        return _load(self._config_root, client_id, "vault_access.yaml", VaultAccess)
+
+
+class FileSystemDemoScenariosProvider:
+    """Cenários prontos do simulador. Sem o arquivo, a lista fica vazia."""
+
+    def __init__(self, config_root: Path) -> None:
+        self._config_root = Path(config_root)
+
+    def get_scenarios(self, client_id: str) -> DemoScenarios:
+        path = self._config_root / client_id / "config" / "demo_scenarios.yaml"
+        if not path.exists():
+            return DemoScenarios(schema_version=1, client_id=client_id)
+        return _load(self._config_root, client_id, "demo_scenarios.yaml", DemoScenarios)
