@@ -1,0 +1,703 @@
+<title>BRM Framework para Clínicas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* Layout: página de rolagem única com seções alternadas (mesma estrutura da apresentação para advogados), paleta ameixa para o contexto clínico */
+  :root{
+    --ink:#17141f; --ink-soft:#514b60; --paper:#eceaf1; --surface:#ffffff; --surface-alt:#f4f2f8;
+    --border:#d2cedd; --accent:#5b3f8c; --accent-strong:#3b2766; --accent-soft:#e6def3;
+    --ok:#2f6b4f; --ok-soft:#dcece3; --warn:#93611c; --warn-soft:#f3e6d0; --danger:#a23b32; --danger-soft:#f3dcd9;
+    --log-bg:#17141f; --log-fg:#d3cde4; --log-key:#b9a2ec; --log-str:#9fd6b3; --log-dim:#7d7595;
+    --serif:'IBM Plex Serif',Georgia,'Times New Roman',serif;
+    --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#ebe8f3; --ink-soft:#aca6bf; --paper:#0f0d16; --surface:#181521; --surface-alt:#1f1b2b;
+      --border:#332e44; --accent:#b9a2ec; --accent-strong:#d6c8f5; --accent-soft:#2b2243;
+      --ok:#74c39a; --ok-soft:#1b3327; --warn:#dcab5c; --warn-soft:#3a2c14; --danger:#e6897c; --danger-soft:#3a211e;
+      --log-bg:#09080e; --log-fg:#d3cde4; --log-key:#b9a2ec; --log-str:#9fd6b3; --log-dim:#7d7595;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#ebe8f3; --ink-soft:#aca6bf; --paper:#0f0d16; --surface:#181521; --surface-alt:#1f1b2b;
+    --border:#332e44; --accent:#b9a2ec; --accent-strong:#d6c8f5; --accent-soft:#2b2243;
+    --ok:#74c39a; --ok-soft:#1b3327; --warn:#dcab5c; --warn-soft:#3a2c14; --danger:#e6897c; --danger-soft:#3a211e;
+    --log-bg:#09080e; --log-fg:#d3cde4; --log-key:#b9a2ec; --log-str:#9fd6b3; --log-dim:#7d7595;
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+    font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:var(--serif); text-wrap:balance; margin:0; color:var(--ink); font-weight:600;}
+  p{margin:0;}
+  .mono{font-family:var(--mono);}
+  .shell{max-width:1120px; margin:0 auto; padding-inline:24px;}
+  section{padding-block:clamp(48px,7vw,88px);}
+  .eyebrow{font-family:var(--mono); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:500;}
+  a{color:var(--accent);}
+
+  .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; backdrop-filter:blur(8px);
+    background:color-mix(in srgb, var(--paper) 86%, transparent); border-bottom:1px solid var(--border);}
+  .topbar .shell{display:flex; align-items:center; justify-content:space-between; padding-block:14px; gap:16px;}
+  .wordmark{font-family:var(--serif); font-weight:700; font-size:1.05rem; letter-spacing:.01em;}
+  .wordmark span{color:var(--accent);}
+  .topbar nav{display:flex; gap:22px; font-size:.86rem;}
+  .topbar nav a{color:var(--ink-soft); text-decoration:none;}
+  .topbar nav a:hover{color:var(--accent);}
+
+  .hero{padding-block:clamp(56px,9vw,104px) clamp(40px,6vw,72px);}
+  .hero-grid{display:grid; grid-template-columns:1.15fr .85fr; gap:56px; align-items:center;}
+  .hero-grid > *{min-width:0;}
+  .hero h1{font-size:clamp(2rem,3.6vw,2.9rem); line-height:1.14; margin-block:14px 18px;}
+  .hero .lede{font-size:1.1rem; color:var(--ink-soft); max-width:52ch;}
+  .hero-badges{display:flex; gap:10px; margin-top:28px; flex-wrap:wrap;}
+  .stamp{display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:.72rem; letter-spacing:.05em;
+    text-transform:uppercase; padding:6px 11px; border-radius:3px; border:1px solid transparent;}
+  .stamp.ok{color:var(--ok); background:var(--ok-soft); border-color:color-mix(in srgb, var(--ok) 35%, transparent);}
+  .stamp.warn{color:var(--warn); background:var(--warn-soft); border-color:color-mix(in srgb, var(--warn) 35%, transparent);}
+  .stamp.danger{color:var(--danger); background:var(--danger-soft); border-color:color-mix(in srgb, var(--danger) 35%, transparent);}
+
+  .hero-card{background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:22px;
+    font-family:var(--mono); font-size:.78rem; line-height:1.7; color:var(--ink-soft); overflow-x:auto;
+    box-shadow:0 18px 40px -22px rgba(30,20,50,.35);}
+  .hero-card .k{color:var(--accent-strong);}
+  .hero-card .lbl{color:var(--ink); font-family:var(--sans); font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px; display:block;}
+  .hero-card .comment{color:var(--ink-soft); opacity:.8;}
+
+  .sec-head{max-width:62ch; margin-bottom:36px;}
+  .sec-head h2{font-size:clamp(1.5rem,2.6vw,2rem); margin-top:8px;}
+  .sec-head .lede{color:var(--ink-soft); margin-top:10px; font-size:1.02rem;}
+  .alt{background:var(--surface-alt); border-block:1px solid var(--border);}
+
+  .grid-4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  .pain{background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px; display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .pain p{font-size:.94rem; color:var(--ink-soft);}
+  .pain strong{color:var(--ink); font-size:1rem; display:block;}
+
+  .compare{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .compare .card{background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:24px; min-width:0;}
+  .compare .card.on{background:var(--accent-soft); border-color:var(--accent);}
+  .compare .card h3{font-size:1.05rem; margin-bottom:12px;}
+  .compare ul{margin:0; padding-left:18px; color:var(--ink-soft); font-size:.9rem; display:flex; flex-direction:column; gap:8px;}
+  .compare .card.on ul{color:var(--ink);}
+
+  .flow{display:flex; align-items:stretch; gap:0; flex-wrap:wrap;}
+  .flow-step{flex:1 1 160px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px 16px;
+    display:flex; flex-direction:column; gap:6px; min-width:150px;}
+  .flow-step .t{font-weight:600; font-size:.98rem;}
+  .flow-step .d{font-size:.82rem; color:var(--ink-soft); line-height:1.45;}
+  .flow-arrow{display:flex; align-items:center; justify-content:center; flex:0 0 34px; color:var(--ink-soft); font-size:1.1rem;}
+  @media (max-width:820px){ .flow-arrow{transform:rotate(90deg); flex-basis:24px;} }
+
+  .rbac-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:6px;}
+  table.rbac{border-collapse:collapse; width:100%; min-width:720px; background:var(--surface); font-size:.9rem;}
+  table.rbac th, table.rbac td{padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top;}
+  table.rbac thead th{font-family:var(--mono); font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); background:var(--surface-alt);}
+  table.rbac tbody tr:last-child td{border-bottom:none;}
+  table.rbac td.role{font-weight:600;}
+  table.rbac td.role .sub{display:block; font-weight:400; font-size:.78rem; color:var(--ink-soft); font-family:var(--mono);}
+  table.rbac td .d{color:var(--ink-soft); font-size:.86rem;}
+  .mark{font-size:1rem;}
+  .mark.yes{color:var(--ok);} .mark.no{color:var(--danger);} .mark.cond{color:var(--warn);}
+
+  .fronts{display:grid; grid-template-columns:repeat(5,1fr); gap:14px;}
+  .front{background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px; min-width:0;}
+  .front h3{font-size:.98rem; margin-bottom:6px;}
+  .front p{font-size:.86rem; color:var(--ink-soft);}
+
+  .timeline{display:flex; flex-direction:column; border-left:2px solid var(--border); margin-left:8px;}
+  .tl-item{position:relative; padding:0 0 34px 30px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-item::before{content:''; position:absolute; left:-7px; top:4px; width:12px; height:12px; border-radius:50%; background:var(--surface); border:2px solid var(--accent);}
+  .tl-time{font-family:var(--mono); font-size:.76rem; color:var(--ink-soft); display:block; margin-bottom:4px;}
+  .tl-item h3{font-size:1.02rem; margin-bottom:5px;}
+  .tl-item p{color:var(--ink-soft); font-size:.92rem; max-width:62ch;}
+  .tl-item .stamps{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .tl-item .stamp{margin:0;}
+
+  .sec-grid{display:grid; grid-template-columns:1.1fr .9fr; gap:44px; align-items:start;}
+  .sec-grid > *{min-width:0;}
+  .sec-list{display:flex; flex-direction:column; gap:22px; padding:0; margin:0;}
+  .sec-list li{list-style:none; display:flex; gap:14px;}
+  .sec-list .ico{flex:0 0 30px; height:30px; border-radius:50%; background:var(--accent-soft); color:var(--accent-strong);
+    display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:.7rem; font-weight:600;}
+  .sec-list h3{font-size:.98rem; margin-bottom:4px;}
+  .sec-list p{color:var(--ink-soft); font-size:.9rem;}
+  .log-card{background:var(--log-bg); color:var(--log-fg); border-radius:6px; padding:20px 22px; font-family:var(--mono);
+    font-size:.76rem; line-height:1.75; overflow-x:auto;}
+  .log-card .k{color:var(--log-key);} .log-card .s{color:var(--log-str);} .log-card .comment{color:var(--log-dim);}
+
+  .roadmap{display:flex; gap:16px; flex-wrap:wrap;}
+  .road-card{flex:1 1 220px; border:1px dashed var(--border); border-radius:6px; padding:18px; background:var(--surface); min-width:0;}
+  .road-card .tag{font-family:var(--mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft);}
+  .road-card h3{font-size:.98rem; margin-block:6px;}
+  .road-card p{font-size:.86rem; color:var(--ink-soft);}
+  .road-card.active{border-style:solid; border-color:var(--accent); background:var(--accent-soft);}
+  .road-card.active .tag{color:var(--accent-strong);}
+
+  footer{padding-block:56px; border-top:1px solid var(--border);}
+  footer .shell{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:20px;}
+  footer h2{font-size:1.5rem; max-width:20ch;}
+  footer .note{color:var(--ink-soft); font-size:.85rem; max-width:44ch;}
+
+.chat{display:flex; flex-direction:column; gap:12px; max-width:760px;}
+  .bubble{border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--surface); font-size:.95rem; min-width:0;}
+  .bubble.user{background:var(--accent-soft); border-color:var(--accent); align-self:flex-end; max-width:90%;}
+  .bubble .who{font-family:var(--mono); font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:4px;}
+  .calls{background:var(--log-bg); color:var(--log-fg); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:.78rem; line-height:1.7; overflow-x:auto; white-space:pre;}
+  .calls .k{color:var(--log-key);} .calls .s{color:var(--log-str);} .calls .comment{color:var(--log-dim);}
+  .uc-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px;}
+  .uc{background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:18px; min-width:0;}
+  .uc h3{font-size:1rem; margin-bottom:6px;}
+  .uc p{font-size:.88rem; color:var(--ink-soft);}
+  @media (max-width:900px){ .uc-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:560px){ .uc-grid{grid-template-columns:1fr;} .bubble.user{max-width:100%;} }
+  .sugestao-banner{display:flex; gap:14px; align-items:flex-start; background:var(--warn-soft); border:2px dashed var(--warn); border-radius:8px; padding:18px 20px; margin-bottom:28px;}
+  .sugestao-banner .stamp{flex:0 0 auto;}
+  .sugestao-banner p{font-size:.95rem; color:var(--ink);}
+  .sugestao-banner > div{min-width:0;}
+  .sug-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
+  .sug{background:var(--surface); border:1px dashed var(--warn); border-radius:6px; padding:20px; min-width:0; display:flex; flex-direction:column; gap:10px;}
+  .sug h3{font-size:1.02rem;}
+  .sug p{font-size:.9rem; color:var(--ink-soft);}
+  .sug .stamps{display:flex; gap:8px; flex-wrap:wrap; margin-top:auto;}
+  .sug .tag{font-family:var(--mono); font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--warn);}
+  .stamp.sug-tag{color:var(--warn); background:var(--warn-soft); border-color:var(--warn);}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  @media (max-width:760px){ .sug-grid{grid-template-columns:1fr;} .sugestao-banner{flex-direction:column;} }
+  @media (max-width:1000px){ .fronts{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:900px){ .hero-grid,.sec-grid,.compare{grid-template-columns:1fr;} .grid-4{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .grid-4,.fronts{grid-template-columns:1fr;} .topbar nav{display:none;} }
+</style>
+
+<div class="topbar">
+  <div class="shell">
+    <div class="wordmark">BRM<span>.</span> Framework</div>
+    <nav>
+      <a href="#problema">O problema</a>
+      <a href="#solucao">A solução</a>
+      <a href="#norma">Normas do CFP</a>
+      <a href="#perfis">Perfis de acesso</a>
+      <a href="#dia">Um dia na clínica</a>
+      <a href="#conversa">Conversa natural</a>
+      <a href="#acesso">Acesso por nota</a>
+      <a href="#simulador">Simulador</a>
+      <a href="#agenda">Agenda no chat</a>
+      <a href="#carteira">Carteira de pacientes</a>
+      <a href="#escola">Sugestão: escola</a>
+      <a href="#piloto">Piloto</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero shell">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow">Apresentação para clínicas de psicologia</span>
+      <h1>Inteligência artificial que ajuda a clínica sem abrir mão do sigilo.</h1>
+      <p class="lede">O BRM configura o Claude para o jeito da sua clínica: modelos de documento, tom de comunicação e as regras do CFP. Cada pedido passa por perfis de acesso, ações de risco esperam a aprovação de um psicólogo, e tudo fica registrado.</p>
+      <div class="hero-badges">
+        <span class="stamp ok">Allow</span>
+        <span class="stamp warn">Require&nbsp;approval</span>
+        <span class="stamp danger">Deny</span>
+      </div>
+    </div>
+    <div class="hero-card">
+      <span class="lbl">Evento de auditoria · exemplo de estrutura</span>
+      <div><span class="comment">// registrado a cada chamada, sem exceção</span></div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;<span class="k">"actor"</span>: "claude",</div>
+      <div>&nbsp;&nbsp;<span class="k">"action"</span>: "entregar_prontuario_responsavel",</div>
+      <div>&nbsp;&nbsp;<span class="k">"decision"</span>: "PENDING_APPROVAL",</div>
+      <div>&nbsp;&nbsp;<span class="k">"rule_id"</span>: "prontuario-menor-exige-validacao-responsavel",</div>
+      <div>&nbsp;&nbsp;<span class="k">"payload_digest"</span>: "4b8e17…",</div>
+      <div>&nbsp;&nbsp;<span class="k">"occurred_at"</span>: "2026-10-07T14:32:07Z"</div>
+      <div>}</div>
+    </div>
+  </div>
+</header>
+
+<section id="problema" class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">O problema</span>
+    <h2>Usar IA numa clínica sem configuração é arriscado</h2>
+    <p class="lede">Quatro situações que aparecem quando alguém copia dados de pacientes para uma IA genérica.</p>
+  </div>
+  <div class="grid-4">
+    <div class="pain"><strong>Documento com o conteúdo errado</strong><p>Uma declaração de comparecimento não pode registrar sintomas. A IA genérica não sabe disso e escreve o que foi pedido.</p></div>
+    <div class="pain"><strong>Dado de paciente espalhado</strong><p>Informação clínica no WhatsApp, em planilhas, em papel e agora também colada em um chat de IA.</p></div>
+    <div class="pain"><strong>Acesso sem controle</strong><p>Recepção, estagiário e psicólogo enxergam o mesmo e executam as mesmas ações.</p></div>
+    <div class="pain"><strong>Nenhuma trilha</strong><p>Quando um prontuário é consultado ou um documento sai, ninguém consegue reconstruir quem pediu e quem autorizou.</p></div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="eyebrow">Por que não basta assinar uma IA</span>
+      <h2>A IA genérica é um estagiário brilhante no primeiro dia</h2>
+      <p class="lede">Ela escreve bem, mas ainda não conhece a abordagem da clínica, o tom com cada público nem as regras do CFP. A configuração é o que muda.</p>
+    </div>
+    <div class="compare">
+      <div class="card">
+        <h3>Sem configuração</h3>
+        <ul>
+          <li>Respostas genéricas, fora do padrão da clínica.</li>
+          <li>Qualquer pessoa pede qualquer coisa.</li>
+          <li>Nenhum registro de quem pediu o quê.</li>
+        </ul>
+      </div>
+      <div class="card on">
+        <h3>Com o BRM</h3>
+        <ul>
+          <li>Modelos, tom e abordagem da clínica como ponto de partida.</li>
+          <li>Perfis: recepção, estagiário, psicólogo e responsável técnico.</li>
+          <li>Regras do CFP aplicadas antes de cada ação e trilha de auditoria.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="solucao" class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">A solução</span>
+    <h2>Automação com guardrails, não automação cega</h2>
+    <p class="lede">Cinco peças, nessa ordem, para toda ação que o sistema executa.</p>
+  </div>
+  <div class="flow">
+    <div class="flow-step"><div class="t">Vault</div><div class="d">O conhecimento da clínica: modelos de documento, protocolos e material de apoio. No Obsidian ou no Notion.</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="t">Regras</div><div class="d">Condições em JSONLogic, nunca código solto. Definem o que é permitido, negado ou exige aprovação.</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="t">Skills</div><div class="d">As integrações: emitir declaração, gerar rascunho de relatório, enviar lembrete, cobrar mensalidade.</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="t">Perfis (RBAC)</div><div class="d">Cada ação sabe quem a pede: recepção, estagiário, psicólogo ou responsável técnico.</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="t">Auditoria</div><div class="d">Todo evento vira um registro encadeado por hash. Nada se apaga, nada se reescreve.</div></div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="eyebrow">Onde a IA ajuda</span>
+      <h2>Cinco frentes comuns em clínicas com várias unidades</h2>
+      <p class="lede">Frentes típicas de uma clínica com atendimento por faixa etária, supervisão e ensino. Cada clínica prioriza as suas.</p>
+    </div>
+    <div class="fronts">
+      <div class="front"><h3>Clínica</h3><p>Rascunho de evolução e relatório, psicoeducação e tarefas de casa por faixa etária.</p></div>
+      <div class="front"><h3>Supervisão</h3><p>Roteiros de caso e feedback para estagiários, com dados anonimizados.</p></div>
+      <div class="front"><h3>Ensino</h3><p>Planos de aula, material de curso e palestras no padrão da clínica.</p></div>
+      <div class="front"><h3>Comunicação</h3><p>Calendário editorial e legendas no tom da clínica, dentro das regras de publicidade do CFP.</p></div>
+      <div class="front"><h3>Atendimento</h3><p>Respostas padrão no WhatsApp, triagem e lembretes de sessão sem dado clínico.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="norma" class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">Normas do CFP</span>
+    <h2>A norma vira configuração</h2>
+    <p class="lede">O que o Conselho já exige é transformado em regra que a IA não consegue contornar.</p>
+  </div>
+  <div class="rbac-wrap">
+    <table class="rbac">
+      <thead>
+        <tr><th>Documento</th><th>Norma</th><th>O que a norma pede</th><th>Regra no BRM</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="role">Prontuário<span class="sub">registro documental</span></td>
+          <td class="d">Res. CFP 001/2009</td>
+          <td class="d">Sigiloso, guarda mínima de 5 anos, acesso garantido ao paciente ou responsável legal.</td>
+          <td>Só quem tem vínculo com o paciente abre o prontuário.</td>
+        </tr>
+        <tr>
+          <td class="role">Declaração<span class="sub">comparecimento</span></td>
+          <td class="d">Res. CFP 06/2019, art. 9º</td>
+          <td class="d">Informa dia, horário e duração. Nunca sintomas ou estado psicológico.</td>
+          <td>O pedido que inclui sintomas é bloqueado.</td>
+        </tr>
+        <tr>
+          <td class="role">Relatório<span class="sub">psicológico</span></td>
+          <td class="d">Res. CFP 06/2019, art. 18</td>
+          <td class="d">Baseado no registro documental, com entrevista devolutiva antes da entrega.</td>
+          <td>Sai como rascunho e espera o psicólogo; a recepção não emite.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="perfis" class="alt">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="eyebrow">Perfis de acesso</span>
+      <h2>Quatro pessoas, um único motor de regras</h2>
+      <p class="lede">Exemplo da clínica fictícia usada nesta demonstração. Os nomes e os pacientes são inventados.</p>
+    </div>
+    <div class="rbac-wrap">
+      <table class="rbac">
+        <thead>
+          <tr>
+            <th>Perfil</th>
+            <th>Prontuário do próprio paciente</th>
+            <th>Prontuário de outro paciente</th>
+            <th>Declaração de comparecimento</th>
+            <th>Relatório psicológico</th>
+            <th>Cobrança de mensalidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="role">Camila Souza<span class="sub">viewer · recepção</span></td>
+            <td><span class="mark no">✕</span></td>
+            <td><span class="mark no">✕</span></td>
+            <td><span class="mark yes">✓ sem sintomas</span></td>
+            <td><span class="mark no">✕</span></td>
+            <td><span class="mark cond">◐ requer aprovação</span></td>
+          </tr>
+          <tr>
+            <td class="role">Lucas Ribeiro e Wagner Massaranduba<span class="sub">admin · psicólogos</span></td>
+            <td><span class="mark yes">✓</span></td>
+            <td><span class="mark no">✕</span></td>
+            <td><span class="mark yes">✓ sem sintomas</span></td>
+            <td><span class="mark cond">◐ rascunho + devolutiva</span></td>
+            <td><span class="mark yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="role">Dra. Helena Prado<span class="sub">super_admin · responsável técnica</span></td>
+            <td><span class="mark yes">✓ auditado</span></td>
+            <td><span class="mark yes">✓ auditado</span></td>
+            <td><span class="mark yes">✓ sem sintomas</span></td>
+            <td><span class="mark cond">◐ rascunho + devolutiva</span></td>
+            <td><span class="mark yes">✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="dia" class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">Na prática</span>
+    <h2>Um dia na clínica com o BRM</h2>
+    <p class="lede">Seis situações do dia a dia, as mesmas que rodam na demonstração ao vivo.</p>
+  </div>
+  <div class="timeline">
+    <div class="tl-item">
+      <span class="tl-time">08:30</span>
+      <h3>O psicólogo consulta o prontuário do próprio paciente</h3>
+      <p>Lucas pede ao Claude o resumo das últimas sessões e a tarefa de casa pendente. O sistema confirma o vínculo e entrega o contexto do prontuário. O registro documental, com as hipóteses clínicas, fica em outra nota.</p>
+      <div class="stamps"><span class="stamp ok">Allow</span></div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-time">09:10</span>
+      <h3>Quem não tem vínculo não abre o prontuário</h3>
+      <p>A recepção tenta abrir o prontuário. Depois, outro psicólogo da clínica tenta o mesmo, sem ser a responsável pelo paciente. As duas tentativas ficam registradas.</p>
+      <div class="stamps"><span class="stamp danger">Deny</span></div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-time">10:00</span>
+      <h3>Declaração de comparecimento: só dia, hora e duração</h3>
+      <p>A recepção emite a declaração padrão. Quando alguém pede para constar "ansiedade", a regra bloqueia: declaração não registra sintomas (Res. CFP 06/2019, art. 9º).</p>
+      <div class="stamps"><span class="stamp ok">Allow</span><span class="stamp danger">Deny com sintomas</span></div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-time">11:30</span>
+      <h3>Relatório para a escola: rascunho e entrevista devolutiva</h3>
+      <p>A recepção não emite relatório. O psicólogo responsável pede o rascunho, e ele só segue depois da revisão dela e da entrevista devolutiva com a família.</p>
+      <div class="stamps"><span class="stamp danger">Deny recepção</span><span class="stamp warn">Require approval</span></div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-time">14:00</span>
+      <h3>O pai pede o prontuário do filho adolescente</h3>
+      <p>Paciente menor de idade: o sistema pede a conferência do responsável legal e a revisão do que será entregue. Quando é um adulto pedindo o próprio prontuário, o acesso integral é garantido.</p>
+      <div class="stamps"><span class="stamp warn">Require approval</span><span class="stamp ok">Allow adulto</span></div>
+    </div>
+    <div class="tl-item">
+      <span class="tl-time">16:45</span>
+      <h3>Dado sensível no WhatsApp e na cobrança</h3>
+      <p>Um lembrete de sessão sai com um CID no texto: para a recepção, ele é redigido como <span class="mono">[REDACTED:CID]</span>. Na cobrança, o CPF digitado no texto é bloqueado até para a responsável técnica, e a cobrança da recepção espera a aprovação da gestão.</p>
+      <div class="stamps"><span class="stamp ok">Allow com máscara</span><span class="stamp warn">Require approval</span><span class="stamp danger">Deny (DLP)</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="simulador" class="alt">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="eyebrow">Governança na tela</span>
+      <h2>Ver o sistema como cada pessoa o vê</h2>
+      <p class="lede">No painel de administração, a responsável técnica escolhe um perfil, executa um cenário e vê a decisão na hora: o que foi permitido, negado ou enviado para aprovação, qual regra decidiu e qual é o próximo passo. Um clique em outro perfil repete o mesmo pedido.</p>
+    </div>
+    <div class="compare">
+      <div class="card">
+        <h3>Simulador</h3>
+        <ul>
+          <li>Perfis da clínica em cartões, com uma faixa fixa "simulando como Camila · recepção".</li>
+          <li>Cenários prontos: abrir prontuário, declaração com sintomas, relatório para a escola, cobrança com CPF.</li>
+          <li>Resultado com a regra, a mensagem e os fatos que o motor calculou, como o vínculo com o paciente.</li>
+          <li>O que cada perfil enxerga no vault: nota completa, só ficha ou nada.</li>
+        </ul>
+      </div>
+      <div class="card on">
+        <h3>Matriz de governança</h3>
+        <ul>
+          <li>Cenários nas linhas e perfis nas colunas, com a decisão de cada célula.</li>
+          <li>Calculada na hora a partir das regras e do cadastro, sem enviar nada.</li>
+          <li>Mostra, em uma tela, quem pode o quê.</li>
+          <li>Tudo o que se simula fica registrado na auditoria, com quem simulou e como quem.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:16px; color:var(--ink-soft); max-width:70ch;">Nada é enviado de verdade durante a simulação. Só a responsável técnica acessa o painel, e o recurso pode ser desligado por cliente.</p>
+  </div>
+</section>
+
+<section id="agenda" class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">BRM Agenda · em demonstração</span>
+    <h2>Agendar uma sessão conversando</h2>
+    <p class="lede">O Claude conversa com o BRM Agenda e marca a sessão no horário certo do profissional, sem o recepcionista abrir a agenda. O tenant de demonstração tem quatro profissionais (Wagner Massaranduba, Ana Flávia Weis, Lucas Ribeiro e Renata Alves) e quatro serviços, todos fictícios.</p>
+  </div>
+  <div class="chat">
+    <div class="bubble user"><span class="who">Recepção</span>Quais horários o Wagner tem na segunda para uma sessão individual?</div>
+    <div class="calls"><span class="comment">// o Claude consulta a agenda do profissional</span>
+verificar_disponibilidade(<span class="k">date</span>=<span class="s">"2026-10-12"</span>, <span class="k">staff</span>=<span class="s">"Wagner"</span>, <span class="k">service</span>=<span class="s">"Sessão individual (50 min)"</span>)
+<span class="s">9 horários livres</span></div>
+    <div class="bubble user"><span class="who">Recepção</span>Agende a Maria Souza às 14h.</div>
+    <div class="calls">criar_agendamento(<span class="k">scheduled_at</span>=<span class="s">"2026-10-12T14:00:00"</span>, <span class="k">staff</span>=<span class="s">"Wagner"</span>)
+<span class="s">✓ agendado</span>  <span class="comment">// horário local, gravado em UTC, origem: mcp</span>
+<span class="comment">// um segundo pedido no mesmo horário é recusado: o profissional já tem uma sessão</span></div>
+  </div>
+  <div class="compare" style="margin-top:20px;">
+    <div class="card on">
+      <h3>O que já protege o agendamento</h3>
+      <ul>
+        <li>Profissional, serviço e horários precisam ser do estabelecimento.</li>
+        <li>Horário sobreposto para o mesmo profissional é recusado.</li>
+        <li>A disponibilidade respeita o fuso do estabelecimento.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>O que vem a seguir</h3>
+      <ul>
+        <li>Skills do BRM que chamem a Agenda, para o agendamento passar por perfis, aprovação e auditoria.</li>
+        <li>O mesmo fluxo no WhatsApp e no web chat do Instituto.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="lede" style="margin-top:16px; color:var(--ink-soft); max-width:70ch;">Ilustração do fluxo. O agendamento foi verificado de ponta a ponta no ambiente de homologação com dados fictícios. Hoje ele não passa pelas regras e pela auditoria do BRM; essa integração é o próximo passo.</p>
+</section>
+
+<section id="conversa" class="alt">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="eyebrow">Conversa natural</span>
+      <h2>Pedir pelo chat, sem falar em comandos</h2>
+      <p class="lede">O psicólogo escreve como falaria com um colega. O Claude entende o pedido, acha o paciente no vault e chama a ação certa. O motor decide quem pode, usando dados do próprio cadastro, nunca o que o chat afirma. Mesmo a busca pelo paciente respeita as gavetas.</p>
+    </div>
+    <div class="chat">
+      <div class="bubble user"><span class="who">Wagner Massaranduba · psicólogo</span>Vou atender a paciente com autocrítica e procrastinação. Me ajuda a me preparar?</div>
+      <div class="calls"><span class="comment">// o Claude acha o caso no vault e chama a ação</span>
+vault_search(<span class="s">"autocrítica procrastinação"</span>)  →  PAC-005
+consultar_prontuario(<span class="k">paciente_id</span>=<span class="s">"PAC-005"</span>)
+<span class="comment">// o motor confere o vínculo no cadastro: Wagner é o responsável</span>  <span class="s">✓ allowed</span></div>
+      <div class="bubble user"><span class="who">Camila · recepção</span>Me mostra o prontuário do PAC-001.</div>
+      <div class="calls">consultar_prontuario(<span class="k">paciente_id</span>=<span class="s">"PAC-001"</span>)
+<span class="k">✕ denied</span>  Sem vínculo com este paciente.
+<span class="k">proximo_passo</span>: Peça ao psicólogo responsável pelo paciente ou à responsável técnica.</div>
+      <div class="bubble"><span class="who">O que o Claude diz à Camila</span>Ele repassa o motivo e o próximo passo à recepção, em linguagem simples, e não tenta contornar a regra.</div>
+    </div>
+    <p class="lede" style="margin-top:20px; max-width:62ch; color:var(--ink-soft);">Ilustração do fluxo. A demonstração ao vivo roda no terminal; as ações já estão expostas ao Claude como uma ferramenta por tarefa, com parâmetros e exemplos de pedido. Ainda não foi testada em um cliente de chat real.</p>
+  </div>
+</section>
+
+<section id="acesso" class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">Controle de acesso por nota</span>
+    <h2>O prontuário tem três gavetas</h2>
+    <p class="lede">O psicólogo responsável abre as suas. A recepção enxerga só a etiqueta, ou seja, quem é o paciente e com quem está. Para os demais, a gaveta nem existe. A regra vale também para o Claude, porque ela mora no sistema, não na boa vontade da IA.</p>
+  </div>
+  <div class="rbac-wrap">
+    <table class="rbac">
+      <thead><tr><th>Quem pergunta</th><th>Ficha (ID, unidade, psicólogo)</th><th>Prontuário e resumo</th><th>Registro documental</th></tr></thead>
+      <tbody>
+        <tr><td class="role">Recepção<span class="sub">viewer</span></td><td><span class="mark yes">✓</span></td><td><span class="mark no">✕</span></td><td><span class="mark no">✕ invisível</span></td></tr>
+        <tr><td class="role">Outro psicólogo<span class="sub">admin sem vínculo</span></td><td><span class="mark yes">✓</span></td><td><span class="mark no">✕</span></td><td><span class="mark no">✕ invisível</span></td></tr>
+        <tr><td class="role">Psicólogo responsável<span class="sub">admin com vínculo</span></td><td><span class="mark yes">✓</span></td><td><span class="mark yes">✓</span></td><td><span class="mark yes">✓</span></td></tr>
+        <tr><td class="role">Responsável técnica<span class="sub">super_admin</span></td><td><span class="mark yes">✓</span></td><td><span class="mark yes">✓ auditado</span></td><td><span class="mark yes">✓ auditado</span></td></tr>
+        <tr><td class="role">Aluno da pós<span class="sub">viewer</span></td><td><span class="mark no">✕</span></td><td><span class="mark no">✕</span></td><td><span class="mark no">✕</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="lede" style="margin-top:16px; color:var(--ink-soft); max-width:70ch;">Exemplo com o PAC-005, fictício. O aluno lê as aulas pela própria skill, nunca pelo vault direto. Criar notas fica restrito a psicólogos e à responsável técnica. Cada busca registra quantas notas foram devolvidas e quantas foram ocultadas, sem guardar conteúdo.</p>
+</section>
+
+<section id="carteira" class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">Carteira de exemplo</span>
+    <h2>Cinco pacientes fictícios, com histórico no vault</h2>
+    <p class="lede">Idades e abordagens diferentes, cada um com prontuário, resumo e, em alguns casos, registro documental. Os casos de uso abaixo partem desses dados.</p>
+  </div>
+  <div class="rbac-wrap">
+    <table class="rbac">
+      <thead><tr><th>ID</th><th>Idade</th><th>Unidade</th><th>Abordagem</th><th>Sessões</th><th>Queixa</th></tr></thead>
+      <tbody>
+        <tr><td class="role">PAC-001</td><td>34</td><td>Adultos</td><td>TCC</td><td>7 (1 falta)</td><td class="d">Ansiedade de avaliação no trabalho</td></tr>
+        <tr><td class="role">PAC-002</td><td>15</td><td>Adolescentes</td><td>TCC</td><td>6</td><td class="d">Concentração e apresentações em sala; a escola pediu relatório</td></tr>
+        <tr><td class="role">PAC-003</td><td>8</td><td>Infantil</td><td>TCC infantil</td><td>5</td><td class="d">Medo de dormir sozinha</td></tr>
+        <tr><td class="role">PAC-004</td><td>68</td><td>Terceira idade</td><td>TCC com ativação comportamental</td><td>6</td><td class="d">Luto e isolamento; encaminhamento médico para o sono</td></tr>
+        <tr><td class="role">PAC-005</td><td>22</td><td>Adultos</td><td>Terapia do Esquema</td><td>5 (2 faltas)</td><td class="d">Procrastinação e autocrítica</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="uc-grid">
+    <div class="uc"><h3>Preparação da sessão</h3><p>O psicólogo pede o resumo e os pontos de atenção do caso. Outro psicólogo da clínica, sem vínculo, não abre.</p></div>
+    <div class="uc"><h3>Alerta de faltas</h3><p>A carteira mostra quem acumulou faltas. A recepção envia um convite neutro para remarcar, sem citar tratamento.</p></div>
+    <div class="uc"><h3>Relatório de encaminhamento</h3><p>Para o PAC-004, o rascunho segue os 5 itens da Res. CFP 06/2019 e fica aguardando revisão e devolutiva. As hipóteses do registro documental não entram.</p></div>
+    <div class="uc"><h3>Painel da responsável técnica</h3><p>Sessões e faltas por psicólogo, sem identificar pacientes. A recepção não acessa.</p></div>
+    <div class="uc"><h3>Mensalidades em atraso</h3><p>A carteira indica quem está em atraso. A recepção prepara a cobrança e a gestão aprova antes do envio.</p></div>
+    <div class="uc"><h3>Preparar caso para supervisão</h3><p>O resumo, sem identificação, vira insumo da supervisão da Clínica Escola.</p></div>
+  </div>
+</section>
+
+<section id="escola" class="shell">
+  <div class="sugestao-banner">
+    <span class="stamp sug-tag">Sugestão</span>
+    <div>
+      <p><strong>Ideia para validar com o cliente, não é funcionalidade fechada.</strong> Muitas clínicas também ensinam: pós-graduação, supervisão de estagiários, cursos e palestras. As cenas abaixo mostram como o mesmo motor serve a essa frente. Nascem de uma leitura da página pública de pós-graduação do cliente e rodam hoje com dados fictícios.</p>
+    </div>
+  </div>
+  <div class="sec-head">
+    <span class="eyebrow">Sugestão · a clínica como escola</span>
+    <h2>Cinco cenas para a frente de ensino</h2>
+    <p class="lede">Supervisão clínica, aulas gravadas, frequência, interessados no WhatsApp e divulgação de turma.</p>
+  </div>
+  <div class="sug-grid">
+    <div class="sug">
+      <span class="tag">Sugestão 1 · a mais forte</span>
+      <h3>Caso clínico do aluno na supervisão</h3>
+      <p>O aluno cola o caso de um paciente real. O DLP barra CPF e telefone antes de sair; o caso anonimizado segue para o supervisor, que revisa antes de ir para o grupo. Nome próprio solto ainda exige uma etapa de reconhecimento de nomes, que está no roadmap.</p>
+      <div class="stamps"><span class="stamp danger">Deny (DLP)</span><span class="stamp ok">Allow anonimizado</span><span class="stamp warn">Require approval</span></div>
+    </div>
+    <div class="sug">
+      <span class="tag">Sugestão 2</span>
+      <h3>Perguntas ao conteúdo gravado das aulas</h3>
+      <p>As transcrições ficam no vault, e o aluno pergunta "o que é o modo Criança Vulnerável?". A resposta vem dos trechos da aula, com a fonte. Só para matrícula ativa.</p>
+      <div class="stamps"><span class="stamp danger">Deny matrícula inativa</span><span class="stamp ok">Allow</span></div>
+    </div>
+    <div class="sug">
+      <span class="tag">Sugestão 3</span>
+      <h3>Declaração de horas e frequência</h3>
+      <p>A secretaria emite a declaração sem incomodar ninguém, desde que a frequência atinja o mínimo do regimento. O percentual usado na demo (75%) é ilustrativo.</p>
+      <div class="stamps"><span class="stamp danger">Deny abaixo do mínimo</span><span class="stamp ok">Allow</span></div>
+    </div>
+    <div class="sug">
+      <span class="tag">Sugestão 4</span>
+      <h3>Interessado chega pelo WhatsApp</h3>
+      <p>"Quem pode participar? Como são os encontros?" é respondido a partir do FAQ do vault. Valor, desconto e vaga ficam sempre com uma pessoa da secretaria.</p>
+      <div class="stamps"><span class="stamp ok">Allow FAQ</span><span class="stamp warn">Require approval</span></div>
+    </div>
+    <div class="sug">
+      <span class="tag">Sugestão 5</span>
+      <h3>Divulgação de turma</h3>
+      <p>A regra de exemplo bloqueia texto que promete resultado ou cura e libera o que descreve conteúdo e formato. A regra precisa ser validada com o CRP.</p>
+      <div class="stamps"><span class="stamp danger">Deny promessa</span><span class="stamp ok">Allow</span></div>
+    </div>
+    <div class="sug">
+      <span class="tag">Sugestão 6 · só conversa</span>
+      <h3>"IA com segurança na prática clínica"</h3>
+      <p>Um módulo para os alunos aprenderem a usar IA respeitando sigilo e CFP, em parceria com o Instituto. É uma ideia comercial a conversar, ainda sem demo.</p>
+      <div class="stamps"><span class="stamp sug-tag">Ideia</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="seguranca" class="alt">
+  <div class="shell sec-grid">
+    <div>
+      <div class="sec-head">
+        <span class="eyebrow">Segurança e sigilo</span>
+        <h2>Pensado para o padrão de risco de uma clínica</h2>
+      </div>
+      <ul class="sec-list">
+        <li><span class="ico">DLP</span><div><h3>Dado sensível nunca sai cru</h3><p>CPF é bloqueado por padrão. CID e outros dados clínicos são redigidos conforme o perfil de quem pergunta.</p></div></li>
+        <li><span class="ico">URL</span><div><h3>Lista de domínios explícita</h3><p>Toda integração externa, como e-mail, WhatsApp ou o sistema da clínica, só fala com os domínios autorizados.</p></div></li>
+        <li><span class="ico">#</span><div><h3>Auditoria encadeada por hash</h3><p>Cada decisão gera um evento imutável. Editar o passado quebraria a cadeia, e isso é detectável.</p></div></li>
+        <li><span class="ico">⏸</span><div><h3>Aprovação humana quando o risco pedir</h3><p>As regras de aprovação são configuração da clínica, não sugestão da IA.</p></div></li>
+      </ul>
+    </div>
+    <div class="log-card">
+      <div class="comment">// exemplo: lembrete de sessão enviado pela recepção</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;<span class="k">"actor"</span>: <span class="s">"claude"</span>,</div>
+      <div>&nbsp;&nbsp;<span class="k">"action"</span>: <span class="s">"enviar_lembrete_sessao"</span>,</div>
+      <div>&nbsp;&nbsp;<span class="k">"decision"</span>: <span class="s">"ALLOWED"</span>,</div>
+      <div>&nbsp;&nbsp;<span class="k">"details"</span>: {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"dlp_matches"</span>: { <span class="s">"CID"</span>: [<span class="s">"F41.1"</span>] }</div>
+      <div>&nbsp;&nbsp;},</div>
+      <div>&nbsp;&nbsp;<span class="k">"payload_digest"</span>: <span class="s">"7c41e0…"</span></div>
+      <div>}</div>
+    </div>
+  </div>
+</section>
+
+<section class="shell">
+  <div class="sec-head">
+    <span class="eyebrow">Onde mora o conhecimento</span>
+    <h2>O motor se adapta à ferramenta que a clínica já usa</h2>
+    <p class="lede">Modelos, protocolos e material ficam no "segundo cérebro" da clínica. Na demonstração, o vault também guarda prontuários fictícios; em uso real, a fonte do prontuário é o sistema da clínica.</p>
+  </div>
+  <div class="compare">
+    <div class="card">
+      <h3>Obsidian</h3>
+      <ul>
+        <li>Arquivos markdown no computador da clínica, sem sair da máquina.</li>
+        <li>Funciona offline.</li>
+        <li>Ponto de partida natural quando há dado de saúde envolvido.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Notion</h3>
+      <ul>
+        <li>Na nuvem, acessível pela equipe de todas as unidades.</li>
+        <li>Mesma estrutura, mesma busca, mesmas regras.</li>
+        <li>Para conteúdo sem dado de paciente, ou depois de avaliar a privacidade do plano.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="piloto" class="alt">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="eyebrow">Próximos passos</span>
+      <h2>Um passo de cada vez</h2>
+      <p class="lede">Começamos pelo que não toca em prontuário identificado e ampliamos conforme a confiança cresce.</p>
+    </div>
+    <div class="roadmap">
+      <div class="road-card active"><span class="tag">Pronto para demonstrar</span><h3>Casos de uso clínicos</h3><p>Prontuário por vínculo, declaração, relatório com devolutiva, menores de idade, WhatsApp e cobrança, com dados fictícios.</p></div>
+      <div class="road-card"><span class="tag">Piloto · 30 dias</span><h3>IA configurada na prática</h3><p>2 psicólogos, 1 unidade, 3 fluxos: declaração, rascunho de relatório e comunicação. Dados de pacientes só anonimizados. Medimos horas por relatório e retrabalho.</p></div>
+      <div class="road-card"><span class="tag">Depois</span><h3>Prontuário com governança</h3><p>Integração com o sistema de agenda e prontuário da clínica, com perfis e auditoria sobre dado identificado.</p></div>
+      <div class="road-card"><span class="tag">Quando fizer sentido</span><h3>BRM Agenda + WhatsApp</h3><p>Chatbot de triagem, remarcação e lembretes ligado à agenda da clínica.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="shell">
+    <h2>Uma IA em que a clínica consegue confiar.</h2>
+    <p class="note">Demonstração construída com dados fictícios (clínica, psicólogos e pacientes inventados). As regras refletem as Resoluções CFP 001/2009 e 06/2019; a interpretação final deve ser validada com o CRP e a assessoria jurídica da clínica.</p>
+  </div>
+</footer>

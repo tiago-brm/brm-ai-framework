@@ -5,7 +5,8 @@ MCP_USER_EMAIL, e não muda durante a conversa. Este script cria os perfis da
 demo no banco do cliente (idempotente) e imprime o trecho de configuração do
 Claude Desktop para UM perfil.
 
-Uso: uv run python scripts/preparar_demo_chat.py [wagner|camila|helena|lucas|paulo|beatriz|rodrigo]
+Uso: uv run python scripts/preparar_demo_chat.py [perfil]
+Perfis: wagner, ana, camila, helena, lucas, paulo, beatriz, rodrigo (padrão: wagner)
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from mcp_engine.core.user_store import SQLUserStore  # noqa: E402
 CLIENT_ID = "instituto-afw"
 PERFIS = {
     "wagner": ("wagner@clinica-demo.com.br", Role.ADMIN, "psicólogo responsável"),
+    "ana": ("ana.weis@clinica-demo.com.br", Role.ADMIN, "psicóloga e diretora"),
     "lucas": ("lucas.ribeiro@clinica-demo.com.br", Role.ADMIN, "psicólogo"),
     "paulo": ("paulo.tavares@clinica-demo.com.br", Role.ADMIN, "psicólogo"),
     "camila": ("camila.souza@clinica-demo.com.br", Role.VIEWER, "recepção"),

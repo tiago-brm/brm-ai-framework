@@ -1,0 +1,496 @@
+<title>Roteiro de Demo para Clínicas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* Layout: guia de uma coluna com cenas em cartões, mesma estrutura do roteiro para advogados, paleta ameixa */
+  :root{
+    --ink:#17141f; --ink-soft:#514b60; --paper:#eceaf1; --surface:#ffffff; --surface-alt:#f4f2f8;
+    --border:#d2cedd; --accent:#5b3f8c; --accent-strong:#3b2766; --accent-soft:#e6def3;
+    --ok:#2f6b4f; --ok-soft:#dcece3; --warn:#93611c; --warn-soft:#f3e6d0; --danger:#a23b32; --danger-soft:#f3dcd9;
+    --term-bg:#17141f; --term-fg:#d3cde4; --term-cmd:#b9a2ec; --term-ok:#8fd6a6; --term-warn:#e3c072; --term-deny:#ec9686; --term-dim:#7d7595;
+    --serif:'IBM Plex Serif',Georgia,serif;
+    --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#ebe8f3; --ink-soft:#aca6bf; --paper:#0f0d16; --surface:#181521; --surface-alt:#1f1b2b;
+      --border:#332e44; --accent:#b9a2ec; --accent-strong:#d6c8f5; --accent-soft:#2b2243;
+      --ok:#74c39a; --ok-soft:#1b3327; --warn:#dcab5c; --warn-soft:#3a2c14; --danger:#e6897c; --danger-soft:#3a211e;
+      --term-bg:#09080e;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#ebe8f3; --ink-soft:#aca6bf; --paper:#0f0d16; --surface:#181521; --surface-alt:#1f1b2b;
+    --border:#332e44; --accent:#b9a2ec; --accent-strong:#d6c8f5; --accent-soft:#2b2243;
+    --ok:#74c39a; --ok-soft:#1b3327; --warn:#dcab5c; --warn-soft:#3a2c14; --danger:#e6897c; --danger-soft:#3a211e;
+    --term-bg:#09080e;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.55;}
+  h1,h2,h3{font-family:var(--serif); text-wrap:balance; margin:0; font-weight:600; color:var(--ink);}
+  p{margin:0;}
+  .mono,code{font-family:var(--mono);}
+  .shell{max-width:880px; margin:0 auto; padding-inline:24px;}
+  a{color:var(--accent);}
+
+  .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:30; background:color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--border);}
+  .topbar-inner{max-width:880px; margin:0 auto; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px;}
+  .wordmark{font-family:var(--serif); font-weight:700; font-size:.98rem;}
+  .wordmark span{color:var(--accent);}
+  .quicknav{display:flex; gap:4px; overflow-x:auto; scrollbar-width:none;}
+  .quicknav::-webkit-scrollbar{display:none;}
+  .quicknav a{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft); text-decoration:none; white-space:nowrap; padding:5px 9px; border-radius:4px; border:1px solid transparent;}
+  .quicknav a:hover{border-color:var(--border); color:var(--ink);}
+
+  header.hero{padding-block:40px 8px;}
+  .eyebrow{font-family:var(--mono); font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
+  header.hero h1{font-size:clamp(1.6rem,3vw,2.1rem); margin-block:10px 12px;}
+  header.hero p{color:var(--ink-soft); max-width:60ch; font-size:1rem;}
+
+  section{padding-block:34px; border-top:1px solid var(--border);}
+  section > .eyebrow{font-size:.7rem; letter-spacing:.1em; display:block; margin-bottom:6px;}
+  section h2{font-size:1.4rem; margin-bottom:16px;}
+
+  .checklist{display:flex; flex-direction:column; gap:10px; list-style:none; padding:0; margin:0;}
+  .checklist li{display:flex; gap:10px; align-items:flex-start; font-size:.95rem; min-width:0;}
+  .checklist li::before{content:'☐'; color:var(--accent); font-size:1.05rem; line-height:1.3; flex:0 0 auto;}
+  .checklist li > span{min-width:0; overflow-wrap:anywhere;}
+  code{background:var(--surface-alt); border:1px solid var(--border); padding:1px 6px; border-radius:3px; font-size:.85em; overflow-wrap:anywhere;}
+
+  .term{background:var(--term-bg); color:var(--term-fg); border-radius:6px; padding:16px 18px; font-family:var(--mono); font-size:.8rem; line-height:1.7; overflow-x:auto; margin-block:14px; white-space:pre;}
+  .term .cmd{color:var(--term-cmd);} .term .ok{color:var(--term-ok);} .term .warn{color:var(--term-warn);} .term .deny{color:var(--term-deny);} .term .dim{color:var(--term-dim);}
+
+  .scene{border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:22px 24px; margin-block:18px;}
+  .scene-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:6px;}
+  .scene-head h3{font-size:1.1rem;}
+  .scene-num{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.08em;}
+  .say{background:var(--accent-soft); border-left:3px solid var(--accent); border-radius:0 6px 6px 0; padding:12px 14px; font-size:.92rem; margin-block:12px; color:var(--ink);}
+  .say .lbl{font-family:var(--mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--accent-strong); display:block; margin-bottom:4px;}
+  .point{font-size:.88rem; color:var(--ink-soft); margin-top:8px;}
+  .point strong{color:var(--ink);}
+
+  .qa{display:flex; flex-direction:column; gap:18px;}
+  .qa-item q{display:block; font-family:var(--serif); font-style:italic; font-size:1.02rem; margin-bottom:6px; quotes:none;}
+  .qa-item .a{font-size:.92rem; color:var(--ink-soft);}
+  .qa-item .a strong{color:var(--ink);}
+
+  .discover{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .discover > div{background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:16px 18px; font-size:.92rem; min-width:0;}
+  .discover .n{font-family:var(--mono); font-size:.7rem; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:4px;}
+
+  .limits{background:var(--warn-soft); border:1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius:8px; padding:20px 22px;}
+  .limits h2{color:var(--warn);}
+  .limits ul{margin:8px 0 0; padding-left:18px; font-size:.92rem; display:flex; flex-direction:column; gap:8px;}
+  .plan-b{background:var(--danger-soft); border:1px solid color-mix(in srgb, var(--danger) 40%, transparent); border-radius:8px; padding:20px 22px;}
+  .plan-b h2{color:var(--danger);}
+
+  footer{padding-block:40px; border-top:1px solid var(--border);}
+  footer p{color:var(--ink-soft); font-size:.85rem;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  @media (max-width:640px){ .quicknav{display:none;} .discover{grid-template-columns:1fr;} }
+</style>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark">BRM<span>.</span> Roteiro</div>
+    <nav class="quicknav">
+      <a href="#preparo">Preparo</a>
+      <a href="#troca">Troca de perfil</a>
+      <a href="#abertura">Abertura</a>
+      <a href="#cenas">Cenas</a>
+      <a href="#parte2">Parte 2 · Sugestão</a>
+      <a href="#parte3">Parte 3 · Carteira</a>
+      <a href="#agenda">Agendar pelo chat</a>
+      <a href="#conversa">Conversa natural</a>
+      <a href="#fechamento">Fechamento</a>
+      <a href="#descoberta">Descoberta</a>
+      <a href="#perguntas">Perguntas</a>
+      <a href="#limites">Limites</a>
+      <a href="#plano-b">Plano B</a>
+    </nav>
+  </div>
+</div>
+
+<div class="shell">
+  <header class="hero">
+    <span class="eyebrow">Guia do apresentador · clínicas de psicologia</span>
+    <h1>Roteiro para demonstrar o BRM ao vivo</h1>
+    <p>Este roteiro acompanha um script real (<code>scripts/demo_clinica.py</code>) rodando contra o motor do cliente <code>instituto-afw</code>. Os pacientes, psicólogos e documentos são fictícios. Cada pausa do script (<code>Enter para continuar</code>) é o seu sinal para falar antes de revelar o resultado.</p>
+  </header>
+
+  <section id="preparo">
+    <span class="eyebrow">15 minutos antes</span>
+    <h2>Preparo</h2>
+    <ul class="checklist">
+      <li><span>Se for mostrar o agendamento pelo chat: no <code>agendapro4/apps/mcp</code>, rode <code>npm run smoke:demo</code>. Ele confere o tenant de demonstração, agenda, recusa conflito e cancela o agendamento de teste.</span></li>
+      <li><span>Rodar o pré-voo: <code>uv run python scripts/preflight_demo.py</code>. Ele executa as duas demos e confere erros e resultados esperados. Se der falha, não apresente.</span></li>
+      <li><span>Rodar o script uma vez inteiro antes da reunião: <code>uv run python scripts/demo_clinica.py</code>, na raiz do projeto. Use <code>--parte1</code> para só as 6 cenas da clínica. A Parte 3 tem script próprio: <code>uv run python scripts/demo_casos_de_uso.py</code> (10 chamadas: 5 permitidas, 2 negadas e 3 em aprovação). A primeira execução baixa o modelo de busca do vault, então faça-a antes, com internet.</span></li>
+      <li><span>Conferir o fim da execução: a trilha completa deve ter 24 chamadas (10 permitidas, 9 bloqueadas, 5 em aprovação). Com <code>--parte1</code> são 12 (4, 5 e 3). Se o número mudar, avise na fala em vez de ler de cor.</span></li>
+      <li><span>Aumentar a fonte do terminal antes de compartilhar a tela. O verde, amarelo e vermelho carregam a demonstração.</span></li>
+      <li><span>O script roda local e não envia nada: WhatsApp, e-mail e sistema da clínica são simulados.</span></li>
+      <li><span>Abrir a <a href="https://claude.ai/artifact/TC7d8cvGpJ4eyFrA2pJXJV" target="_blank" rel="noopener">apresentação</a> em outra aba para a abertura.</span></li>
+      <li><span>Combinar com a pessoa que indicou o contato se o nome dela pode ser citado.</span></li>
+      <li><span>Decidir antes o que dizer sobre preço, caso perguntem. Este material não define valores.</span></li>
+    </ul>
+  </section>
+
+  <section id="troca">
+    <span class="eyebrow">Para não parecer improviso</span>
+    <h2>Como trocar de perfil durante a apresentação</h2>
+    <div class="say"><span class="lbl">Regra de ouro</span>Nunca troque o perfil de um aplicativo ao vivo. Use o simulador do painel, onde a troca é um clique, ou o terminal, onde ela é automática. No chat, o perfil é definido quando o servidor inicia e não muda.</div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>1 · No painel, com o simulador (principal)</h3><span class="scene-num">troca com um clique</span></div>
+      <p class="point">Aba <strong>Simular</strong> do painel. Cartões com os perfis, cenários prontos, o resultado com a regra e o próximo passo, o que o perfil vê no vault e a trilha de auditoria ao lado. Uma faixa fixa avisa "Simulando como Camila · recepção". A aba <strong>Governança</strong> mostra a matriz de quem pode o quê.</p>
+      <div class="term"><span class="dim"># terminal 1: motor</span>
+<span class="cmd">uv run python scripts/preparar_demo_chat.py wagner</span>
+<span class="cmd">CLIENT_ID=instituto-afw uv run python -m uvicorn mcp_engine.core.http_app:app --port 8000</span>
+<span class="dim"># terminal 2: painel</span>
+<span class="cmd">cd dashboard &amp;&amp; npm run build &amp;&amp; npx vite preview --port 4173</span>
+<span class="dim"># navegador: http://localhost:4173 · URL http://localhost:8000 · token demo-helena</span></div>
+      <div class="say"><span class="lbl">Roteiro de uso</span>1) Clique no cenário "Abrir o prontuário do PAC-005". 2) Clique em Camila: negado, com a regra e o próximo passo. 3) Clique em Wagner: permitido, com o vínculo calculado. 4) Em "O que este perfil vê no vault", busque e alterne os perfis. 5) Abra a aba Governança e mostre a matriz.</div>
+      <div class="say"><span class="lbl">Diga</span>"Aqui a responsável técnica vê o sistema pelos olhos de cada pessoa da equipe. O mesmo pedido, quatro respostas, e cada uma explicada pela regra que decidiu."</div>
+      <p class="point"><strong>Faça antes da reunião:</strong> suba os dois servidores, entre no painel, clique em um cenário e deixe a aba aberta. O servidor aquece o vault ao iniciar; o primeiro resultado sai em menos de um segundo depois disso.</p>
+      <p class="point"><strong>Cuidado:</strong> a matriz não inclui o DLP, porque ele depende do conteúdo de cada pedido. Use o simulador para mostrar o DLP (cenários "Lembrete com CID" e "Cobrança com CPF").</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>2 · No terminal, troca automática</h3><span class="scene-num">plano B do simulador</span></div>
+      <p class="point">O script troca a persona sozinho a cada chamada e mostra o nome e o papel antes de cada ação. Você só aperta Enter.</p>
+      <div class="say"><span class="lbl">Antes de começar, apresente o elenco</span>"Vou mostrar quatro pessoas da clínica pedindo coisas ao mesmo sistema: a Camila na recepção, o Lucas e o Wagner, psicólogos, e a Dra. Helena, responsável técnica."</div>
+      <div class="say"><span class="lbl">Na hora de trocar, anuncie a troca</span>"Agora, a mesma pergunta feita pela Camila."</div>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>3 · No chat, com um perfil só</h3><span class="scene-num">uso natural</span></div>
+      <p class="point">Para mostrar a conversa em linguagem natural no Claude Desktop, use <strong>um</strong> perfil, o do Wagner (psicólogo responsável). Mostre dois ou três pedidos naturais e pare. O contraste entre perfis fica no simulador.</p>
+      <div class="term"><span class="cmd">uv run python scripts/preparar_demo_chat.py wagner</span>
+<span class="dim">cola o trecho em claude_desktop_config.json, reinicia o Claude Desktop (Cmd+Q) e abre uma conversa nova</span></div>
+      <p class="point"><strong>Faça isso antes da reunião, nunca durante.</strong></p>
+    </div>
+
+    <ul class="checklist" style="margin-top:12px;">
+      <li><span>Pré-voo rodado e sem falhas (<code>uv run python scripts/preflight_demo.py</code>).</span></li>
+      <li><span>Motor e painel no ar, com um cenário já executado na tela.</span></li>
+      <li><span>Fonte do terminal grande, tema escuro e notificações desligadas.</span></li>
+      <li><span>Um ensaio completo com cronômetro.</span></li>
+      <li><span>A apresentação em uma aba e o roteiro no segundo monitor ou no celular.</span></li>
+      <li><span>Se algo travar, vá para o Plano B (abaixo) sem pedir desculpas longas: "Vou mostrar pelo material, o resultado é o mesmo."</span></li>
+    </ul>
+  </section>
+
+  <section id="abertura">
+    <span class="eyebrow">~5 minutos</span>
+    <h2>Abertura, com a apresentação</h2>
+    <p class="point">Percorra a página até a seção <strong>"Um dia na clínica"</strong> e pare aí. Comece pela pergunta: <strong>"Vocês já testaram alguma IA? Como foi?"</strong> e ouça antes de seguir. A resposta orienta o resto da conversa.</p>
+    <div class="say"><span class="lbl">Diga</span>"Não vim vender mais uma ferramenta de IA. Vim mostrar como uma clínica usa IA sem abrir mão do sigilo. Uma IA sem configuração é como um estagiário brilhante no primeiro dia: escreve bem, mas não conhece a abordagem de vocês nem as regras do CFP."</div>
+    <div class="say"><span class="lbl">Transição</span>"O que mostrei até aqui não é mockup. Vou rodar seis situações do dia a dia agora, ao vivo, no motor de verdade, com pacientes inventados."</div>
+    <p class="point">Troque para o terminal e rode <code>uv run python scripts/demo_clinica.py</code>. Antes do primeiro Enter, apresente os quatro perfis: Camila (recepção), Lucas e Wagner (psicólogos) e a Dra. Helena (responsável técnica).</p>
+  </section>
+
+  <section id="cenas">
+    <span class="eyebrow">~12 minutos</span>
+    <h2>Parte 1 · As seis cenas da clínica</h2>
+    <p class="point">Antes de cada Enter, pergunte à plateia: "O que vocês acham que vai acontecer?"</p>
+
+    <div class="scene">
+      <div class="scene-head"><h3>1 · O psicólogo consulta o prontuário</h3><span class="scene-num">allow</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"O Lucas quer o resumo das últimas sessões do paciente dele e a tarefa pendente."</div>
+<div class="term"><span class="dim">Lucas Ribeiro (admin · psicólogo)</span> chama <span class="cmd">consultar_prontuario</span>
+<span class="ok">✓ ALLOWED</span>
+<span class="dim">Contexto entregue ao Claude a partir do vault:
+  - Sessão 08 (23/09) · Exposição ao item 2 ... Tarefa: repetir 2x na semana</span></div>
+      <p class="point"><strong>Aponte:</strong> o terminal mostra o contexto que o Claude recebe. O resumo em si é feito por ele no uso real, e a demo não o simula. O registro documental, com as hipóteses clínicas, é outra nota e não vem junto.</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>2 · Quem não tem vínculo não abre</h3><span class="scene-num">deny · deny</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"A recepção tenta abrir o mesmo prontuário. Depois, a Wagner, que também é psicóloga da clínica."</div>
+<div class="term"><span class="dim">Camila Souza (viewer · recepção)</span> chama <span class="cmd">consultar_prontuario</span>
+<span class="deny">✕ DENY</span> Sem vínculo com este paciente — o prontuário é sigiloso
+
+<span class="dim">Wagner Massaranduba (admin · psicólogo)</span> chama <span class="cmd">consultar_prontuario</span>
+<span class="deny">✕ DENY</span> Sem vínculo com este paciente</div>
+      <div class="say"><span class="lbl">Diga</span>"Ser psicólogo da clínica não basta. O acesso é por paciente, como o sigilo exige."</div>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>3 · Declaração de comparecimento</h3><span class="scene-num">allow → deny</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"A recepção emite a declaração padrão. Depois alguém pede para constar 'ansiedade'."</div>
+<div class="term"><span class="dim">Camila Souza (viewer)</span> chama <span class="cmd">emitir_declaracao_comparecimento</span>
+<span class="ok">✓ ALLOWED</span>
+<span class="dim">(com incluir_sintomas: true)</span>
+<span class="deny">✕ DENY</span> Declaração não pode conter sintomas ou estado psicológico (Res. CFP 06/2019, art. 9º)</div>
+      <div class="say"><span class="lbl">Diga</span>"A recepção resolve a rotina sem incomodar o psicólogo, e a regra do CFP vira um bloqueio que ninguém precisa lembrar."</div>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>4 · Relatório para a escola</h3><span class="scene-num">deny → approval</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"A recepção tenta gerar o relatório do adolescente. Depois, a psicóloga responsável pede o rascunho."</div>
+<div class="term"><span class="dim">Camila Souza (viewer)</span> chama <span class="cmd">emitir_relatorio_psicologico</span>
+<span class="deny">✕ DENY</span> Relatório só pode ser emitido pelo psicólogo responsável
+
+<span class="dim">Wagner Mendes (admin)</span> chama <span class="cmd">emitir_relatorio_psicologico</span>
+<span class="warn">⏸ REQUIRE_APPROVAL</span> revise e realize a entrevista devolutiva (Res. CFP 06/2019, art. 18)</div>
+      <div class="say"><span class="lbl">Diga</span>"A IA ajuda a escrever, mas o documento só sai depois da revisão da psicóloga e da devolutiva."</div>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>5 · O pai pede o prontuário do adolescente</h3><span class="scene-num">approval → allow</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"O pai de um paciente de 15 anos pede o prontuário. Depois, um adulto pede o próprio."</div>
+<div class="term"><span class="dim">Wagner Mendes (admin)</span> chama <span class="cmd">entregar_prontuario_responsavel</span> <span class="dim">(paciente_menor: true)</span>
+<span class="warn">⏸ REQUIRE_APPROVAL</span> confirme o responsável legal e revise o que será entregue
+
+<span class="dim">Lucas Ribeiro (admin)</span> chama <span class="cmd">entregar_prontuario_responsavel</span> <span class="dim">(paciente_menor: false)</span>
+<span class="ok">✓ ALLOWED</span></div>
+      <div class="say"><span class="lbl">Diga</span>"Para o adulto, o acesso integral ao prontuário é direito dele. Para o menor, o sistema pede a conferência do responsável legal antes de entregar."</div>
+      <p class="point">Esta costuma ser a cena que mais gera conversa. Deixe a plateia reagir.</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>6 · Dado sensível no WhatsApp e na cobrança</h3><span class="scene-num">mask · approval · deny</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"Um lembrete de sessão sai com um CID por engano. Depois, uma cobrança com o CPF digitado no texto."</div>
+<div class="term"><span class="dim">Camila Souza (viewer)</span> chama <span class="cmd">enviar_lembrete_sessao</span>
+<span class="ok">✓ ALLOWED</span> "...acompanhamento <span class="warn">[REDACTED:CID]</span>"
+
+<span class="dim">Camila Souza (viewer)</span> chama <span class="cmd">cobrar_mensalidade</span>
+<span class="warn">⏸ REQUIRE_APPROVAL</span>
+
+<span class="dim">Dra. Helena Prado (super_admin)</span> chama <span class="cmd">cobrar_mensalidade</span>
+<span class="deny">✕ DENY</span> DLP: found CPF</div>
+      <div class="say"><span class="lbl">Diga</span>"O CID some para a recepção sem ninguém tarjar nada. O CPF no texto é bloqueado até para a responsável técnica."</div>
+    </div>
+  </section>
+
+  <section id="parte2">
+    <span class="eyebrow">~8 minutos · opcional</span>
+    <h2>Parte 2 · O Instituto como escola</h2>
+    <div class="limits" style="margin-bottom:18px;">
+      <h2 style="font-size:1.1rem; margin-bottom:6px;">SUGESTÃO, não é escopo fechado</h2>
+      <p class="point" style="margin-top:0; color:var(--ink);">Estas cenas partem de uma leitura da página pública de pós-graduação do cliente. Apresente-as como ideia para validar ("vocês também ensinam, e isso poderia funcionar assim"), nunca como algo que eles já pediram. Se o tempo estiver curto, mostre só a cena 7.</p>
+    </div>
+    <div class="say"><span class="lbl">Transição</span>"Vi que o Instituto também tem pós-graduação e supervisão em grupo. Posso mostrar como o mesmo motor ajudaria essa frente? É uma sugestão, e vocês me dizem se faz sentido."</div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>7 · Caso clínico do aluno na supervisão</h3><span class="scene-num">sugestão 1 · a mais forte</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"A aluna cola o caso de um paciente real, com CPF e telefone. Depois, o caso anonimizado. Depois, levar ao grupo."</div>
+<div class="term"><span class="dim">Beatriz Lima (viewer · aluna)</span> chama <span class="cmd">enviar_caso_supervisao</span>
+<span class="deny">✕ DENY</span> DLP: found CPF
+<span class="dim">(caso anonimizado)</span>
+<span class="ok">✓ ALLOWED</span>
+
+<span class="dim">Beatriz Lima</span> chama <span class="cmd">compartilhar_caso_grupo</span>
+<span class="warn">⏸ REQUIRE_APPROVAL</span> o supervisor revisa a anonimização
+
+<span class="dim">Prof. Rodrigo Azevedo (admin · supervisor)</span> chama <span class="cmd">compartilhar_caso_grupo</span>
+<span class="ok">✓ ALLOWED</span></div>
+      <div class="say"><span class="lbl">Diga</span>"Todo aluno em formação corre o risco de colar dado de paciente numa IA. Aqui o erro é barrado antes de sair, e o supervisor é a última barreira antes do grupo."</div>
+      <p class="point"><strong>Seja honesto:</strong> o DLP pega padrões (CPF, telefone). Um nome próprio solto passa. Reconhecer nomes é uma etapa futura (NER). Diga isso antes que perguntem.</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>8 · Perguntas ao conteúdo das aulas</h3><span class="scene-num">sugestão 2</span></div>
+      <div class="say"><span class="lbl">Antes do Enter</span>"Uma aluna com matrícula trancada tenta consultar as aulas. Depois, a mesma aluna com matrícula ativa pergunta sobre modos esquemáticos."</div>
+<div class="term"><span class="dim">Beatriz Lima</span> chama <span class="cmd">buscar_aulas</span> <span class="dim">(matricula: inativa)</span>
+<span class="deny">✕ DENY</span> Matrícula inativa
+<span class="dim">(matricula: ativa)</span>
+<span class="ok">✓ ALLOWED</span>
+<span class="dim">  [aulas/modos-esquematicos.md] Na Terapia do Esquema, modo é o estado emocional...</span></div>
+      <p class="point"><strong>Aponte:</strong> as aulas da demo são textos fictícios curtos. Em uso real entram as transcrições do próprio Instituto. O Claude responde com base nos trechos e cita a fonte.</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>9 · Declaração de horas e frequência</h3><span class="scene-num">sugestão 3</span></div>
+<div class="term"><span class="dim">Camila Souza (viewer · secretaria)</span> chama <span class="cmd">emitir_declaracao_horas</span> <span class="dim">(frequência 62%)</span>
+<span class="deny">✕ DENY</span> Frequência abaixo do mínimo do regimento
+<span class="dim">(frequência 88%)</span>
+<span class="ok">✓ ALLOWED</span></div>
+      <p class="point"><strong>Cuidado:</strong> o mínimo de 75% é só um exemplo. Pergunte qual é o do regimento deles. Não afirme requisitos de certificação do MEC.</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>10 · Interessado chega pelo WhatsApp</h3><span class="scene-num">sugestão 4</span></div>
+<div class="term"><span class="dim">Camila Souza</span> chama <span class="cmd">responder_lead_whatsapp</span> <span class="dim">("Quem pode participar?")</span>
+<span class="ok">✓ ALLOWED</span>
+<span class="dim">  [pos-graduacao/faq-pos-graduacao.md] Profissionais graduados em Psicologia e estudantes a partir do 8º semestre...</span>
+
+<span class="dim">("Quanto custa e ainda tem vaga?")</span>
+<span class="warn">⏸ REQUIRE_APPROVAL</span> valor e vaga ficam com a secretaria</div>
+      <p class="point"><strong>Aponte:</strong> o FAQ do vault foi escrito a partir da página pública. Valores e vagas não constam, de propósito, e a regra garante que a IA não invente.</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>11 · Divulgação de turma</h3><span class="scene-num">sugestão 5</span></div>
+<div class="term"><span class="dim">Camila Souza</span> chama <span class="cmd">publicar_post_turma</span> <span class="dim">("...fique livre da ansiedade para sempre!")</span>
+<span class="deny">✕ DENY</span> Divulgação não pode prometer resultado ou cura
+<span class="dim">("Pós em Terapia do Esquema: encontros mensais...")</span>
+<span class="ok">✓ ALLOWED</span></div>
+      <p class="point"><strong>Cuidado:</strong> é uma regra de exemplo. Valide o que o CRP permite na divulgação antes de apresentá-la como conformidade.</p>
+    </div>
+
+    <div class="say"><span class="lbl">Só conversa</span>"Uma ideia para pensar: um módulo para os alunos aprenderem a usar IA com segurança na prática clínica, em parceria com o Instituto. Não tenho demo disso, é só uma conversa."</div>
+  </section>
+
+  <section id="parte3">
+    <span class="eyebrow">~6 minutos · opcional</span>
+    <h2>Parte 3 · Casos de uso sobre a carteira de pacientes</h2>
+    <p class="point">Script: <code>uv run python scripts/demo_casos_de_uso.py</code> (7 cenas). Os dados saem dos cinco pacientes fictícios do vault (PAC-001 a PAC-005). Nenhum argumento de segurança é passado pelo script: vínculo, idade, matrícula e frequência vêm do cadastro no vault.</p>
+    <div class="scene">
+      <div class="scene-head"><h3>1 · A carteira</h3><span class="scene-num">visão geral</span></div>
+      <p class="point">Tabela com ID, idade, unidade, abordagem, sessões e faltas. Diga: "Cinco pessoas de 8 a 68 anos, com abordagens diferentes. Tudo isto está no vault."</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>2 · A mesma busca, quatro respostas</h3><span class="scene-num">controle de acesso por nota</span></div>
+      <div class="say"><span class="lbl">Diga primeiro</span>"Pense no prontuário como um armário com três gavetas. O psicólogo responsável abre as dele. A recepção enxerga só a etiqueta: quem é e com quem está. Para os demais, a gaveta nem existe."</div>
+<div class="term"><span class="dim">Busca no vault: "hipótese de trabalho autocrítica procrastinação desligamento"</span>
+
+Camila (recepção)          <span class="warn">só ficha: PAC-005</span>
+Lucas (outro psicólogo)    <span class="warn">só ficha: PAC-005</span>
+Wagner (responsável)        <span class="ok">registro-documental, prontuario, resumo</span>
+Dra. Helena (resp. técnica) <span class="ok">tudo, com acesso registrado</span></div>
+      <div class="say"><span class="lbl">Se o psicólogo perguntar "a recepção vê meu prontuário?"</span>"Não. A recepção vê só 'PAC-005, unidade Adultos, psicólogo Wagner'. O registro documental, com as suas hipóteses, nem aparece para ela. E a responsável técnica só vê com o acesso registrado."</div>
+      <p class="point"><strong>Aponte:</strong> o pedido é o mesmo nas quatro linhas. Quem muda a resposta é o perfil. Por trás, cada busca grava quantas notas foram devolvidas e quantas foram ocultadas, sem guardar conteúdo.</p>
+      <p class="point"><strong>Cuidado:</strong> o nome do paciente não aparece na ficha. Se pedirem busca por nome, diga que depende de o Instituto aprovar expor esse dado à recepção.</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>3 · Preparação da sessão</h3><span class="scene-num">allow · deny</span></div>
+      <p class="point">Wagner abre o PAC-005 (é a responsável) e o Claude recebe as últimas sessões e o resumo. Em seguida o Lucas tenta o mesmo caso e é negado. <strong>Frase:</strong> "Trinta segundos para chegar na sessão sabendo onde parou."</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>4 · Alerta de faltas</h3><span class="scene-num">allow</span></div>
+      <p class="point">O script lista quem tem 2 ou mais faltas (PAC-005) e a recepção envia uma mensagem neutra. <strong>Aponte:</strong> a mensagem não cita tratamento nem dado clínico.</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>5 · Relatório de encaminhamento</h3><span class="scene-num">approval</span></div>
+      <p class="point">Paulo pede o relatório do PAC-004 para avaliação médica do sono. O rascunho aguarda revisão e devolutiva. O terminal mostra de onde vem cada um dos 5 itens da Res. CFP 06/2019. <strong>Aponte:</strong> o registro documental não entra.</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>6 · Painel da responsável técnica</h3><span class="scene-num">deny · allow</span></div>
+      <p class="point">A recepção é negada; a Dra. Helena vê sessões e faltas por psicólogo, sem identificar pacientes.</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>7 · Mensalidades em atraso</h3><span class="scene-num">approval · allow</span></div>
+      <p class="point">PAC-003 (5 dias) e PAC-005 (10 dias). A recepção prepara, a gestão aprova e envia. <strong>Cuidado:</strong> valores e e-mails são fictícios.</p>
+    </div>
+  </section>
+
+  <section id="conversa">
+    <span class="eyebrow">Como falar com o Claude</span>
+    <h2>Conversa em linguagem natural</h2>
+    <p class="point">As ações do cliente agora existem como ferramentas próprias, com parâmetros descritos e exemplos de pedido, e o servidor entrega ao Claude o contexto do negócio. O usuário não precisa saber nome de skill. Frases que devem funcionar:</p>
+    <div class="discover">
+      <div><span class="n">Prontuário</span>"Me ajuda a me preparar para a sessão da paciente com autocrítica e procrastinação."</div>
+      <div><span class="n">Documento</span>"Preciso de uma declaração de comparecimento do PAC-001 para o trabalho."</div>
+      <div><span class="n">Relatório</span>"Faça o rascunho do relatório de encaminhamento ao médico para o PAC-004."</div>
+      <div><span class="n">Cobrança</span>"Cobre a mensalidade em atraso do PAC-005."</div>
+      <div><span class="n">Aulas</span>"O que o professor falou sobre o modo Criança Vulnerável?"</div>
+      <div><span class="n">Painel</span>"Como foi setembro por psicólogo?"</div>
+    </div>
+    <div class="say" style="margin-top:16px;"><span class="lbl">Como funciona</span>O Claude acha o ID com <code>vault_search</code> (que só devolve o que o perfil pode ver), chama a ferramenta da tarefa e o motor calcula vínculo, idade, matrícula e frequência a partir do cadastro. Se algo for negado ou ficar aguardando aprovação, o Claude explica o motivo e o próximo passo.</div>
+    <div class="limits" style="margin-top:16px;"><h2 style="font-size:1.05rem; margin-bottom:6px;">Ainda não testado em um cliente de chat</h2><p class="point" style="margin-top:0; color:var(--ink);">Verificamos que o servidor lista as ferramentas, com os esquemas certos, e que as regras derivam os fatos do vault (testes automáticos). Não rodamos essas frases em um Claude real nesta sessão. Teste-as no Claude Desktop antes da reunião, seguindo o <code>docs/guia-teste-claude-desktop.md</code>, e ajuste as descrições se o modelo escolher a ferramenta errada.</p></div>
+  </section>
+
+  <section id="agenda">
+    <span class="eyebrow">BRM Agenda · ~5 minutos · opcional</span>
+    <h2>Agendar pelo chat</h2>
+    <p class="point">O Claude conversa com o MCP do BRM Agenda e agenda de verdade no tenant de demonstração <strong>Instituto Ana Flávia Weis (demonstração)</strong>, no ambiente de homologação. Os dados são fictícios. O tenant tem 4 profissionais: <strong>Wagner Massaranduba</strong>, <strong>Ana Flávia Weis</strong>, Lucas Ribeiro e Renata Alves. Serviços: sessão individual (50 min), triagem gratuita (30 min), orientação de pais (50 min) e sessão online (50 min). Horários de 8h a 17h, sem o meio-dia.</p>
+
+    <div class="scene">
+      <div class="scene-head"><h3>Preparação</h3><span class="scene-num">antes da reunião</span></div>
+      <div class="term"><span class="dim"># no agendapro4/apps/mcp</span>
+<span class="cmd">npm run smoke:demo</span>
+<span class="dim"># cola o trecho "brm-agenda-demo" em claude_desktop_config.json,
+# reinicia o Claude Desktop (Cmd+Q) e abre uma conversa nova</span></div>
+      <p class="point">O trecho da configuração usa o <code>.env</code> do MCP e fixa o tenant de demonstração, para que o servidor nunca toque em outro tenant. Se precisar refazer o tenant: <code>npm run seed:demo</code>. Para apagar só ele: <code>npm run seed:demo:remove</code>.</p>
+    </div>
+
+    <div class="scene">
+      <div class="scene-head"><h3>Frases para a conversa</h3><span class="scene-num">linguagem natural</span></div>
+      <div class="discover">
+        <div><span class="n">1 · Disponibilidade</span>"Quais horários o Wagner tem na segunda-feira para uma sessão individual?"</div>
+        <div><span class="n">2 · Agendar</span>"Agende uma sessão individual para a Maria Souza, telefone 67 90000-0002, na segunda às 14h com o Wagner."</div>
+        <div><span class="n">3 · Conflito</span>"Agora tente agendar outra pessoa no mesmo horário com o Wagner."</div>
+        <div><span class="n">4 · Alternativa</span>"E com a Ana Flávia, tem horário nesse mesmo dia?"</div>
+      </div>
+      <div class="say"><span class="lbl">O que acontece por baixo</span><code>verificar_disponibilidade</code> mostra o dia com os horários livres e ocupados. <code>criar_agendamento</code> grava a sessão, convertendo o horário local para UTC, e recusa quando o profissional já tem algo que se sobrepõe. O agendamento fica marcado com origem <code>mcp</code>.</div>
+    </div>
+
+    <div class="limits">
+      <h2 style="font-size:1.1rem; margin-bottom:6px;">Diga isto antes que perguntem</h2>
+      <ul>
+        <li><strong>O agendamento direto pela Agenda não passa pelas regras e pela auditoria do BRM.</strong> O Claude fala com o MCP da Agenda. Governar o agendamento (perfis, aprovação, trilha) exige skills do BRM que chamem a Agenda. Isso é o próximo passo e ainda não existe.</li>
+        <li>O MCP agora confere que profissional, serviço e horários são do tenant, recusa conflito de horário e calcula a disponibilidade no fuso do estabelecimento. Foi verificado por um teste de ponta a ponta no banco de homologação, mas <strong>não por um Claude real</strong> escolhendo as ferramentas. Ensaie antes.</li>
+        <li>Sem profissional informado, o conflito não é verificado.</li>
+        <li>Vale usar o web chat nativo da Agenda como alternativa: o modo guiado não precisa de chave de IA, mas exige o Worker e o SAF no ar e uma configuração de chat no tenant, que deixa uma URL pública acessível. Hoje o tenant de demonstração não tem isso.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="fechamento">
+    <span class="eyebrow">~3 minutos</span>
+    <h2>Fechamento, com a trilha de auditoria</h2>
+    <p class="point">No último Enter, o script lista as chamadas registradas (24 na demo completa, 12 só com a Parte 1). Aponte para a lista e depois volte para a apresentação, na seção do piloto.</p>
+    <div class="say"><span class="lbl">Diga</span>"Cada linha é permanente. Se o CRP, um paciente ou vocês mesmos perguntarem o que aconteceu, a resposta está aqui. E nada foi decidido pela IA sozinha: cada linha é uma regra que a clínica configurou."</div>
+    <div class="say"><span class="lbl">Proposta</span>"Sugiro um piloto de 30 dias: 2 psicólogos, 1 unidade e 3 fluxos, com dado de paciente só anonimizado. Medimos horas por relatório e retrabalho. Quem poderia participar?"</div>
+    <p class="point">Saia com uma decisão pequena: quem participa do piloto e uma data para a próxima conversa.</p>
+  </section>
+
+  <section id="descoberta">
+    <span class="eyebrow">Conversa com a clínica</span>
+    <h2>Perguntas de descoberta</h2>
+    <p class="point" style="margin-bottom:14px;">As respostas definem o piloto e o que vem depois. Anote tudo.</p>
+    <div class="discover">
+      <div><span class="n">Sistema</span>Como vocês fazem agenda e prontuário hoje? Sistema, planilha, papel?</div>
+      <div><span class="n">Tempo</span>O que mais consome tempo da equipe e da recepção no dia a dia?</div>
+      <div><span class="n">Triagem</span>Como funciona a triagem e a distribuição de pacientes entre unidades e psicólogos?</div>
+      <div><span class="n">Decisão</span>Quem decide esse tipo de investimento? Uma pessoa só, ou há sócios e gestão?</div>
+      <div><span class="n">Receios</span>Já usaram IA? Houve algum receio sobre sigilo, CRP ou LGPD?</div>
+      <div><span class="n">Documentos</span>Que modelos de declaração, relatório e comunicação a equipe já usa?</div>
+    </div>
+  </section>
+
+  <section id="perguntas">
+    <span class="eyebrow">Se perguntarem</span>
+    <h2>Perguntas frequentes</h2>
+    <div class="qa">
+      <div class="qa-item"><q>"Os dados dos pacientes vão para a IA?"</q><div class="a"><strong>Resposta:</strong> no piloto, só dados anonimizados. Quando o prontuário entrar, ele passa pelas regras de acesso, pela proteção de dado sensível e pela auditoria que vocês viram. Os termos de privacidade do plano do Claude são confirmados por escrito antes do piloto; não responda isso de memória.</div></div>
+      <div class="qa-item"><q>"Isso está de acordo com o CFP e a LGPD?"</q><div class="a"><strong>Resposta:</strong> as regras seguem as Resoluções 001/2009 e 06/2019 e ajudam a cumprir a norma. A interpretação final deve ser validada com o CRP e a assessoria jurídica da clínica. Não prometa conformidade.</div></div>
+      <div class="qa-item"><q>"A IA faz diagnóstico?"</q><div class="a"><strong>Resposta:</strong> não. Ela apoia a redação e a organização. A decisão clínica e a assinatura são do psicólogo.</div></div>
+      <div class="qa-item"><q>"Já existem sistemas que escrevem o prontuário com IA. O que muda?"</q><div class="a"><strong>Resposta:</strong> esses sistemas resolvem a escrita. O BRM resolve quem pode fazer o quê, quando é preciso aprovação humana e o registro de tudo, e funciona com o sistema que a clínica já usa.</div></div>
+      <div class="qa-item"><q>"E se eu quiser mudar quem pode fazer o quê?"</q><div class="a"><strong>Resposta:</strong> perfil de acesso e regras são configuração, não código. Dá para ajustar sem novo desenvolvimento.</div></div>
+      <div class="qa-item"><q>"Quanto custa?"</q><div class="a"><strong>Resposta:</strong> a proposta comercial vem depois de definirmos o piloto. Alinhe o que dizer antes da reunião.</div></div>
+    </div>
+  </section>
+
+  <section id="limites">
+    <div class="limits">
+      <h2>Limites que você deve conhecer</h2>
+      <ul>
+        <li>O vínculo com o paciente agora é calculado pelo motor, a partir do cadastro no vault. O que falta é filtrar o que a busca no vault devolve (ver o item sobre <code>vault_search</code>).</li>
+        <li>A auditoria registra o agente (Claude), e não o e-mail de cada pessoa. Se perguntarem, diga que registrar a identidade individual é a próxima evolução.</li>
+        <li>As integrações são simuladas. Nenhum WhatsApp, e-mail ou sistema real é chamado na demonstração.</li>
+        <li>O resumo do prontuário não é gerado na demo. O terminal mostra o contexto que o Claude receberia.</li>
+        <li>O vault agora filtra por perfil (spec 017): busca, listagem e relacionados respeitam as políticas, e o padrão é negar. Ainda não passam pelo filtro as ferramentas de rascunho e promoção de regras (<code>vault_interpret_and_propose</code> e afins), que operam em <code>config_drafts/</code> e continuam restritas por perfil de ferramenta.</li>
+        <li>Três indicadores ainda são informados pelo próprio Claude, por dependerem do texto que ele escreve: se a declaração inclui sintomas, se a resposta ao lead cita valor ou vaga e se o post promete resultado.</li>
+        <li>Parte 2: as aulas são textos fictícios curtos e o FAQ vem da página pública do Instituto. O limite de 75% de frequência e a regra de divulgação são exemplos.</li>
+        <li>O tenant da Agenda e os pacientes são fictícios, mas o banco é o de homologação real do Agenda Pro. Não use dados reais nele.</li>
+        <li>Os nomes dos perfis e dos pacientes são inventados. Não use dado real de paciente na demonstração.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="plano-b">
+    <div class="plan-b">
+      <h2>Plano B, se a demo ao vivo falhar</h2>
+      <p class="point" style="margin-top:8px;">Se o notebook travar ou o terminal não abrir, volte para a <a href="https://claude.ai/artifact/TC7d8cvGpJ4eyFrA2pJXJV" target="_blank" rel="noopener">apresentação</a> e continue pela seção "Um dia na clínica". Os resultados da Parte 1 estão lá. Diga: "Isso é exatamente o que eu ia rodar ao vivo: mesmos dados, mesma regra, mesmo resultado."</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Roteiro construído com dados fictícios, sobre a implementação do cliente <code>instituto-afw</code>. O modelo genérico para outras clínicas é o cliente <code>clinica-psi</code>.</p>
+  </footer>
+</div>

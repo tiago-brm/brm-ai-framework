@@ -109,7 +109,7 @@
       "id": "perfilDemo",
       "type": "pickString",
       "description": "Perfil da demo",
-      "options": ["wagner", "camila", "helena", "lucas", "paulo", "beatriz", "rodrigo"],
+      "options": ["wagner", "ana", "camila", "helena", "lucas", "paulo", "beatriz", "rodrigo"],
       "default": "wagner"
     },
     {
@@ -118,6 +118,7 @@
       "description": "Entrar no servidor MCP como",
       "options": [
         "wagner@clinica-demo.com.br",
+        "ana.weis@clinica-demo.com.br",
         "camila.souza@clinica-demo.com.br",
         "helena.prado@clinica-demo.com.br",
         "lucas.ribeiro@clinica-demo.com.br"

@@ -41,6 +41,7 @@ TOTAL = 6 if PARTE1 else 11
 LUCAS = UserProfile(identity="lucas.ribeiro@clinica-demo.com.br", role=Role.ADMIN)
 WAGNER = UserProfile(identity="wagner@clinica-demo.com.br", role=Role.ADMIN)
 CAMILA = UserProfile(identity="camila.souza@clinica-demo.com.br", role=Role.VIEWER)
+ANA = UserProfile(identity="ana.weis@clinica-demo.com.br", role=Role.ADMIN)
 HELENA = UserProfile(identity="helena.prado@clinica-demo.com.br", role=Role.SUPER_ADMIN)
 BEATRIZ = UserProfile(identity="beatriz.lima@aluno-demo.com.br", role=Role.VIEWER)
 RODRIGO = UserProfile(identity="rodrigo.azevedo@clinica-demo.com.br", role=Role.ADMIN)
@@ -49,6 +50,7 @@ PERSONAS = {
     "lucas": ("Lucas Ribeiro", "admin · psicólogo", LUCAS),
     "wagner": ("Wagner Massaranduba", "admin · psicólogo", WAGNER),
     "camila": ("Camila Souza", "viewer · recepção", CAMILA),
+    "ana": ("Ana Flávia Weis", "admin · psicóloga e diretora", ANA),
     "helena": ("Dra. Helena Prado", "super_admin · responsável técnica", HELENA),
     "beatriz": ("Beatriz Lima", "viewer · aluna da pós", BEATRIZ),
     "rodrigo": ("Prof. Rodrigo Azevedo", "admin · supervisor", RODRIGO),
