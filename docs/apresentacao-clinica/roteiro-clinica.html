@@ -98,6 +98,7 @@
   <div class="topbar-inner">
     <div class="wordmark">BRM<span>.</span> Roteiro</div>
     <nav class="quicknav">
+      <a href="#enxuto">Roteiro enxuto</a>
       <a href="#preparo">Preparo</a>
       <a href="#troca">Troca de perfil</a>
       <a href="#abertura">Abertura</a>
@@ -121,6 +122,33 @@
     <h1>Roteiro para demonstrar o BRM ao vivo</h1>
     <p>Este roteiro acompanha um script real (<code>scripts/demo_clinica.py</code>) rodando contra o motor do cliente <code>instituto-afw</code>. Os pacientes, psicólogos e documentos são fictícios. Cada pausa do script (<code>Enter para continuar</code>) é o seu sinal para falar antes de revelar o resultado.</p>
   </header>
+
+  <section id="enxuto">
+    <span class="eyebrow">Para a reunião de verdade</span>
+    <h2>Roteiro enxuto, em cinco blocos</h2>
+    <p class="point">Sem o Agenda e só com o que mais convence. Os tempos abaixo são uma estimativa minha, não foram cronometrados: ensaie uma vez com relógio e corte o que passar.</p>
+    <div class="scene">
+      <div class="scene-head"><h3>1 · Abertura com a apresentação</h3><span class="scene-num">~3 min</span></div>
+      <p class="point">Da capa até "Um dia na clínica". Pergunte se já testaram alguma IA e ouça. Fale do estagiário brilhante no primeiro dia e dos três riscos (sigilo, invenção, sem rastro).</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>2 · O elenco e a regra</h3><span class="scene-num">~2 min</span></div>
+      <p class="point">Apresente as quatro pessoas: Camila (recepção), o Wagner e o Lucas (psicólogos) e a Dra. Helena (responsável técnica). Mostre "O prontuário tem três gavetas" na apresentação.</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>3 · Simulador no painel (o centro da demo)</h3><span class="scene-num">~6 min</span></div>
+      <p class="point">Cenários, nesta ordem: abrir o prontuário do PAC-005 (Camila nega, Wagner permite) → declaração com sintomas → relatório para a escola → pai pede o prontuário do adolescente → cobrança com CPF. Termine na aba <strong>Governança</strong>. Depois, em "O que este perfil vê no vault", alterne Camila e Wagner.</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>4 · Conversa no chat, um perfil só</h3><span class="scene-num">~3 min</span></div>
+      <p class="point">No Claude Desktop, como Wagner. Dois ou três pedidos naturais: "Me ajuda a me preparar para a sessão da paciente com autocrítica e procrastinação" e "Como está o PAC-001?" (que ele não atende, então é negado). Pare aí.</p>
+    </div>
+    <div class="scene">
+      <div class="scene-head"><h3>5 · Fechamento</h3><span class="scene-num">~3 min</span></div>
+      <p class="point">Trilha de auditoria no painel (aba Auditoria), a frase "produtividade sem rastro só acelera o erro" e a proposta do piloto de 30 dias. Saia com uma decisão pequena: quem participa e a data da próxima conversa.</p>
+    </div>
+    <p class="point"><strong>Fica de fora, de propósito:</strong> as demos de terminal inteiras (só como plano B), a Parte 2 (ensino), a Parte 3 (carteira) e o agendamento pelo chat. Use o que sobrar de tempo para perguntas.</p>
+  </section>
 
   <section id="preparo">
     <span class="eyebrow">15 minutos antes</span>
@@ -173,6 +201,16 @@
       <p class="point"><strong>Faça isso antes da reunião, nunca durante.</strong></p>
     </div>
 
+    <div class="limits" style="margin-top:12px;">
+      <h2 style="font-size:1.1rem; margin-bottom:6px;">Se o Claude Desktop disser que o servidor está fora</h2>
+      <ul>
+        <li>O servidor precisa apontar para a pasta atual do projeto: <code>/Users/tiagopereiraramos/Dev/01-Ativos/brm-ai-framework</code>. Uma configuração antiga apontava para <code>~/brm-ai-framework</code>, que não existe mais, e o log mostrava "No such file or directory".</li>
+        <li>O aplicativo não enxerga o PATH do seu terminal. Por isso a configuração usa o caminho completo do <code>uv</code> (<code>/Users/tiagopereiraramos/.local/bin/uv</code>).</li>
+        <li>Depois de mudar a configuração, feche o aplicativo com Cmd+Q e abra de novo. Fechar a janela não basta.</li>
+        <li>Log do servidor: <code>~/Library/Logs/Claude/mcp-server-&lt;nome&gt;.log</code>. A configuração fica em <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>.</li>
+        <li>Para conferir o servidor sem o aplicativo, rode <code>.venv/bin/python scripts/preflight_demo.py</code> e, para o perfil do chat, <code>uv run python scripts/preparar_demo_chat.py wagner</code>.</li>
+      </ul>
+    </div>
     <ul class="checklist" style="margin-top:12px;">
       <li><span>Pré-voo rodado e sem falhas (<code>uv run python scripts/preflight_demo.py</code>).</span></li>
       <li><span>Motor e painel no ar, com um cenário já executado na tela.</span></li>
@@ -395,8 +433,8 @@ Dra. Helena (resp. técnica) <span class="ok">tudo, com acesso registrado</span>
   </section>
 
   <section id="agenda">
-    <span class="eyebrow">BRM Agenda · ~5 minutos · opcional</span>
-    <h2>Agendar pelo chat</h2>
+    <span class="eyebrow">Fora do roteiro principal · reserva</span>
+    <h2>Reserva: agendar pelo chat</h2>
     <p class="point">O Claude conversa com o MCP do BRM Agenda e agenda de verdade no tenant de demonstração <strong>Instituto Ana Flávia Weis (demonstração)</strong>, no ambiente de homologação. Os dados são fictícios. O tenant tem 4 profissionais: <strong>Wagner Massaranduba</strong>, <strong>Ana Flávia Weis</strong>, Lucas Ribeiro e Renata Alves. Serviços: sessão individual (50 min), triagem gratuita (30 min), orientação de pais (50 min) e sessão online (50 min). Horários de 8h a 17h, sem o meio-dia.</p>
 
     <div class="scene">

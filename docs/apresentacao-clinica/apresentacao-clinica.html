@@ -189,7 +189,6 @@
       <a href="#conversa">Conversa natural</a>
       <a href="#acesso">Acesso por nota</a>
       <a href="#simulador">Simulador</a>
-      <a href="#agenda">Agenda no chat</a>
       <a href="#carteira">Carteira de pacientes</a>
       <a href="#escola">Sugestão: escola</a>
       <a href="#piloto">Piloto</a>
@@ -462,42 +461,6 @@
     </div>
     <p class="lede" style="margin-top:16px; color:var(--ink-soft); max-width:70ch;">Nada é enviado de verdade durante a simulação. Só a responsável técnica acessa o painel, e o recurso pode ser desligado por cliente.</p>
   </div>
-</section>
-
-<section id="agenda" class="shell">
-  <div class="sec-head">
-    <span class="eyebrow">BRM Agenda · em demonstração</span>
-    <h2>Agendar uma sessão conversando</h2>
-    <p class="lede">O Claude conversa com o BRM Agenda e marca a sessão no horário certo do profissional, sem o recepcionista abrir a agenda. O tenant de demonstração tem quatro profissionais (Wagner Massaranduba, Ana Flávia Weis, Lucas Ribeiro e Renata Alves) e quatro serviços, todos fictícios.</p>
-  </div>
-  <div class="chat">
-    <div class="bubble user"><span class="who">Recepção</span>Quais horários o Wagner tem na segunda para uma sessão individual?</div>
-    <div class="calls"><span class="comment">// o Claude consulta a agenda do profissional</span>
-verificar_disponibilidade(<span class="k">date</span>=<span class="s">"2026-10-12"</span>, <span class="k">staff</span>=<span class="s">"Wagner"</span>, <span class="k">service</span>=<span class="s">"Sessão individual (50 min)"</span>)
-<span class="s">9 horários livres</span></div>
-    <div class="bubble user"><span class="who">Recepção</span>Agende a Maria Souza às 14h.</div>
-    <div class="calls">criar_agendamento(<span class="k">scheduled_at</span>=<span class="s">"2026-10-12T14:00:00"</span>, <span class="k">staff</span>=<span class="s">"Wagner"</span>)
-<span class="s">✓ agendado</span>  <span class="comment">// horário local, gravado em UTC, origem: mcp</span>
-<span class="comment">// um segundo pedido no mesmo horário é recusado: o profissional já tem uma sessão</span></div>
-  </div>
-  <div class="compare" style="margin-top:20px;">
-    <div class="card on">
-      <h3>O que já protege o agendamento</h3>
-      <ul>
-        <li>Profissional, serviço e horários precisam ser do estabelecimento.</li>
-        <li>Horário sobreposto para o mesmo profissional é recusado.</li>
-        <li>A disponibilidade respeita o fuso do estabelecimento.</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3>O que vem a seguir</h3>
-      <ul>
-        <li>Skills do BRM que chamem a Agenda, para o agendamento passar por perfis, aprovação e auditoria.</li>
-        <li>O mesmo fluxo no WhatsApp e no web chat do Instituto.</li>
-      </ul>
-    </div>
-  </div>
-  <p class="lede" style="margin-top:16px; color:var(--ink-soft); max-width:70ch;">Ilustração do fluxo. O agendamento foi verificado de ponta a ponta no ambiente de homologação com dados fictícios. Hoje ele não passa pelas regras e pela auditoria do BRM; essa integração é o próximo passo.</p>
 </section>
 
 <section id="conversa" class="alt">
