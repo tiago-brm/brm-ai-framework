@@ -245,16 +245,17 @@ def test_audit_event_recorded_for_blocked_domain():
     assert event.details["domain"] == "api.evil.com"
 
 
-def test_audit_event_carries_dlp_matches():
+def test_audit_event_records_dlp_label_and_count_never_the_value():
     sink = RecordingAuditSink()
     config = _config(dlp_patterns=(CPF_DENY,))
-    call = _call("https://api.example.com/cliente", response_text="123.456.789-00")
+    call = _call("https://api.example.com/cliente", response_text="123.456.789-00 e 987.654.321-00")
 
     intercept(call, config, sink)
 
     event = sink.events[0]
     assert event.decision is AuditDecision.DENIED
-    assert event.details["dlp_matches"] == {"CPF": ["123.456.789-00"]}
+    assert event.details["dlp_matches"] == {"CPF": 2}
+    assert "123.456.789-00" not in event.model_dump_json()
 
 
 def test_payload_digest_is_sha256_of_response():

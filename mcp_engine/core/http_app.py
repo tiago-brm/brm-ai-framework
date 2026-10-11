@@ -64,7 +64,7 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
     # Dashboard React/Vite roda em outra origem (localhost:5173 em dev) e
     # autentica com o mesmo Bearer token do SQLUserStore — não há cookie/
     # sessão pra CSRF proteger. allow_origins=["*"] é aceitável no estágio
-    # atual (Fase 1, local-first, sem exposição pública — ver docs/spec.md);
+    # atual (Fase 1, local-first, sem exposição pública — ver docs/ARCHITECTURE.md);
     # revisitar quando isso for exposto fora de localhost.
     app.add_middleware(
         CORSMiddleware,

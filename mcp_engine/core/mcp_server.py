@@ -421,7 +421,7 @@ class BRMEngine:
                 "payload_digest": None,
             }
 
-        # Fase 1 é mocked-by-design (ver docs/spec.md) — enviar_email é a única
+        # Fase 1 é mocked-by-design (ver docs/ARCHITECTURE.md) — enviar_email é a única
         # exceção: dispara um envio SMTP real quando SMTP_* está configurado,
         # sempre depois (nunca antes) do gate de DLP/allowlist acima.
         if skill_name == "enviar_email" and email_configured() and not simulacao:
@@ -632,6 +632,7 @@ class BRMEngine:
             self._draft_store,
             self._vault_provider,
             self._audit_sink,
+            approved_by=self._actor(),
         )
 
     def vault_promote_draft(self, draft_id: str, kind: str) -> dict[str, Any]:
@@ -643,6 +644,7 @@ class BRMEngine:
             self._rule_provider,
             self._skill_provider,
             self._audit_sink,
+            approved_by=self._actor(),
         )
 
     def consultar_processo_datajud(self, numero_processo: str) -> dict[str, Any]:

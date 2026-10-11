@@ -40,6 +40,12 @@ def _payload_digest(response_text: str, allowed: bool, dlp_configured: bool) -> 
     return hashlib.sha256(response_text.encode("utf-8")).hexdigest()
 
 
+def summarize_dlp_matches(matches: dict[str, list[str]]) -> dict[str, int]:
+    """Rótulo -> nº de ocorrências. A auditoria nunca guarda o valor casado
+    (CPF, CID...): o log não pode virar uma segunda cópia do dado sensível."""
+    return {label: len(found) for label, found in matches.items()}
+
+
 def _emit_audit(
     audit_sink: AuditSink,
     skill_call: SkillCall,
@@ -57,7 +63,7 @@ def _emit_audit(
         payload_digest=_payload_digest(
             skill_call.response_text, decision.allowed, bool(client_config.dlp_patterns)
         ),
-        details={"domain": hostname, "dlp_matches": decision.dlp_matches},
+        details={"domain": hostname, "dlp_matches": summarize_dlp_matches(decision.dlp_matches)},
     )
     audit_sink.record(event)
 

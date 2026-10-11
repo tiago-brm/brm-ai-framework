@@ -166,6 +166,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# o painel React tem src/lib (router, hooks): não é diretório de build Python
+!dashboard/src/lib/
 parts/
 sdist/
 var/

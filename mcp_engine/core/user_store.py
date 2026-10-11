@@ -77,6 +77,15 @@ _DEFAULT_PERMISSIONS: tuple[tuple[Role, str, bool], ...] = (
     (Role.ADMIN, "atualizar_perfil_usuario", False),
     (Role.ADMIN, "listar_permissoes", False),
     (Role.ADMIN, "atualizar_permissao", False),
+    # Promoção, geração por LLM, escrita no vault e leitura da auditoria não
+    # são tools abertas: sem linha aqui valeriam para qualquer perfil, inclusive
+    # o anônimo (L-01 em docs/SECURITY.md).
+    (Role.ADMIN, "vault_promote_draft", True),
+    (Role.ADMIN, "vault_promote_document", True),
+    (Role.ADMIN, "vault_interpret_and_propose", True),
+    (Role.ADMIN, "vault_generate_document", True),
+    (Role.ADMIN, "vault_add_note", True),
+    (Role.ADMIN, "query_audit_log", True),
 )
 
 
@@ -101,11 +110,15 @@ class SQLUserStore:
         self._seed_default_permissions()
 
     def _seed_default_permissions(self) -> None:
+        """Semeia os padrões **por tool**, só para tools que ainda não têm
+        nenhuma linha. Idempotente e seguro para bancos já existentes: uma
+        tool que o super_admin já configurou (qualquer linha) nunca é
+        sobrescrita, e tools novas no seed passam a valer sem migração."""
         with Session(self._engine) as session:
-            has_any = session.scalar(select(ToolPermissionRow.id).limit(1))
-            if has_any is not None:
-                return
+            configured = set(session.scalars(select(ToolPermissionRow.tool_name).distinct()))
             for role, tool_name, allowed in _DEFAULT_PERMISSIONS:
+                if tool_name in configured:
+                    continue
                 session.add(
                     ToolPermissionRow(role=role.value, tool_name=tool_name, allowed=allowed)
                 )
