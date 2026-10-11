@@ -1,0 +1,76 @@
+skills:
+- name: agenda_sessoes
+  description: Lista as sessões da Agenda por período (somente leitura). Perfis sem permissão de
+    gestão recebem só totais agregados, sem nomes de pacientes.
+  parameters:
+    de:
+      type: string
+      description: 'Primeiro dia (AAAA-MM-DD), no fuso do estabelecimento. Padrão: hoje.'
+    ate:
+      type: string
+      description: 'Último dia (AAAA-MM-DD), inclusive. Padrão: o mesmo dia de "de".'
+    status:
+      type: string
+      description: 'Filtro opcional, separado por vírgula: PENDING_CONFIRMATION, WAITING, CONFIRMED,
+        IN_PROGRESS, COMPLETED, CANCELLED.'
+    profissional:
+      type: string
+      description: Id do profissional na Agenda (opcional).
+  executor:
+    type: native
+    handler: agenda.sessoes
+  autonomia: A0
+  examples:
+  - Quais sessões temos hoje?
+  - Quantas sessões foram concluídas esta semana?
+- name: agenda_clientes
+  description: Busca clientes na Agenda por nome (somente leitura). Perfis sem permissão de gestão
+    recebem só a contagem.
+  parameters:
+    busca:
+      type: string
+      description: Parte do nome do cliente.
+    limite:
+      type: integer
+      description: Máximo de resultados (até 20).
+  executor:
+    type: native
+    handler: agenda.clientes
+  autonomia: A0
+  examples:
+  - Esse paciente já está cadastrado na Agenda?
+- name: agenda_servicos
+  description: Lista os serviços da Agenda com preço e duração (somente leitura).
+  parameters: {}
+  executor:
+    type: native
+    handler: agenda.servicos
+  autonomia: A0
+  examples:
+  - Quais serviços e preços a Agenda tem?
+- name: agenda_sessoes_sem_pagamento
+  description: Visão cruzada agenda x financeiro (somente leitura) - sessões realizadas no período
+    sem recebimento correspondente no ledger. Usa o espelho da última sincronização.
+  parameters:
+    de:
+      type: string
+      description: 'Primeiro dia (AAAA-MM-DD). Padrão: primeiro dia do mês corrente.'
+    ate:
+      type: string
+      description: 'Último dia (AAAA-MM-DD). Padrão: hoje.'
+  executor:
+    type: native
+    handler: agenda.sessoes_sem_pagamento
+  autonomia: A0
+  examples:
+  - Quais sessões realizadas ainda não foram pagas?
+- name: sincronizar_agenda
+  description: Sincroniza a Agenda com o ledger (somente leitura na Agenda; idempotente). Cria
+    pacientes e sessões, gera pendências de desfecho, duplicidade e conflito.
+  parameters: {}
+  executor:
+    type: native
+    handler: agenda.sincronizar_agenda
+  autonomia: A1
+  examples:
+  - Sincronize a Agenda agora

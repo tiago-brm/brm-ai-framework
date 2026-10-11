@@ -335,3 +335,17 @@ data/
 # `uv run python -m mcp_engine.core.user_store` — binary, unlike the
 # versioned rules.yaml/skills.yaml it sits next to.
 clients/*/config/*.db
+
+# Planilhas de clientes (exemplos e dados reais ficam fora do git)
+*.xlsx
+*.xls
+*.xlsm
+!tests/fixtures/**/*.xlsx
+
+# Docker (spec 028): segredos e backups nunca vao para o git
+.env
+.env.*
+!.env.example
+secrets/
+backups/
+clients/*/vault/.silverbullet*

@@ -10,8 +10,10 @@ cliente em `clients/<cliente>/config/users.db` — mesma convenção de
 
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import NamedTuple
@@ -24,6 +26,15 @@ from mcp_engine.core.auth import Role, UserProfile
 
 class Base(DeclarativeBase):
     pass
+
+
+_TOKEN_PREFIX = "sha256:"
+IDENTIDADE_SISTEMA = "sistema:"
+
+
+def hash_token(token: str) -> str:
+    """Forma em que um token é guardado: só o hash chega ao banco (spec 020)."""
+    return _TOKEN_PREFIX + hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 class UserRow(Base):
@@ -77,6 +88,15 @@ _DEFAULT_PERMISSIONS: tuple[tuple[Role, str, bool], ...] = (
     (Role.ADMIN, "atualizar_perfil_usuario", False),
     (Role.ADMIN, "listar_permissoes", False),
     (Role.ADMIN, "atualizar_permissao", False),
+    (Role.ADMIN, "rotacionar_token", False),
+    (Role.VIEWER, "confirmar_operacao", True),
+    (Role.ADMIN, "confirmar_operacao", True),
+    (Role.VIEWER, "cancelar_operacao", True),
+    (Role.ADMIN, "cancelar_operacao", True),
+    (Role.VIEWER, "listar_operacoes", True),
+    (Role.ADMIN, "listar_operacoes", True),
+    (Role.ADMIN, "aprovar_operacao", True),
+    (Role.ADMIN, "rejeitar_operacao", True),
 )
 
 
@@ -92,19 +112,49 @@ class UserNotFoundError(Exception):
         self.email = email
 
 
+def _resolve_db_path(config_root: Path, client_id: str) -> Path:
+    legacy = config_root / client_id / "config" / "users.db"
+    data_dir = os.getenv("BRM_DATA_DIR")
+    if not data_dir:
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        return legacy
+    target = Path(data_dir) / client_id / "users.db"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists() and legacy.exists():
+        shutil.copy2(legacy, target)
+    return target
+
+
 class SQLUserStore:
     def __init__(self, config_root: Path, client_id: str) -> None:
-        db_path = Path(config_root) / client_id / "config" / "users.db"
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+        db_path = _resolve_db_path(Path(config_root), client_id)
+        self.db_path = db_path
         self._engine = create_engine(f"sqlite:///{db_path}")
         Base.metadata.create_all(self._engine)
+        self.fresh_permissions = False
         self._seed_default_permissions()
+        self._migrate_plaintext_tokens()
+
+    def _migrate_plaintext_tokens(self) -> None:
+        """Converte tokens antigos em texto puro para hash, uma única vez."""
+        with Session(self._engine) as session:
+            rows = session.scalars(
+                select(UserRow).where(
+                    UserRow.api_token.is_not(None),
+                    ~UserRow.api_token.startswith(_TOKEN_PREFIX),
+                )
+            ).all()
+            for row in rows:
+                row.api_token = hash_token(row.api_token)
+            if rows:
+                session.commit()
 
     def _seed_default_permissions(self) -> None:
         with Session(self._engine) as session:
             has_any = session.scalar(select(ToolPermissionRow.id).limit(1))
             if has_any is not None:
                 return
+            self.fresh_permissions = True
             for role, tool_name, allowed in _DEFAULT_PERMISSIONS:
                 session.add(
                     ToolPermissionRow(role=role.value, tool_name=tool_name, allowed=allowed)
@@ -118,7 +168,7 @@ class SQLUserStore:
 
     def get_by_token(self, token: str) -> UserProfile | None:
         with Session(self._engine) as session:
-            row = session.scalar(select(UserRow).where(UserRow.api_token == token))
+            row = session.scalar(select(UserRow).where(UserRow.api_token == hash_token(token)))
             return row.to_profile() if row else None
 
     def create_user(
@@ -130,23 +180,60 @@ class SQLUserStore:
         Esta é a única chamada que devolve o token em texto puro — não há
         como recuperá-lo depois (list_users nunca inclui token).
         """
-        token = api_token or secrets.token_urlsafe(24)
+        if email.strip().lower().startswith(IDENTIDADE_SISTEMA):
+            raise ValueError("o prefixo 'sistema:' é reservado aos atores de gatilho")
+        token = api_token or secrets.token_urlsafe(32)
         with Session(self._engine) as session:
             existing = session.scalar(select(UserRow).where(UserRow.email == email))
             if existing is not None:
                 raise UserAlreadyExistsError(email)
 
-            row = UserRow(email=email, api_token=token, role=role.value)
+            row = UserRow(email=email, api_token=hash_token(token), role=role.value)
             session.add(row)
             session.commit()
             return row.to_profile(), token
+
+    def rotate_token(self, email: str) -> str:
+        """Gera um token novo, invalida o anterior e devolve o valor uma única vez."""
+        token = secrets.token_urlsafe(32)
+        with Session(self._engine) as session:
+            row = session.scalar(select(UserRow).where(UserRow.email == email))
+            if row is None:
+                raise UserNotFoundError(email)
+            row.api_token = hash_token(token)
+            session.commit()
+        return token
 
     def list_users(self) -> list[UserProfile]:
         with Session(self._engine) as session:
             rows = session.scalars(select(UserRow).order_by(UserRow.email))
             return [row.to_profile() for row in rows]
 
-    def is_tool_allowed(self, role: Role, tool_name: str) -> bool:
+    def tools_without_permissions(self, tool_names: list[str]) -> list[str]:
+        """Tools que não têm nenhuma linha em `tool_permissions` (negadas em modo deny)."""
+        with Session(self._engine) as session:
+            known = set(session.scalars(select(ToolPermissionRow.tool_name)).all())
+        return [name for name in tool_names if name not in known]
+
+    def seed_open_tools(
+        self, tool_names: list[str], roles: tuple[Role, ...] = (Role.VIEWER, Role.ADMIN)
+    ) -> list[str]:
+        """Cria linhas explícitas de acesso para tools sem nenhuma linha.
+
+        Preserva, de forma visível e editável, o que antes era "aberto por
+        omissão". Devolve as tools semeadas.
+        """
+        missing = self.tools_without_permissions(tool_names)
+        if not missing:
+            return []
+        with Session(self._engine) as session:
+            for name in missing:
+                for role in roles:
+                    session.add(ToolPermissionRow(role=role.value, tool_name=name, allowed=True))
+            session.commit()
+        return missing
+
+    def is_tool_allowed(self, role: Role, tool_name: str, default: str = "allow") -> bool:
         """Substitui a lookup em ROLE_TOOLS por uma consulta na tabela
         `tool_permissions`. Sem linha para (role, tool_name): se NENHUMA
         linha existe pra essa tool (em qualquer role), ela é irrestrita —
@@ -167,7 +254,9 @@ class SQLUserStore:
                 .where(ToolPermissionRow.tool_name == tool_name)
                 .limit(1)
             )
-            return any_row is None
+            if any_row is None:
+                return default == "allow"
+            return False
 
     def set_permission(self, role: Role, tool_name: str, allowed: bool) -> None:
         with Session(self._engine) as session:

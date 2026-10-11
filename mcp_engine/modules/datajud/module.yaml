@@ -1,0 +1,7 @@
+name: datajud
+version: "1.0.0"
+api_version: 1
+compartilhavel: true
+skills: []
+segredos_requeridos: []
+dominios_requeridos: []

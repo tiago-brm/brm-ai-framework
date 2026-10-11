@@ -1,0 +1,13 @@
+schema_version: 1
+client_id: avaliacao
+rules:
+  - id: recebimento-valor-alto
+    description: recebimento acima de R$ 5.000 exige aprovação de outro perfil
+    condition:
+      and:
+        - { "==": [{ "var": "skill_name" }, "registrar_recebimento"] }
+        - { ">": [{ "var": "valor" }, 5000] }
+    effect: require_approval
+    message: Recebimento de valor alto precisa de aprovação.
+    next_step: Peça a um administrador que aprove com aprovar_operacao.
+    aprovador: admin

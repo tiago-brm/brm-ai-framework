@@ -31,15 +31,29 @@ mcp_engine/core/user_store.py — popular com
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
 import os
+import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from mcp_engine.core.api_router import build_api_router
-from mcp_engine.core.auth import current_user_var, resolve_http_identity, set_current_user
+from mcp_engine.core.auth import (
+    ANONYMOUS_PROFILE,
+    current_user_var,
+    resolve_http_identity,
+    set_current_user,
+    trace_id_var,
+)
+from mcp_engine.core.health import tudo_ok, verificar_integridade
 from mcp_engine.core.mcp_server import BRMEngine, build_server
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(engine: BRMEngine | None = None) -> FastAPI:
@@ -52,6 +66,19 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
     # registro de tools para os dois transportes (ver spec 010).
     mcp_server = build_server(engine)
 
+    @contextlib.asynccontextmanager
+    async def lifespan(_: FastAPI):
+        parar = asyncio.Event()
+        agendador = None
+        if engine.gatilhos.habilitado and os.getenv("BRM_GATILHOS", "on").lower() != "off":
+            agendador = asyncio.create_task(engine.gatilhos.rodar(parar=parar))
+        try:
+            yield
+        finally:
+            parar.set()
+            if agendador is not None:
+                await agendador
+
     # Aquece o índice do vault no startup: a primeira indexação carrega o modelo
     # de embeddings e, sem isso, o primeiro pedido do painel demora vários segundos.
     try:
@@ -59,16 +86,17 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
     except Exception:
         pass
 
-    app = FastAPI(title="BRM Engine (remoto)")
+    app = FastAPI(title="BRM Engine (remoto)", lifespan=lifespan)
 
     # Dashboard React/Vite roda em outra origem (localhost:5173 em dev) e
     # autentica com o mesmo Bearer token do SQLUserStore — não há cookie/
-    # sessão pra CSRF proteger. allow_origins=["*"] é aceitável no estágio
-    # atual (Fase 1, local-first, sem exposição pública — ver docs/spec.md);
-    # revisitar quando isso for exposto fora de localhost.
+    # sessão pra CSRF proteger. As origens permitidas vêm da configuração do
+    # cliente (`cors_origins`); `*` só com `cors_permitir_qualquer: true`.
+    if engine.cors_permitir_qualquer:
+        logger.warning("CORS aberto a qualquer origem (cors_permitir_qualquer: true)")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["*"] if engine.cors_permitir_qualquer else list(engine.cors_origins),
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -81,10 +109,15 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
         # o resto do código (RBACFastMCP, tools, rotas /api), que não sabe e
         # não precisa saber que a identidade veio de um header.
         profile = resolve_http_identity(engine.user_store, request.headers.get("authorization"))
+        open_request = request.method == "OPTIONS" or request.url.path == "/health"
+        if profile is ANONYMOUS_PROFILE and not open_request:
+            return JSONResponse({"detail": "credencial ausente ou inválida"}, status_code=401)
         token = set_current_user(profile)
+        trace_token = trace_id_var.set(uuid.uuid4().hex)
         try:
             return await call_next(request)
         finally:
+            trace_id_var.reset(trace_token)
             current_user_var.reset(token)
 
     # /api/* é a superfície REST do painel super_admin (dashboard React) —
@@ -92,6 +125,21 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
     # mount("/", ...) abaixo: o mount captura qualquer path que não tenha
     # casado com uma rota anterior, então uma rota /api registrada depois
     # nunca seria alcançada.
+    @app.get("/health")
+    async def health():
+        diretorios = [
+            engine._data_root / engine.client_id,
+            engine.user_store.db_path.parent,
+        ]
+        resultado = await asyncio.to_thread(verificar_integridade, diretorios)
+        modulos = await asyncio.to_thread(engine.verificar_saude_modulos)
+        if not tudo_ok(resultado) or not all(m["ok"] for m in modulos.values()):
+            corpo = {"status": "degraded", "bancos": resultado}
+            if modulos:
+                corpo["modulos"] = modulos
+            return JSONResponse(corpo, status_code=503)
+        return {"status": "ok"}
+
     app.include_router(build_api_router(engine, mcp_server), prefix="/api")
 
     app.mount("/", mcp_server.sse_app())

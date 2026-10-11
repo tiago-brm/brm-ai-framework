@@ -1,0 +1,37 @@
+confianca_minima: 0.8
+formas:
+- planilha: PIX SICOOB
+  forma: pix
+  meio: Sicoob
+- planilha: PIX STONE
+  forma: pix
+  meio: Stone
+- planilha: PIX SICREDI
+  forma: pix
+  meio: Sicredi
+- planilha: PIX INTER
+  forma: pix
+  meio: Inter
+- planilha: DEB
+  forma: debito
+  meio: Stone
+  vigente_de: '2025-01-01'
+- planilha: CRED
+  forma: credito
+  meio: Stone
+  vigente_de: '2025-01-01'
+- planilha: DINH
+  forma: dinheiro
+  meio: Caixa
+- planilha: TED SICOOB
+  forma: ted
+  meio: Sicoob
+- planilha: ACORDO
+  forma: acordo
+  meio: null
+  tipo: acordo
+despesas_formas:
+- planilha: PIX
+  forma: pix
+- planilha: HOLERITE
+  forma: null

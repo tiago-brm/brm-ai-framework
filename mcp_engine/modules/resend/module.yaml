@@ -1,0 +1,7 @@
+name: resend
+version: "1.0.0"
+api_version: 1
+compartilhavel: true
+skills: [enviar_email]
+segredos_requeridos: [resend_api_key, resend_remetente]
+dominios_requeridos: [api.resend.com]

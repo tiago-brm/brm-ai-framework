@@ -1,0 +1,30 @@
+skills:
+- name: enviar_email
+  description: Envia um e-mail transacional pelo Resend (POST /emails).
+  method: POST
+  url_template: https://api.resend.com/emails
+  allowed_domains: [api.resend.com]
+  parameters:
+    to:
+      type: string
+      required: true
+      description: Endereço do destinatário.
+    subject:
+      type: string
+      required: true
+      description: Assunto do e-mail.
+    text:
+      type: string
+      required: true
+      description: Corpo do e-mail em texto simples.
+  executor:
+    type: http
+    headers:
+      Authorization: "Bearer ${secret:resend_api_key}"
+    corpo_fixo:
+      from: "${secret:resend_remetente}"
+    mapeamento_resposta:
+      id: $.id
+  autonomia: A2
+  irreversivel: true
+  resumo: "E-mail para {to}: {subject}"

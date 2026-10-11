@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,7 @@ class ObsidianVaultProvider:
         self._embedding_provider = embedding_provider or LocalEmbeddingProvider()
         self._client_config_provider = FileSystemClientConfigProvider(self._config_root)
         self._indices: dict[str, VaultIndex] = {}
+        self.on_external_change: Callable[[str, str], None] | None = None
         self._watchers: dict[str, VaultWatcher] = {}
 
     def _vault_root(self, client_id: str) -> tuple[Path, bool]:
@@ -219,6 +221,7 @@ class ObsidianVaultProvider:
                 AuditDecision.ALLOWED,
                 {"note_id": note_id, "change": "deleted"},
             )
+            self._notify_change(client_id, note_id)
             return
 
         old_hash = index.get_indexed_content_hash(note_id)
@@ -234,3 +237,13 @@ class ObsidianVaultProvider:
             AuditDecision.ALLOWED,
             {"note_id": note_id, "change": change},
         )
+        self._notify_change(client_id, note_id)
+
+    def _notify_change(self, client_id: str, note_id: str) -> None:
+        hook = self.on_external_change
+        if hook is None:
+            return
+        try:
+            hook(client_id, note_id)
+        except Exception:
+            pass

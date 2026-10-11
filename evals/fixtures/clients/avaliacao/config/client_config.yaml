@@ -1,0 +1,11 @@
+client_id: avaliacao
+context: >-
+  Cliente de avaliação, agnóstico de setor: presta serviços a clientes
+  cadastrados por ID (c-001, c-002...), recebe pagamentos, agenda
+  atendimentos e registra observações.
+simulador: false
+domain_allowlist:
+  - api.example.com
+block_private_ip: true
+rbac_default: deny
+operacao_ttl_horas: 24

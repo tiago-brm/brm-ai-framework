@@ -6,6 +6,7 @@ import re
 from datetime import UTC, datetime
 from fnmatch import fnmatch
 from functools import lru_cache
+from typing import Any
 from urllib.parse import urlparse
 
 from mcp_engine.core.auth import Role
@@ -16,6 +17,7 @@ from mcp_engine.core.models import (
     ClientConfig,
     DLPPattern,
     InterceptDecision,
+    RequestScan,
     SkillCall,
 )
 
@@ -160,3 +162,57 @@ def check_vault_egress(text: str, client_config: ClientConfig) -> InterceptDecis
         )
 
     return InterceptDecision(allowed=True)
+
+
+def scan_request(
+    arguments: dict[str, Any], client_config: ClientConfig, role: Role
+) -> RequestScan:
+    """DLP sobre os argumentos que chegam, antes de qualquer regra ou execução.
+
+    Padrões `deny` bloqueiam para todos os perfis. Padrões `mask` redigem o
+    valor apenas para perfis não confiáveis, igual à saída (`redact_for_role`).
+    O retorno traz só tipo e contagem das ocorrências, nunca o valor.
+    """
+    counts: dict[str, int] = {}
+    deny_label: str | None = None
+
+    def walk(value: Any) -> Any:
+        nonlocal deny_label
+        if isinstance(value, str):
+            for dlp in client_config.dlp_patterns:
+                pattern = _compile(dlp.pattern)
+                found = pattern.findall(value)
+                if not found:
+                    continue
+                counts[dlp.label] = counts.get(dlp.label, 0) + len(found)
+                if dlp.action == "deny":
+                    if deny_label is None:
+                        deny_label = dlp.label
+                elif role not in TRUSTED_ROLES:
+                    value = pattern.sub(f"[REDACTED:{dlp.label}]", value)
+            return value
+        if isinstance(value, dict):
+            return {k: walk(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [walk(v) for v in value]
+        return value
+
+    cleaned = walk(arguments)
+    if deny_label is not None:
+        return RequestScan(
+            allowed=False,
+            reason=f"DLP: found {deny_label}",
+            dlp_matches=counts,
+            arguments={},
+        )
+    return RequestScan(allowed=True, dlp_matches=counts, arguments=cleaned)
+
+
+def scan_response(text: str, client_config: ClientConfig) -> InterceptDecision:
+    """DLP sobre a resposta de um executor real (nativo ou HTTP), sem auditoria."""
+    dlp_matches, deny_label = _scan_dlp_matches(text, client_config.dlp_patterns)
+    if deny_label is not None:
+        return InterceptDecision(
+            allowed=False, reason=f"DLP: found {deny_label}", dlp_matches=dlp_matches
+        )
+    return InterceptDecision(allowed=True, dlp_matches=dlp_matches)

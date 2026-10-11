@@ -1,5 +1,6 @@
 client_id: example
 block_private_ip: true
+modules: [datajud]
 vault_root: /Users/tiagopereiraramos/vault/brm-framework-vault
 
 # Vault no Notion (spec 015) — página raiz "BRM Vault" no workspace

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
-DraftKind = Literal["rule", "skill", "document"]
+DraftKind = Literal["rule", "skill", "document", "memoria"]
 
 
 class DraftNotFoundError(Exception):

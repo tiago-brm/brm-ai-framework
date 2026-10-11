@@ -40,9 +40,16 @@ def _auth(token: str) -> dict[str, str]:
 
 
 class TestAccessControl:
-    def test_no_token_is_forbidden(self, client: TestClient) -> None:
+    def test_no_token_is_unauthorized(self, client: TestClient) -> None:
         response = client.get("/api/me")
-        assert response.status_code == 403
+        assert response.status_code == 401
+
+    def test_unknown_token_is_unauthorized(self, client: TestClient) -> None:
+        response = client.get("/api/me", headers=_auth("nao-existe"))
+        assert response.status_code == 401
+
+    def test_health_is_open(self, client: TestClient) -> None:
+        assert client.get("/health").status_code == 200
 
     def test_admin_token_is_forbidden(self, client: TestClient) -> None:
         response = client.get("/api/me", headers=_auth("admin-tok"))

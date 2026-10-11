@@ -1,0 +1,20 @@
+name: financeiro
+version: "1.0.0"
+api_version: 1
+compartilhavel: true
+skills:
+- registrar_recebimento
+- registrar_despesa
+- estornar_lancamento
+- anexar_comprovante
+- atualizar_status_nf
+- registrar_falta
+- registrar_pacote
+- resolver_pendencia
+- fechar_mes
+- reabrir_mes
+- consultar_financeiro
+- listar_pendencias
+- exportar_planilha
+segredos_requeridos: []
+dominios_requeridos: []

@@ -375,7 +375,7 @@ def main() -> None:
             "destinatario": "responsavel@exemplo.com.br",
             "valor": "R$ 480,00",
             "dias_atraso": 10,
-            "mensagem": "Titular CPF 123.456.789-09",
+            "mensagem": "Lembrete de mensalidade em aberto.",
         },
         "Cobrança pela recepção: exige aprovação da gestão.",
     )

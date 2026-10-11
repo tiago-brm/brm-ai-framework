@@ -16,13 +16,13 @@ class AccessResult:
     privileged: list[str] = field(default_factory=list)
 
 
-def _facts(note: VaultNote, actor: str, role: str) -> dict[str, Any]:
+def _facts(access: VaultAccess, note: VaultNote, actor: str, role: str) -> dict[str, Any]:
     frontmatter = dict(note.frontmatter)
     return {
         "actor": actor,
         "actor_role": role,
         "note": {**frontmatter, "note_id": note.note_id},
-        "vinculo": str(frontmatter.get("psicologo_responsavel")) == actor,
+        "vinculo": str(frontmatter.get(access.vinculo_campo)) == actor,
     }
 
 
@@ -33,11 +33,11 @@ def _match(policy: VaultPolicy, facts: dict[str, Any]) -> bool:
         return False
 
 
-def _restrict(note: VaultNote, expose: Sequence[str]) -> VaultNote:
+def _restrict(note: VaultNote, expose: Sequence[str], identificador_campo: str) -> VaultNote:
     frontmatter = {k: v for k, v in note.frontmatter.items() if k in expose}
     return note.model_copy(
         update={
-            "title": str(frontmatter.get("paciente_id") or "(restrito)"),
+            "title": str(frontmatter.get(identificador_campo) or "(restrito)"),
             "content": "",
             "frontmatter": frontmatter,
             "links": (),
@@ -56,7 +56,7 @@ def filter_notes(
         return result
 
     for note in notes:
-        facts = _facts(note, actor, role)
+        facts = _facts(access, note, actor, role)
         policy = next((p for p in access.policies if _match(p, facts)), None)
 
         effect = policy.effect if policy else access.default
@@ -66,7 +66,7 @@ def filter_notes(
             result.hidden += 1
             continue
         if effect == "metadata_only" and policy is not None:
-            result.visible.append(_restrict(note, policy.expose))
+            result.visible.append(_restrict(note, policy.expose, access.identificador_campo))
         else:
             result.visible.append(note)
         if policy is not None and policy.audit:

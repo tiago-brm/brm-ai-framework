@@ -1,0 +1,5 @@
+schema_version: 1
+client_id: avaliacao
+default: allow
+write_roles: [admin, super_admin]
+policies: []

@@ -1,0 +1,28 @@
+schema_version: 1
+client_id: __CLIENT_ID__
+default: deny
+write_roles: [admin, super_admin]
+vinculo_campo: responsavel
+identificador_campo: identificador
+write_denied_next_step: Peça a um administrador do cliente.
+policies:
+- id: modelos-abertos
+  when:
+    ==: [{var: note.tipo}, modelo]
+  effect: allow
+- id: conhecimento-aberto
+  when:
+    in: [{var: note.zona}, [politicas, glossario, procedimentos, memoria]]
+  effect: allow
+- id: cadastros-gestor
+  when:
+    and:
+    - ==: [{var: note.zona}, cadastros]
+    - in: [{var: actor_role}, [admin, super_admin]]
+  effect: allow
+- id: sistema-e-relatorios-gestor
+  when:
+    and:
+    - in: [{var: note.zona}, [sistema, relatorios]]
+    - in: [{var: actor_role}, [admin, super_admin]]
+  effect: allow

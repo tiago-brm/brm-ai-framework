@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
+import logging
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -10,15 +11,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
+from json_logic import jsonLogic
 from pydantic import Field
 
 from audit.sink import FileSystemAuditSink
 from mcp_engine.core.auth import (
     ANONYMOUS_PROFILE,
     Role,
+    UserProfile,
+    current_user_var,
+    ensure_trace_id,
     get_current_user,
+    get_trace_id,
     resolve_stdio_identity,
     set_current_user,
+    trace_id_var,
 )
 from mcp_engine.core.config_loader import (
     FileSystemClientConfigProvider,
@@ -27,9 +34,27 @@ from mcp_engine.core.config_loader import (
     FileSystemSkillProvider,
     FileSystemVaultAccessProvider,
 )
-from mcp_engine.core.datajud import DatajudError, consultar_processo
+from mcp_engine.core.config_notas import OPERACAO_ATIVAR, Extensoes
+from mcp_engine.core.config_notas_servico import Caderno
 from mcp_engine.core.email_sender import EmailSendError, email_configured, send_email
-from mcp_engine.core.interceptor import intercept, redact_for_role
+from mcp_engine.core.executor import (
+    EVENTOS_CHAVE,
+    ExecucaoFalhou,
+    HandlerContext,
+    HandlerRegistry,
+    SecretStore,
+    emitir_chamada,
+    run_http,
+    run_native,
+)
+from mcp_engine.core.fatos import ContextoFatos, FatosIndisponiveis
+from mcp_engine.core.gatilhos import Gatilhos
+from mcp_engine.core.interceptor import (
+    intercept,
+    redact_for_role,
+    scan_request,
+    scan_response,
+)
 from mcp_engine.core.models import (
     AuditDecision,
     AuditEvent,
@@ -38,9 +63,30 @@ from mcp_engine.core.models import (
     SkillCall,
     SkillDefinition,
 )
+from mcp_engine.core.operacoes import (
+    AGUARDANDO,
+    CANCELADA,
+    CONFIRMADA,
+    EXECUTADA,
+    EXPIRADA,
+    FALHOU,
+    PROPOSTA,
+    RANK,
+    REJEITADA,
+    Operacao,
+    OperacaoStore,
+    digest_argumentos,
+)
 from mcp_engine.core.rbac_server import RBACFastMCP
 from mcp_engine.core.rule_evaluator import evaluate
+from mcp_engine.core.state import StateStore
 from mcp_engine.core.user_store import SQLUserStore, UserAlreadyExistsError, UserNotFoundError
+from mcp_engine.modules import (
+    ModuleError,
+    install_modules,
+    load_for_client,
+    segredos_ausentes,
+)
 from mcp_engine.vault.access import filter_notes
 from mcp_engine.vault.document_generator import (
     build_document_agent,
@@ -48,6 +94,7 @@ from mcp_engine.vault.document_generator import (
     propose_document,
 )
 from mcp_engine.vault.draft_store import DraftStore
+from mcp_engine.vault.escrita_motor import EscritorMotor
 from mcp_engine.vault.interpreter import (
     build_interpreter_agent,
     promote_draft,
@@ -55,32 +102,30 @@ from mcp_engine.vault.interpreter import (
 )
 from mcp_engine.vault.notion_adapter import NotionVaultProvider
 from mcp_engine.vault.obsidian_adapter import ObsidianVaultProvider
+from mcp_engine.vault.segundo_cerebro import SegundoCerebro
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_ACTOR = "claude"
 
+TOOLS_DO_NUCLEO = frozenset(
+    {
+        "call_skill", "query_audit_log", "vault_search", "vault_add_note", "vault_get_related",
+        "vault_list_notes", "vault_interpret_and_propose", "vault_list_drafts",
+        "vault_promote_draft", "vault_generate_document", "vault_promote_document",
+        "consultar_dados", "deletar_banco", "criar_usuario", "listar_usuarios",
+        "atualizar_perfil_usuario", "listar_permissoes", "confirmar_operacao",
+        "aprovar_operacao", "rejeitar_operacao", "cancelar_operacao", "listar_operacoes",
+        "rotacionar_token", "atualizar_permissao", "config_estado", "config_propor",
+        "config_reverter", "config_rascunho", "memoria_registrar", "memoria_rascunhos",
+        "memoria_promover", "gerar_relatorio_mensal",
+    }
+)  # fmt: skip
 
-def _render_processo_note(result: dict[str, Any]) -> str:
-    classe = (result.get("classe") or {}).get("nome", "—")
-    orgao = (result.get("orgao_julgador") or {}).get("nome", "—")
-    assuntos = ", ".join(a.get("nome", "") for a in (result.get("assuntos") or []))
-    movimentos = list(result.get("movimentos") or [])
-    movimentos.sort(key=lambda m: m.get("dataHora", ""), reverse=True)
 
-    linhas = [
-        f"Consulta ao DataJud (CNJ) — tribunal `{result.get('tribunal')}`, "
-        f"grau `{result.get('grau')}`.",
-        "",
-        f"- **Classe:** {classe}",
-        f"- **Órgão julgador:** {orgao}",
-        f"- **Assuntos:** {assuntos or '—'}",
-        f"- **Ajuizamento:** {result.get('data_ajuizamento') or '—'}",
-        "",
-        "## Últimas movimentações",
-    ]
-    for m in movimentos[:10]:
-        linhas.append(f"- {m.get('dataHora', '')} — {m.get('nome', '')}")
-
-    return "\n".join(linhas) + "\n"
+class _SafeDict(dict):
+    def __missing__(self, key: str) -> str:
+        return "{" + key + "}"
 
 
 def _render_url(url_template: str, arguments: dict[str, Any]) -> str:
@@ -151,6 +196,9 @@ class BRMEngine:
         interpreter_agent: Any | None = None,
         document_agent: Any | None = None,
         user_store: SQLUserStore | None = None,
+        http_client: Any | None = None,
+        secrets: SecretStore | None = None,
+        skip_config_integrity: bool = False,
     ) -> None:
         self.client_id = client_id
         self._config_root = Path(config_root)
@@ -160,13 +208,35 @@ class BRMEngine:
         self._skill_provider = FileSystemSkillProvider(self._config_root)
         self._client_config_provider = FileSystemClientConfigProvider(self._config_root)
         self._audit_sink = FileSystemAuditSink(self._data_root)
+        self._state = StateStore(self._data_root, client_id)
+        self.extensoes = Extensoes()
+        self.operacoes = OperacaoStore(self._state)
+        self.gatilhos = Gatilhos(self)
+        self.extensoes.registrar_tipo(self.gatilhos.tipo(), substituir=True)
+        self.extensoes.provedores.registrar(
+            "nucleo.operacoes",
+            self._fatos_operacoes,
+            ("operacoes_aguardando", "operacoes_aguardando_horas_max"),
+        )
+        self.handlers = HandlerRegistry()
+        self.secrets = (secrets or SecretStore()).for_client(client_id)
+        self._http_client = http_client
 
         # Eagerly load to catch config errors early. Also needed here (rather
         # than after vault_provider construction) since the vault provider
         # factory below reads client_config.vault_provider.
         self._ruleset = self._rule_provider.get_rules(client_id)
-        self._skillset = self._skill_provider.get_skills(client_id)
         self._client_config = self._client_config_provider.get_client_config(client_id)
+        self._modules = load_for_client(
+            client_id,
+            self._config_root,
+            self._client_config.modules,
+            self._client_config.modulos_privados,
+            self._client_config.domain_allowlist,
+        )
+        self._skill_provider.modules = self._modules
+        self._skill_provider.domain_allowlist = self._client_config.domain_allowlist
+        self._skillset = self._skill_provider.get_skills(client_id)
         self._vault_access = FileSystemVaultAccessProvider(self._config_root).get_vault_access(
             client_id
         )
@@ -182,11 +252,67 @@ class BRMEngine:
         self._interpreter_agent = interpreter_agent
         self._document_agent = document_agent
 
+        self.module_tools = install_modules(
+            self._modules,
+            client_id=client_id,
+            data_root=self._data_root,
+            registry=self.handlers,
+            secrets=self.secrets,
+            add_vault_note=self._module_add_note,
+            audit=self._module_audit,
+            extensoes=self.extensoes,
+            leitor_operacoes=self.operacoes.contagens,
+        )
+        self._iniciar_caderno(skip_config_integrity)
+        self._validar_fatos_de_modulo()
+        for ausente in segredos_ausentes(self._modules, self.secrets):
+            logger.warning("módulo com segredo requerido ausente: %s", ausente)
+
         if vault_watch and hasattr(self._vault_provider, "start_watching"):
             try:
+                if hasattr(self._vault_provider, "on_external_change"):
+                    self._vault_provider.on_external_change = self._on_nota_externa
                 self._vault_provider.start_watching(client_id)
             except Exception:
                 pass
+
+    def _vault_root(self) -> Path:
+        if self._client_config.vault_root:
+            return Path(self._client_config.vault_root).expanduser()
+        return self._config_root / self.client_id / "vault"
+
+    def _iniciar_caderno(self, skip_integrity: bool) -> None:
+        vault_root = self._vault_root()
+        self.escritor = EscritorMotor(self._state, vault_root, self._audit_sink, self.client_id)
+        self.caderno = Caderno(self, self.extensoes, vault_root)
+        self.segundo_cerebro = SegundoCerebro(
+            client_id=self.client_id,
+            vault_root=vault_root,
+            drafts=self._draft_store,
+            audit=self._audit_sink,
+            client_config=self._client_config,
+            extensoes=self.extensoes,
+            escritor=self.escritor,
+            reindex=lambda: self._vault_provider.reindex(self.client_id),
+        )
+        if self._client_config.config_via_notas:
+            if not skip_integrity:
+                self.caderno.verificar_integridade()
+                self.gatilhos.reconciliar(self.caderno.verificar_snapshots())
+            self.caderno.aplicar_no_motor()
+
+    def _on_nota_externa(self, client_id: str, note_id: str) -> None:
+        self.caderno.on_nota_alterada(note_id)
+
+    def reserved_tool_names(self) -> frozenset[str]:
+        return TOOLS_DO_NUCLEO | frozenset(self.module_tools)
+
+    def _module_add_note(self, title: str, content: str, frontmatter: dict[str, Any]) -> str | None:
+        return self._vault_provider.add_note(self.client_id, title, content, frontmatter).note_id
+
+    def _module_audit(self, action: str, allowed: bool) -> None:
+        decision = AuditDecision.ALLOWED if allowed else AuditDecision.DENIED
+        self._record_audit(DEFAULT_ACTOR, action, decision)
 
     def _build_vault_provider(self) -> Any:
         if self._client_config.vault_provider == "notion":
@@ -206,6 +332,18 @@ class BRMEngine:
     @property
     def skills(self) -> tuple[SkillDefinition, ...]:
         return self._skillset.skills
+
+    @property
+    def rbac_default(self) -> str:
+        return self._client_config.rbac_default
+
+    @property
+    def cors_origins(self) -> tuple[str, ...]:
+        return self._client_config.cors_origins
+
+    @property
+    def cors_permitir_qualquer(self) -> bool:
+        return self._client_config.cors_permitir_qualquer
 
     @property
     def client_context(self) -> str | None:
@@ -228,28 +366,41 @@ class BRMEngine:
     def demo_scenarios(self):
         return self._demo_scenarios.get_scenarios(self.client_id)
 
-    def avaliar_skill(self, skill_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    def avaliar_skill(
+        self, skill_name: str, arguments: dict[str, Any], ruleset: RuleSet | None = None
+    ) -> dict[str, Any]:
         """Decisão das regras para uma skill, sem auditoria nem efeitos externos."""
         skill = self._find_skill(skill_name)
         if skill is None:
             return {"efeito": "deny", "rule_id": None, "message": "skill não encontrada"}
         derived = self._resolve_derived_facts(skill, arguments)
-        clean = {k: v for k, v in arguments.items() if k not in skill.derived_facts}
+        nomes_modulo = self._nomes_de_fatos_de_modulo(skill)
+        clean = {
+            k: v
+            for k, v in arguments.items()
+            if k not in skill.derived_facts and k not in nomes_modulo
+        }
+        try:
+            modulo = self._fatos_de_modulo(skill, clean)
+        except FatosIndisponiveis as exc:
+            return {"efeito": "deny", "rule_id": None, "message": str(exc)}
         facts: dict[str, Any] = {
+            **clean,
             "skill_name": skill_name,
             "actor": self._actor(),
             "actor_role": get_current_user().role.value,
             "origem_sistema": "mcp",
-            **clean,
             **derived,
+            **modulo,
         }
-        decision = evaluate(self._ruleset, facts)
+        decision = evaluate(ruleset or self._ruleset, facts)
         return {
             "efeito": decision.effect.value,
             "rule_id": decision.rule_id,
             "message": decision.message,
             "proximo_passo": decision.next_step,
             "fatos_derivados": derived,
+            "fatos_de_modulo": modulo,
         }
 
     def _resolve_derived_facts(
@@ -296,6 +447,43 @@ class BRMEngine:
                 derived[name] = raw
         return derived
 
+    def _fatos_operacoes(self, ctx: ContextoFatos, args: Any) -> dict[str, Any]:
+        contagens = self.operacoes.contagens()
+        return {
+            "operacoes_aguardando": contagens["aguardando_aprovacao"],
+            "operacoes_aguardando_horas_max": contagens["aguardando_mais_antiga_horas"],
+        }
+
+    def _validar_fatos_de_modulo(self) -> None:
+        for skill in self._skillset.skills:
+            erros = self.extensoes.provedores.validar_uso(
+                skill.fatos_de_modulo, skill.parameters, skill.derived_facts
+            )
+            if erros:
+                raise ModuleError(f"skill {skill.name!r}: {'; '.join(erros)}")
+
+    def _fatos_de_modulo(self, skill: SkillDefinition, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Fatos calculados pelos provedores dos módulos que a skill declara (somente leitura)."""
+        if not skill.fatos_de_modulo:
+            return {}
+        user = get_current_user()
+        ctx = ContextoFatos(self.client_id, user.identity, user.role.value, self._data_root)
+        return self.extensoes.provedores.calcular(skill.fatos_de_modulo, ctx, arguments)
+
+    def _nomes_de_fatos_de_modulo(self, skill: SkillDefinition) -> frozenset[str]:
+        return self.extensoes.provedores.fatos_de(skill.fatos_de_modulo)
+
+    def verificar_saude_modulos(self) -> dict[str, dict[str, Any]]:
+        """Executa as verificações de integridade registradas pelos módulos (para /health)."""
+        resultados: dict[str, dict[str, Any]] = {}
+        for nome, fn in sorted(self.extensoes.verificacoes.items()):
+            try:
+                bruto = fn()
+                resultados[nome] = {**bruto, "ok": bool(bruto.get("ok"))}
+            except Exception as exc:
+                resultados[nome] = {"ok": False, "detalhe": type(exc).__name__}
+        return resultados
+
     def _find_skill(self, skill_name: str):
         for skill in self._skillset.skills:
             if skill.name == skill_name:
@@ -327,6 +515,34 @@ class BRMEngine:
         *,
         simulacao: bool = False,
         trace: dict[str, Any] | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        _, token = ensure_trace_id()
+        try:
+            return self._call_skill(
+                skill_name,
+                arguments,
+                simulacao=simulacao,
+                trace=trace,
+                idempotency_key=idempotency_key,
+            )
+        finally:
+            if token is not None:
+                trace_id_var.reset(token)
+
+    def _call_skill(
+        self,
+        skill_name: str,
+        arguments: dict[str, Any],
+        *,
+        simulacao: bool = False,
+        trace: dict[str, Any] | None = None,
+        idempotency_key: str | None = None,
+        _aprovada: bool = False,
+        _regra_aprovada: str | None = None,
+        _confirmado_por: str | None = None,
+        _aprovado_por: str | None = None,
+        _sistema: bool = False,
     ) -> dict[str, Any]:
         actor = self._actor()
 
@@ -357,19 +573,93 @@ class BRMEngine:
                         },
                     )
                 )
-        arguments = {k: v for k, v in arguments.items() if k not in skill.derived_facts}
+        nomes_modulo = self._nomes_de_fatos_de_modulo(skill)
+        informados_modulo = {k: v for k, v in arguments.items() if k in nomes_modulo}
+        arguments = {
+            k: v
+            for k, v in arguments.items()
+            if k not in skill.derived_facts and k not in nomes_modulo
+        }
         if trace is not None:
             trace["fatos_derivados"] = derived
 
+        request_dlp = scan_request(arguments, self._client_config, get_current_user().role)
+        if trace is not None and request_dlp.dlp_matches:
+            trace["dlp_entrada"] = request_dlp.dlp_matches
+        if not request_dlp.allowed:
+            self._audit_sink.record(
+                AuditEvent(
+                    client_id=self.client_id,
+                    occurred_at=datetime.now(UTC),
+                    actor=actor,
+                    action=skill_name,
+                    decision=AuditDecision.DENIED,
+                    details={"dlp_entrada": request_dlp.dlp_matches, "reason": request_dlp.reason},
+                )
+            )
+            return {
+                "allowed": False,
+                "reason": request_dlp.reason,
+                "result": "",
+                "payload_digest": None,
+            }
+        arguments = request_dlp.arguments
+
+        try:
+            modulo = self._fatos_de_modulo(skill, arguments)
+        except FatosIndisponiveis as exc:
+            self._audit_sink.record(
+                AuditEvent(
+                    client_id=self.client_id,
+                    occurred_at=datetime.now(UTC),
+                    actor=actor,
+                    action=f"{skill_name}:fatos_indisponiveis",
+                    decision=AuditDecision.DENIED,
+                    details={"provedor": exc.provedor},
+                )
+            )
+            return {
+                "allowed": False,
+                "reason": "Não foi possível calcular os fatos desta operação; nada foi executado.",
+                "result": "",
+                "payload_digest": None,
+            }
+        for fact_name, fact_value in informados_modulo.items():
+            if str(modulo.get(fact_name)) != str(fact_value):
+                self._audit_sink.record(
+                    AuditEvent(
+                        client_id=self.client_id,
+                        occurred_at=datetime.now(UTC),
+                        actor=actor,
+                        action=f"{skill_name}:fato_divergente",
+                        decision=AuditDecision.DENIED,
+                        details={
+                            "fact": fact_name,
+                            "informado": str(fact_value),
+                            "derivado": str(modulo.get(fact_name)),
+                        },
+                    )
+                )
+        if trace is not None:
+            trace["fatos_de_modulo"] = modulo
+
         facts: dict[str, Any] = {
+            **arguments,
             "skill_name": skill_name,
             "actor": actor,
             "actor_role": get_current_user().role.value,
             "origem_sistema": "mcp",
-            **arguments,
             **derived,
+            **modulo,
         }
-        rule_decision = evaluate(self._ruleset, facts)
+        ruleset = self._ruleset
+        if _regra_aprovada is not None:
+            ruleset = RuleSet(
+                schema_version=1,
+                client_id=ruleset.client_id,
+                rules=tuple(r for r in ruleset.rules if r.id != _regra_aprovada),
+            )
+        rule_decision = evaluate(ruleset, facts)
 
         if rule_decision.effect is RuleEffect.DENY:
             self._record_audit(actor, skill_name, AuditDecision.DENIED, rule_decision.rule_id)
@@ -382,11 +672,20 @@ class BRMEngine:
                 "payload_digest": None,
             }
 
+        if rule_decision.effect is RuleEffect.REQUIRE_APPROVAL and _aprovada:
+            self._record_audit(actor, skill_name, AuditDecision.DENIED, rule_decision.rule_id)
+            return {
+                "allowed": False,
+                "reason": "Uma regra adicional exige nova aprovação desta operação.",
+                "rule_id": rule_decision.rule_id,
+                "result": "",
+                "payload_digest": None,
+            }
         if rule_decision.effect is RuleEffect.REQUIRE_APPROVAL:
             self._record_audit(
                 actor, skill_name, AuditDecision.PENDING_APPROVAL, rule_decision.rule_id
             )
-            return {
+            pending = {
                 "allowed": False,
                 "reason": "human approval required",
                 "rule_id": rule_decision.rule_id,
@@ -395,53 +694,215 @@ class BRMEngine:
                 "result": "",
                 "payload_digest": None,
             }
+            if not simulacao:
+                op = self._propor_operacao(
+                    skill,
+                    arguments,
+                    AGUARDANDO,
+                    rule_decision.aprovador or skill.aprovador,
+                    rule_decision.rule_id,
+                )
+                pending.update({"status": op.status, "operacao_id": op.id, "resumo": op.resumo})
+            return pending
 
-        url = _render_url(skill.url_template, arguments)
-        mock_response = json.dumps(
-            {"status": "ok", "skill": skill_name, "arguments": arguments}, sort_keys=True
-        )
-        skill_call = SkillCall(
-            skill_name=skill_name,
-            url=url,
-            method=skill.method,
-            actor=actor,
-            request_body=arguments,
-            response_text=mock_response,
-            response_status=200,
-        )
-
-        intercept_decision = intercept(skill_call, self._client_config, self._audit_sink)
-        if trace is not None:
-            trace["dlp"] = intercept_decision.dlp_matches
-        if not intercept_decision.allowed:
+        nivel = skill.autonomia
+        if nivel == "A1" and skill.a1_condicao is not None and not jsonLogic(
+            skill.a1_condicao, facts
+        ):
+            nivel = "A2"
+        if nivel in ("A2", "A3") and not _aprovada:
+            if simulacao:
+                payload = json.dumps({"status": "simulacao", "exigiria": nivel}, sort_keys=True)
+                return {
+                    "allowed": True,
+                    "reason": None,
+                    "result": payload,
+                    "payload_digest": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+                }
+            status = PROPOSTA if nivel == "A2" and not _sistema else AGUARDANDO
+            op = self._propor_operacao(skill, arguments, status, skill.aprovador, None)
+            self._record_audit(actor, skill_name, AuditDecision.PENDING_APPROVAL)
+            if status == PROPOSTA:
+                passo = (
+                    "Mostre o resumo ao usuário. Se ele concordar, chame confirmar_operacao "
+                    "com este operacao_id."
+                )
+            else:
+                passo = "Peça a um perfil autorizado que aprove com aprovar_operacao."
             return {
                 "allowed": False,
-                "reason": intercept_decision.reason,
+                "reason": (
+                    "confirmação necessária" if status == PROPOSTA else "aprovação necessária"
+                ),
+                "pendente": True,
+                "status": op.status,
+                "operacao_id": op.id,
+                "resumo": op.resumo,
+                "proximo_passo": passo,
                 "result": "",
                 "payload_digest": None,
             }
 
-        # Fase 1 é mocked-by-design (ver docs/spec.md) — enviar_email é a única
-        # exceção: dispara um envio SMTP real quando SMTP_* está configurado,
-        # sempre depois (nunca antes) do gate de DLP/allowlist acima.
-        if skill_name == "enviar_email" and email_configured() and not simulacao:
-            try:
-                send_result = send_email(
-                    destinatario=str(arguments.get("destinatario", "")),
-                    assunto=str(arguments.get("assunto", "")),
-                    corpo=str(arguments.get("corpo", "")),
-                )
-            except EmailSendError as exc:
-                self._record_audit(actor, skill_name, AuditDecision.DENIED, rule_decision.rule_id)
+        if _sistema and nivel in ("A2", "A3") and not _aprovada:
+            self._record_audit(actor, skill_name, AuditDecision.DENIED, rule_decision.rule_id)
+            return {
+                "allowed": False,
+                "reason": "gatilho não executa ações A2 ou A3 sem pessoa",
+                "result": "",
+                "payload_digest": None,
+            }
+
+        if idempotency_key and not simulacao:
+            cached = self._state.get_execucao(idempotency_key)
+            if cached is not None:
+                return {**cached, "idempotente_reutilizado": True}
+
+        user_role = get_current_user().role
+        if skill.executor.type == "mock":
+            url = _render_url(skill.url_template or "", arguments)
+            mock_response = json.dumps(
+                {"status": "ok", "skill": skill_name, "arguments": arguments}, sort_keys=True
+            )
+            skill_call = SkillCall(
+                skill_name=skill_name,
+                url=url,
+                method=skill.method,
+                actor=actor,
+                request_body=arguments,
+                response_text=mock_response,
+                response_status=200,
+            )
+
+            intercept_decision = intercept(skill_call, self._client_config, self._audit_sink)
+            if trace is not None:
+                trace["dlp"] = intercept_decision.dlp_matches
+            if not intercept_decision.allowed:
                 return {
                     "allowed": False,
-                    "reason": f"falha ao enviar e-mail: {exc}",
+                    "reason": intercept_decision.reason,
                     "result": "",
                     "payload_digest": None,
                 }
-            response_text = json.dumps(send_result, sort_keys=True)
+
+            # Fase 1 é mocked-by-design (ver docs/spec.md) — enviar_email é a única
+            # exceção: dispara um envio SMTP real quando SMTP_* está configurado,
+            # sempre depois (nunca antes) do gate de DLP/allowlist acima.
+            if skill_name == "enviar_email" and email_configured() and not simulacao:
+                try:
+                    send_result = send_email(
+                        destinatario=str(arguments.get("destinatario", "")),
+                        assunto=str(arguments.get("assunto", "")),
+                        corpo=str(arguments.get("corpo", "")),
+                    )
+                except EmailSendError as exc:
+                    self._record_audit(
+                        actor, skill_name, AuditDecision.DENIED, rule_decision.rule_id
+                    )
+                    return {
+                        "allowed": False,
+                        "reason": f"falha ao enviar e-mail: {exc}",
+                        "result": "",
+                        "payload_digest": None,
+                    }
+                response_text = json.dumps(send_result, sort_keys=True)
+            else:
+                response_text = mock_response
         else:
-            response_text = mock_response
+            chamada = emitir_chamada(
+                skill,
+                arguments,
+                actor,
+                user_role.value,
+                get_trace_id(),
+                idempotency_key,
+            )
+            url = _render_url(skill.url_template or "", arguments)
+            if skill.executor.type == "http":
+                gate = intercept(
+                    SkillCall(
+                        skill_name=skill_name,
+                        url=url,
+                        method=skill.method,
+                        actor=actor,
+                        request_body=arguments,
+                    ),
+                    self._client_config,
+                    self._audit_sink,
+                )
+                if not gate.allowed:
+                    return {
+                        "allowed": False,
+                        "reason": gate.reason,
+                        "result": "",
+                        "payload_digest": None,
+                    }
+            else:
+                self._record_audit(actor, skill_name, AuditDecision.ALLOWED, rule_decision.rule_id)
+
+            if simulacao:
+                outcome: dict[str, Any] = {"status": "simulacao", "skill": skill_name}
+            else:
+                try:
+                    if skill.executor.type == "http":
+                        outcome = run_http(chamada, url, self.secrets, self._http_client)
+                    else:
+                        outcome = run_native(
+                            chamada,
+                            self.handlers,
+                            HandlerContext(
+                                client_id=self.client_id,
+                                actor=actor,
+                                role=user_role.value,
+                                trace_id=chamada.trace_id,
+                                data_root=self._data_root,
+                                idempotency_key=idempotency_key,
+                                confirmado_por=_confirmado_por,
+                                aprovado_por=_aprovado_por,
+                            ),
+                        )
+                        eventos = outcome.pop(EVENTOS_CHAVE, None)
+                        if eventos:
+                            self.gatilhos.publicar_eventos(eventos)
+                except ExecucaoFalhou as exc:
+                    self._audit_sink.record(
+                        AuditEvent(
+                            client_id=self.client_id,
+                            occurred_at=datetime.now(UTC),
+                            actor=actor,
+                            action=skill_name,
+                            decision=AuditDecision.DENIED,
+                            rule_id=rule_decision.rule_id,
+                            details={"fase": "execucao", "motivo": exc.reason},
+                        )
+                    )
+                    return {
+                        "allowed": False,
+                        "reason": exc.reason,
+                        "result": "",
+                        "payload_digest": None,
+                    }
+
+            response_text = json.dumps(outcome, sort_keys=True, default=str)
+            scan = scan_response(response_text, self._client_config)
+            if trace is not None:
+                trace["dlp"] = scan.dlp_matches
+            if not scan.allowed:
+                self._audit_sink.record(
+                    AuditEvent(
+                        client_id=self.client_id,
+                        occurred_at=datetime.now(UTC),
+                        actor=actor,
+                        action=skill_name,
+                        decision=AuditDecision.DENIED,
+                        details={"fase": "resposta", "dlp": scan.dlp_matches},
+                    )
+                )
+                return {
+                    "allowed": False,
+                    "reason": scan.reason,
+                    "result": "",
+                    "payload_digest": None,
+                }
 
         response_text = redact_for_role(
             response_text, self._client_config.dlp_patterns, get_current_user().role
@@ -455,7 +916,225 @@ class BRMEngine:
         }
         if skill.vault_read is not None:
             response["vault"] = self._skill_vault_read(skill, arguments)
+        if idempotency_key and not simulacao:
+            self._state.save_execucao(idempotency_key, skill_name, response)
         return response
+
+    # ------------------------------------------------------------------
+    # Operações com confirmação e aprovação (spec 022)
+    # ------------------------------------------------------------------
+
+    def _resumo(self, skill: SkillDefinition, arguments: dict[str, Any]) -> str:
+        if skill.resumo:
+            try:
+                return skill.resumo.format_map(_SafeDict(arguments))
+            except (ValueError, IndexError):
+                pass
+        detalhes = ", ".join(f"{k}: {v}" for k, v in sorted(arguments.items()))
+        base = skill.description.strip().rstrip(".")
+        return f"{base} ({detalhes})" if detalhes else base
+
+    def _propor_operacao(
+        self,
+        skill: SkillDefinition,
+        arguments: dict[str, Any],
+        status: str,
+        aprovador: str | None,
+        regra_id: str | None,
+    ) -> Operacao:
+        user = get_current_user()
+        return self.operacoes.criar(
+            skill=skill.name,
+            argumentos=arguments,
+            resumo=self._resumo(skill, arguments),
+            status=status,
+            proposto_por=user.identity,
+            proposto_papel=user.role.value,
+            aprovador_papel=aprovador if status == AGUARDANDO else None,
+            regra_id=regra_id,
+            ttl_horas=self._client_config.operacao_ttl_horas,
+        )
+
+    def _audit_operacao(self, op: Operacao, estado: str, decision: AuditDecision, **extra: Any):
+        self._audit_sink.record(
+            AuditEvent(
+                client_id=self.client_id,
+                occurred_at=datetime.now(UTC),
+                actor=get_current_user().identity,
+                action=f"operacao:{estado}",
+                decision=decision,
+                rule_id=op.regra_id,
+                payload_digest=op.digest_argumentos,
+                details={
+                    "operacao_id": op.id,
+                    "skill": op.skill,
+                    "proposto_por": op.proposto_por,
+                    **extra,
+                },
+            )
+        )
+
+    @staticmethod
+    def _negado(motivo: str, **extra: Any) -> dict[str, Any]:
+        return {"allowed": False, "reason": motivo, **extra}
+
+    def _carregar_operacao(self, operacao_id: str) -> Operacao | None:
+        op = self.operacoes.get(operacao_id)
+        if op is None:
+            return None
+        if op.status in (PROPOSTA, AGUARDANDO) and datetime.now(UTC) > op.expira_em:
+            if self.operacoes.transicao(op.id, op.status, EXPIRADA):
+                expirada = self.operacoes.get(op.id)
+                if expirada is not None:
+                    self._audit_operacao(expirada, EXPIRADA, AuditDecision.DENIED)
+            return self.operacoes.get(op.id)
+        return op
+
+    def _executar_operacao(self, op: Operacao) -> dict[str, Any]:
+        """Executa uma operação confirmada, como quem a propôs (chave = id da operação)."""
+        if digest_argumentos(op.argumentos) != op.digest_argumentos:
+            self.operacoes.transicao(op.id, CONFIRMADA, FALHOU, motivo="argumentos adulterados")
+            self._audit_operacao(op, FALHOU, AuditDecision.DENIED, motivo="argumentos adulterados")
+            return self._negado("A operação foi alterada depois de proposta e não será executada.")
+
+        if op.skill == OPERACAO_ATIVAR:
+            result = self.caderno.executar_ativacao(op)
+        else:
+            proponente = UserProfile(identity=op.proposto_por, role=Role(op.proposto_papel))
+            token = set_current_user(proponente)
+            try:
+                result = self._call_skill(
+                    op.skill,
+                    dict(op.argumentos),
+                    idempotency_key=op.id,
+                    _aprovada=True,
+                    _regra_aprovada=op.regra_id,
+                    _confirmado_por=op.confirmado_por,
+                    _aprovado_por=op.aprovado_por,
+                )
+            finally:
+                current_user_var.reset(token)
+
+        agora = datetime.now(UTC)
+        if result.get("allowed"):
+            self.operacoes.transicao(
+                op.id, CONFIRMADA, EXECUTADA, resultado=result, executada_em=agora
+            )
+            self._audit_operacao(op, EXECUTADA, AuditDecision.ALLOWED)
+            return {**result, "operacao_id": op.id, "status": EXECUTADA}
+        motivo = str(result.get("reason") or "falha na execução")
+        self.operacoes.transicao(op.id, CONFIRMADA, FALHOU, motivo=motivo)
+        self._audit_operacao(op, FALHOU, AuditDecision.DENIED, motivo=motivo)
+        return {**result, "operacao_id": op.id, "status": FALHOU}
+
+    def confirmar_operacao(self, operacao_id: str) -> dict[str, Any]:
+        user = get_current_user()
+        op = self._carregar_operacao(operacao_id)
+        if op is None:
+            return self._negado("operação não encontrada")
+        if op.status != PROPOSTA:
+            return self._negado(f"operação não está aguardando confirmação (estado: {op.status})")
+        if op.proposto_por != user.identity:
+            self._audit_operacao(op, "confirmacao_negada", AuditDecision.DENIED)
+            return self._negado("Somente quem propôs a operação pode confirmá-la.")
+        if not self.operacoes.transicao(op.id, PROPOSTA, CONFIRMADA, confirmado_por=user.identity):
+            return self._negado("operação já foi tratada")
+        confirmada = self.operacoes.get(op.id)
+        self._audit_operacao(confirmada, CONFIRMADA, AuditDecision.ALLOWED)
+        return self._executar_operacao(confirmada)
+
+    def aprovar_operacao(self, operacao_id: str) -> dict[str, Any]:
+        user = get_current_user()
+        op = self._carregar_operacao(operacao_id)
+        if op is None:
+            return self._negado("operação não encontrada")
+        if op.status != AGUARDANDO:
+            return self._negado(f"operação não está aguardando aprovação (estado: {op.status})")
+        if RANK[user.role.value] < RANK.get(op.aprovador_papel or "admin", 1):
+            self._audit_operacao(op, "aprovacao_negada", AuditDecision.DENIED, motivo="papel")
+            return self._negado(f"Esta operação exige aprovação de perfil {op.aprovador_papel}.")
+        if user.identity == op.proposto_por:
+            self._audit_operacao(op, "aprovacao_negada", AuditDecision.DENIED, motivo="propria")
+            return self._negado("Quem propôs a operação não pode aprová-la.")
+        if not self.operacoes.transicao(op.id, AGUARDANDO, CONFIRMADA, aprovado_por=user.identity):
+            return self._negado("operação já foi tratada")
+        aprovada = self.operacoes.get(op.id)
+        self._audit_operacao(
+            aprovada, CONFIRMADA, AuditDecision.ALLOWED, aprovado_por=user.identity
+        )
+        return self._executar_operacao(aprovada)
+
+    def rejeitar_operacao(self, operacao_id: str, motivo: str = "") -> dict[str, Any]:
+        user = get_current_user()
+        op = self._carregar_operacao(operacao_id)
+        if op is None:
+            return self._negado("operação não encontrada")
+        if op.status != AGUARDANDO:
+            return self._negado(f"operação não está aguardando aprovação (estado: {op.status})")
+        if RANK[user.role.value] < RANK.get(op.aprovador_papel or "admin", 1):
+            return self._negado(f"Esta operação exige perfil {op.aprovador_papel}.")
+        if not self.operacoes.transicao(
+            op.id, AGUARDANDO, REJEITADA, aprovado_por=user.identity, motivo=motivo or None
+        ):
+            return self._negado("operação já foi tratada")
+        self._audit_operacao(op, REJEITADA, AuditDecision.DENIED, motivo=motivo or None)
+        return {"allowed": True, "operacao_id": op.id, "status": REJEITADA}
+
+    def cancelar_operacao(self, operacao_id: str) -> dict[str, Any]:
+        user = get_current_user()
+        op = self._carregar_operacao(operacao_id)
+        if op is None:
+            return self._negado("operação não encontrada")
+        if op.status not in (PROPOSTA, AGUARDANDO):
+            return self._negado(f"operação não pode ser cancelada (estado: {op.status})")
+        if op.proposto_por != user.identity and user.role is not Role.SUPER_ADMIN:
+            return self._negado("Somente quem propôs (ou super_admin) pode cancelar.")
+        if not self.operacoes.transicao(op.id, op.status, CANCELADA):
+            return self._negado("operação já foi tratada")
+        self._audit_operacao(op, CANCELADA, AuditDecision.DENIED)
+        return {"allowed": True, "operacao_id": op.id, "status": CANCELADA}
+
+    def listar_operacoes(self, status: str | None = None) -> dict[str, Any]:
+        user = get_current_user()
+        visiveis = []
+        for op in self.operacoes.listar(status):
+            if op.status in (PROPOSTA, AGUARDANDO):
+                op = self._carregar_operacao(op.id) or op
+            if user.role is Role.SUPER_ADMIN or op.proposto_por == user.identity:
+                visiveis.append(op)
+            elif (
+                op.status == AGUARDANDO
+                and RANK[user.role.value] >= RANK.get(op.aprovador_papel or "admin", 1)
+            ):
+                visiveis.append(op)
+        return {
+            "total": len(visiveis),
+            "operacoes": [
+                {
+                    "operacao_id": o.id,
+                    "skill": o.skill,
+                    "status": o.status,
+                    "resumo": o.resumo,
+                    "proposto_por": o.proposto_por,
+                    "aprovador_papel": o.aprovador_papel,
+                    "criado_em": o.criado_em.isoformat(),
+                    "expira_em": o.expira_em.isoformat(),
+                }
+                for o in visiveis
+            ],
+        }
+
+    def retomar_operacoes_orfas(self) -> int:
+        """Retoma operações confirmadas que não terminaram (queda do processo).
+
+        A chave de idempotência é o id da operação, então uma execução que já
+        concluiu devolve o resultado guardado em vez de repetir o efeito.
+        """
+        retomadas = 0
+        for op in self.operacoes.orfas():
+            self._executar_operacao(op)
+            retomadas += 1
+        return retomadas
 
     def query_audit_log(
         self,
@@ -553,7 +1232,7 @@ class BRMEngine:
             return {
                 "allowed": False,
                 "reason": "Seu perfil não pode criar notas no vault.",
-                "proximo_passo": "Peça a um psicólogo ou à responsável técnica.",
+                "proximo_passo": self._vault_access.write_denied_next_step,
             }
         frontmatter = {"tags": tags} if tags else None
         note = self._vault_provider.add_note(self.client_id, title, content, frontmatter)
@@ -634,7 +1313,57 @@ class BRMEngine:
             self._audit_sink,
         )
 
+    def config_estado(self) -> dict[str, Any]:
+        """Estado de cada nota de configuração; também regenera as páginas de `sistema/`."""
+        user = get_current_user()
+        if user.role not in (Role.ADMIN, Role.SUPER_ADMIN):
+            return self._negado("Somente gestor consulta o estado da configuração.")
+        if not self.caderno.ativo:
+            return self._negado("este cliente não usa configuração via notas")
+        itens = self.caderno.estado()
+        self.caderno.atualizar_paginas()
+        notas = [{k: v for k, v in i.items() if k != "frontmatter"} for i in itens]
+        return {"total": len(itens), "notas": notas}
+
+    def config_propor(self, caminho: str) -> dict[str, Any]:
+        return self.caderno.propor(get_current_user(), caminho)
+
+    def config_reverter(self, caminho: str) -> dict[str, Any]:
+        return self.caderno.reverter(get_current_user(), caminho)
+
+    def config_rascunho(self, draft_id: str, kind: str) -> dict[str, Any]:
+        return self.caderno.rascunho_de_draft(get_current_user(), draft_id, kind)
+
+    def memoria_registrar(
+        self,
+        titulo: str,
+        conteudo: str,
+        categoria: str = "geral",
+        expira_em: str | None = None,
+    ) -> dict[str, Any]:
+        return self.segundo_cerebro.memoria_registrar(
+            get_current_user(), titulo, conteudo, categoria, expira_em
+        )
+
+    def memoria_rascunhos(self) -> dict[str, Any]:
+        return self.segundo_cerebro.memoria_rascunhos(get_current_user())
+
+    def memoria_promover(self, draft_id: str) -> dict[str, Any]:
+        return self.segundo_cerebro.memoria_promover(get_current_user(), draft_id)
+
+    def gerar_relatorio_mensal(
+        self, periodo: str, unidade: str | None = None, gerador: str | None = None
+    ) -> dict[str, Any]:
+        return self.segundo_cerebro.gerar_relatorio_mensal(
+            get_current_user(), periodo, unidade, gerador
+        )
+
     def vault_promote_draft(self, draft_id: str, kind: str) -> dict[str, Any]:
+        if self._client_config.config_via_notas and kind in ("rule", "skill"):
+            return self._negado(
+                "Este cliente configura regras e skills por notas aprovadas "
+                "(config_rascunho e config_propor); a promoção direta está desativada."
+            )
         return promote_draft(
             self.client_id,
             draft_id,
@@ -644,41 +1373,6 @@ class BRMEngine:
             self._skill_provider,
             self._audit_sink,
         )
-
-    def consultar_processo_datajud(self, numero_processo: str) -> dict[str, Any]:
-        actor = DEFAULT_ACTOR
-        try:
-            result = consultar_processo(numero_processo)
-        except DatajudError as exc:
-            self._record_audit(actor, "consultar_processo_datajud", AuditDecision.DENIED)
-            return {"allowed": False, "reason": str(exc)}
-
-        self._record_audit(actor, "consultar_processo_datajud", AuditDecision.ALLOWED)
-
-        note_id = None
-        if result.get("encontrado"):
-            try:
-                note = self._vault_provider.add_note(
-                    self.client_id,
-                    title=f"Processo {result['numero_processo']}",
-                    content=_render_processo_note(result),
-                    frontmatter={
-                        "tags": ["processo", "datajud"],
-                        "numero_processo": result.get("numero_processo"),
-                        "tribunal": result.get("tribunal"),
-                        "classe": (result.get("classe") or {}).get("nome"),
-                        "orgao_julgador": (result.get("orgao_julgador") or {}).get("nome"),
-                        "grau": result.get("grau"),
-                        "consultado_em": datetime.now(UTC).isoformat(),
-                    },
-                )
-                note_id = note.note_id
-            except Exception:
-                # Consulta já teve sucesso e foi retornada; falha ao gravar no
-                # vault não deve mascarar o resultado real da consulta.
-                note_id = None
-
-        return {"allowed": True, "reason": None, "vault_note_id": note_id, **result}
 
     def consultar_dados(self) -> dict[str, Any]:
         """Tool de demonstração do RBAC — sem restrição, visível a
@@ -736,6 +1430,8 @@ class BRMEngine:
             profile, token = self.user_store.create_user(email, role_enum, api_token)
         except UserAlreadyExistsError:
             return {"allowed": False, "reason": f"usuário já existe: {email!r}"}
+        except ValueError as exc:
+            return {"allowed": False, "reason": str(exc)}
 
         return {
             "allowed": True,
@@ -784,6 +1480,18 @@ class BRMEngine:
             ],
         }
 
+    def rotacionar_token(self, email: str) -> dict[str, Any]:
+        """Gera um token novo para o usuário e invalida o anterior (super_admin)."""
+        if get_current_user().role is not Role.SUPER_ADMIN:
+            self._record_audit(self._actor(), "rotacionar_token", AuditDecision.DENIED)
+            return {"allowed": False, "reason": "Somente super_admin pode rotacionar tokens."}
+        try:
+            token = self.user_store.rotate_token(email)
+        except UserNotFoundError:
+            return {"allowed": False, "reason": f"usuário não encontrado: {email!r}"}
+        self._record_audit(self._actor(), "rotacionar_token", AuditDecision.ALLOWED)
+        return {"allowed": True, "email": email, "api_token": token}
+
     def atualizar_permissao(self, role: str, tool_name: str, allowed: bool) -> dict[str, Any]:
         """Liga/desliga o acesso de `role` a `tool_name` — a mesma decisão
         que hoje é o dict fixo ROLE_TOOLS, agora persistida e editável em
@@ -828,6 +1536,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
         audit_sink=engine._audit_sink,
         client_id=engine.client_id,
         user_store=engine.user_store,
+        rbac_default=engine.rbac_default,
     )
 
     @server.tool()
@@ -847,7 +1556,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
         action: str | None = None,
         decision: str | None = None,
     ) -> dict[str, Any]:
-        """Consulta a trilha de auditoria (hash-chained, append-only) do escritório:
+        """Consulta a trilha de auditoria (hash-chained, append-only) do cliente:
         toda skill chamada, toda regra aplicada, todo draft gerado/promovido fica
         registrado aqui com decisão (allowed/denied/pending_approval) e motivo."""
         return engine.query_audit_log(
@@ -870,7 +1579,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
     def vault_add_note(
         title: str, content: str, tags: list[str] | None = None
     ) -> dict[str, Any]:
-        """Cria uma nova nota markdown no vault jurídico do escritório."""
+        """Cria uma nova nota markdown no vault do cliente."""
         return engine.vault_add_note(title, content, tags)
 
     @server.tool()
@@ -880,7 +1589,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
 
     @server.tool()
     def vault_list_notes() -> dict[str, Any]:
-        """Lista todas as notas do vault jurídico do escritório, sem filtro
+        """Lista todas as notas do vault do cliente, sem filtro
         de busca — use vault_search quando quiser filtrar por conteúdo."""
         return engine.vault_list_notes()
 
@@ -894,7 +1603,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
     @server.tool()
     def vault_list_drafts(kind: str | None = None, status: str | None = None) -> dict[str, Any]:
         """Lista drafts de regra/skill/documento gerados pelos agentes do
-        escritório, com status (pending/approved/rejected). kind opcional:
+        cliente, com status (pending/approved/rejected). kind opcional:
         "rule", "skill" ou "document" — omitido, lista todos."""
         return engine.vault_list_drafts(kind, status)
 
@@ -908,7 +1617,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
 
     @server.tool()
     def vault_generate_document(instrucoes: str) -> dict[str, Any]:
-        """Redige um documento jurídico padronizado (modelo de petição,
+        """Redige um documento padronizado (modelo de petição,
         contestação, contrato, checklist etc.) a partir de uma instrução em
         português, e salva como draft pendente — nunca escreve direto no vault.
         Ex.: "gere um modelo de notificação extrajudicial de cobrança"."""
@@ -922,13 +1631,57 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
         return engine.vault_promote_document(draft_id)
 
     @server.tool()
-    def consultar_processo_datajud(numero_processo: str) -> dict[str, Any]:
-        """Consulta o andamento de um processo judicial em tempo real na API
-        pública do CNJ (DataJud). Identifica automaticamente o tribunal a partir
-        do número único do processo (ex.: 0000832-35.2018.4.01.3202), retorna
-        classe, órgão julgador, grau, assuntos e movimentações, e grava uma nota
-        estruturada no vault jurídico (vault_note_id na resposta)."""
-        return engine.consultar_processo_datajud(numero_processo)
+    def config_estado() -> dict[str, Any]:
+        """Lista as notas de configuração (regras, skills, gatilhos, parâmetros) com o
+        estado de cada uma: ativa, alterada aguardando aprovação, pendente ou inválida.
+        Só vale a versão aprovada. Restrita a gestor."""
+        return engine.config_estado()
+
+    @server.tool()
+    def config_propor(caminho: str) -> dict[str, Any]:
+        """Valida uma nota de configuração do caderno e abre a operação de ativação,
+        com o resumo e o impacto gerados pelo motor. Outra pessoa precisa aprovar com
+        aprovar_operacao; editar a nota não ativa nada."""
+        return engine.config_propor(caminho)
+
+    @server.tool()
+    def config_reverter(caminho: str) -> dict[str, Any]:
+        """Propõe a volta de uma nota de configuração à versão aprovada anterior
+        (também exige aprovação de outra pessoa)."""
+        return engine.config_reverter(caminho)
+
+    @server.tool()
+    def config_rascunho(draft_id: str, kind: str) -> dict[str, Any]:
+        """Transforma um draft do interpretador (kind rule ou skill) em nota de
+        configuração com status rascunho, para o gestor conferir no caderno."""
+        return engine.config_rascunho(draft_id, kind)
+
+    @server.tool()
+    def memoria_registrar(
+        titulo: str, conteudo: str, categoria: str = "geral", expira_em: str | None = None
+    ) -> dict[str, Any]:
+        """Registra um fato durável (preferência, decisão, exceção combinada) como
+        rascunho de memória. Só passa a existir no vault depois que um gestor promover.
+        Memória é dado: nunca vira regra."""
+        return engine.memoria_registrar(titulo, conteudo, categoria, expira_em)
+
+    @server.tool()
+    def memoria_rascunhos() -> dict[str, Any]:
+        """Lista os rascunhos de memória pendentes de promoção. Restrita a gestor."""
+        return engine.memoria_rascunhos()
+
+    @server.tool()
+    def memoria_promover(draft_id: str) -> dict[str, Any]:
+        """Promove um rascunho de memória para memoria/ no vault. Restrita a gestor."""
+        return engine.memoria_promover(draft_id)
+
+    @server.tool()
+    def gerar_relatorio_mensal(
+        periodo: str, unidade: str | None = None, gerador: str | None = None
+    ) -> dict[str, Any]:
+        """Gera o relatório mensal (AAAA-MM) em relatorios/ por template determinístico:
+        os números vêm do módulo, nunca do modelo. Restrita a gestor."""
+        return engine.gerar_relatorio_mensal(periodo, unidade, gerador)
 
     @server.tool()
     def consultar_dados() -> dict[str, Any]:
@@ -947,7 +1700,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
 
     @server.tool()
     def criar_usuario(email: str, role: str, api_token: str | None = None) -> dict[str, Any]:
-        """Cria um usuário no banco de perfis do escritório (admin, viewer,
+        """Cria um usuário no banco de perfis do cliente (admin, viewer,
         super_admin). Gera um token de acesso automaticamente se não for
         informado — só é devolvido nesta chamada, não há como recuperá-lo
         depois. Restrita ao perfil admin; atribuir o perfil super_admin só
@@ -976,16 +1729,56 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
         return engine.listar_permissoes()
 
     @server.tool()
+    def confirmar_operacao(operacao_id: str) -> dict[str, Any]:
+        """Confirma e executa uma operação proposta (resultado de uma ação que
+        pediu confirmação). Só quem propôs pode confirmar. Use o operacao_id
+        devolvido pela ação, depois de mostrar o resumo ao usuário e ele concordar."""
+        return engine.confirmar_operacao(operacao_id)
+
+    @server.tool()
+    def aprovar_operacao(operacao_id: str) -> dict[str, Any]:
+        """Aprova e executa uma operação que aguarda aprovação de outro perfil.
+        Quem propôs a operação não pode aprová-la."""
+        return engine.aprovar_operacao(operacao_id)
+
+    @server.tool()
+    def rejeitar_operacao(operacao_id: str, motivo: str = "") -> dict[str, Any]:
+        """Rejeita uma operação que aguarda aprovação, com o motivo."""
+        return engine.rejeitar_operacao(operacao_id, motivo)
+
+    @server.tool()
+    def cancelar_operacao(operacao_id: str) -> dict[str, Any]:
+        """Cancela uma operação pendente. Só quem propôs (ou super_admin)."""
+        return engine.cancelar_operacao(operacao_id)
+
+    @server.tool()
+    def listar_operacoes(status: str | None = None) -> dict[str, Any]:
+        """Lista as operações do usuário (e, para aprovadores, as que aguardam
+        aprovação). status opcional: proposta, aguardando_aprovacao, executada..."""
+        return engine.listar_operacoes(status)
+
+    @server.tool()
+    def rotacionar_token(email: str) -> dict[str, Any]:
+        """Gera um token novo para um usuário e invalida o anterior. O token
+        só é devolvido nesta chamada. Restrita ao perfil super_admin."""
+        return engine.rotacionar_token(email)
+
+    @server.tool()
     def atualizar_permissao(role: str, tool_name: str, allowed: bool) -> dict[str, Any]:
         """Liga ou desliga o acesso de um perfil (admin, viewer) a uma tool
         específica — em runtime, sem precisar de deploy. Cobre qualquer
         tool registrada no servidor, inclusive as hoje livres a todo mundo
-        (call_skill, vault_*, consultar_processo_datajud). Restrita ao
+        (call_skill, vault_*). Restrita ao
         perfil super_admin, que sempre tem acesso irrestrito por conta
         própria e não precisa de entrada aqui."""
         return engine.atualizar_permissao(role, tool_name, allowed)
 
     existing = {t.name for t in server._tool_manager.list_tools()}
+    for tool_name, fn in engine.module_tools.items():
+        if tool_name in existing:
+            raise ValueError(f"tool de módulo conflita com tool do núcleo: {tool_name}")
+        server.add_tool(fn, name=tool_name)
+        existing.add(tool_name)
     for skill in engine.skills:
         if skill.name in existing:
             continue
@@ -994,6 +1787,19 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
             name=skill.name,
             description=_skill_tool_description(skill),
         )
+
+    all_tools = [t.name for t in server._tool_manager.list_tools()]
+    if engine.rbac_default == "deny":
+        if engine.user_store.fresh_permissions:
+            engine.user_store.seed_open_tools(all_tools)
+        else:
+            missing = engine.user_store.tools_without_permissions(all_tools)
+            if missing:
+                logger.warning(
+                    "rbac_default=deny: tools sem permissão (negadas a viewer/admin): %s. "
+                    "Rode scripts/migrar_permissoes.py ou conceda no painel.",
+                    ", ".join(sorted(missing)),
+                )
 
     return server
 
@@ -1025,6 +1831,7 @@ def main() -> None:
         config_root=Path(os.getenv("CONFIG_ROOT", "clients")),
         data_root=Path(os.getenv("DATA_ROOT", "data")),
     )
+    engine.retomar_operacoes_orfas()
     set_current_user(resolve_stdio_identity(engine.user_store))
 
     server = build_server(engine)

@@ -1,0 +1,18 @@
+{$BRM_DOMINIO} {
+	encode zstd gzip
+
+	@engine path /api/* /sse /messages/* /health
+	handle @engine {
+		reverse_proxy engine:8000
+	}
+
+	handle {
+		reverse_proxy dashboard:8080
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+}

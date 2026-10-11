@@ -2,6 +2,9 @@ schema_version: 1
 client_id: instituto-afw
 default: deny
 write_roles: [admin, super_admin]
+vinculo_campo: psicologo_responsavel
+identificador_campo: paciente_id
+write_denied_next_step: Peça a um psicólogo ou à responsável técnica.
 policies:
 - id: registro-documental-so-responsavel
   when:

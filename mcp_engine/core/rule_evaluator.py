@@ -29,6 +29,7 @@ def evaluate(ruleset: RuleSet, facts: dict[str, Any]) -> RuleDecision:
                 rule_id=rule.id,
                 message=rule.message,
                 next_step=rule.next_step,
+                aprovador=rule.aprovador,
             )
 
     return RuleDecision(effect=DEFAULT_EFFECT)

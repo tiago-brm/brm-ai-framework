@@ -90,6 +90,8 @@ ACCESS = """\
 schema_version: 1
 client_id: clinica
 default: deny
+vinculo_campo: psicologo_responsavel
+identificador_campo: paciente_id
 policies:
   - id: reg-responsavel
     when: { and: [ { "==": [ { var: note.tipo }, registro-documental ] }, { var: vinculo } ] }

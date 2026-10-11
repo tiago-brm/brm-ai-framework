@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_VERSION = 1
 
@@ -26,6 +26,7 @@ class Rule(_StrictModel):
     effect: RuleEffect
     message: str | None = None
     next_step: str | None = None
+    aprovador: Literal["admin", "super_admin"] | None = None
 
 
 class RuleSet(_StrictModel):
@@ -80,20 +81,71 @@ class VaultAccess(_StrictModel):
     client_id: str
     default: Literal["allow", "deny"] = "deny"
     write_roles: tuple[str, ...] = ("admin", "super_admin")
+    vinculo_campo: str = "responsavel"
+    identificador_campo: str = "identificador"
+    write_denied_next_step: str = "Peça a um administrador do cliente."
     policies: tuple[VaultPolicy, ...] = ()
+
+
+class SkillExecutor(_StrictModel):
+    """Como uma skill é executada depois de aprovada pelas regras (spec 021).
+
+    `mock` é o padrão e mantém o comportamento das demos. `native` chama um
+    handler Python registrado por um módulo. `http` chama um serviço externo
+    pela allowlist do cliente.
+    """
+
+    type: Literal["mock", "native", "http"] = "mock"
+    handler: str | None = None
+    headers: dict[str, str] = Field(default_factory=dict)
+    timeout_s: float = 10.0
+    idempotente: bool = False
+    max_resposta_bytes: int = 1_000_000
+    mapeamento_resposta: dict[str, str] = Field(default_factory=dict)
+    corpo_fixo: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _native_needs_handler(self) -> SkillExecutor:
+        if self.type == "native" and not self.handler:
+            raise ValueError("executor native exige 'handler'")
+        return self
 
 
 class SkillDefinition(_StrictModel):
     name: str
     description: str
-    method: HttpMethod
-    url_template: str
-    allowed_domains: tuple[str, ...] = Field(min_length=1)
+    method: HttpMethod | None = None
+    url_template: str | None = None
+    allowed_domains: tuple[str, ...] = ()
     parameters: dict[str, Any] = Field(default_factory=dict)
     derived_facts: dict[str, DerivedFact] = Field(default_factory=dict)
     examples: tuple[str, ...] = ()
     vault_read: VaultRead | None = None
     timeout_seconds: float = 30.0
+    executor: SkillExecutor = Field(default_factory=SkillExecutor)
+    autonomia: Literal["A0", "A1", "A2", "A3"] = "A0"
+    a1_condicao: dict[str, Any] | None = None
+    irreversivel: bool = False
+    resumo: str | None = None
+    aprovador: Literal["admin", "super_admin"] = "admin"
+    fatos_de_modulo: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def _autonomia_rules(self) -> SkillDefinition:
+        if self.irreversivel and self.autonomia in ("A0", "A1"):
+            raise ValueError("skill irreversível não pode ter autonomia A0 ou A1")
+        if self.a1_condicao is not None and self.autonomia != "A1":
+            raise ValueError("a1_condicao só vale para autonomia A1")
+        return self
+
+    @model_validator(mode="after")
+    def _network_fields(self) -> SkillDefinition:
+        if self.executor.type != "native":
+            if self.method is None or not self.url_template or not self.allowed_domains:
+                raise ValueError(
+                    "skills mock/http exigem method, url_template e ao menos um allowed_domains"
+                )
+        return self
 
 
 class SkillSet(_StrictModel):
@@ -118,6 +170,9 @@ class AuditEvent(_StrictModel):
     rule_id: str | None = None
     payload_digest: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
+    user_email: str | None = None
+    role: str | None = None
+    trace_id: str | None = None
 
 
 class RuleDecision(_StrictModel):
@@ -125,6 +180,7 @@ class RuleDecision(_StrictModel):
     rule_id: str | None = None
     message: str | None = None
     next_step: str | None = None
+    aprovador: Literal["admin", "super_admin"] | None = None
 
 
 class DLPPattern(_StrictModel):
@@ -144,6 +200,20 @@ class ClientConfig(_StrictModel):
     vault_provider: Literal["obsidian", "notion"] = "obsidian"
     notion_token: str | None = None
     notion_root_page_id: str | None = None
+    rbac_default: Literal["allow", "deny"] = "deny"
+    cors_origins: tuple[str, ...] = (
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    )
+    cors_permitir_qualquer: bool = False
+    operacao_ttl_horas: int = 24
+    modules: tuple[str, ...] = ()
+    modulos_privados: tuple[str, ...] = ()
+    config_via_notas: bool = False
+    config_aprovacoes_por_hora: int = Field(default=30, ge=1)
+    gatilhos_ativos: bool = True
 
 
 class SkillCall(_StrictModel):
@@ -160,6 +230,13 @@ class InterceptDecision(_StrictModel):
     allowed: bool
     reason: str | None = None
     dlp_matches: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class RequestScan(_StrictModel):
+    allowed: bool
+    reason: str | None = None
+    dlp_matches: dict[str, int] = Field(default_factory=dict)
+    arguments: dict[str, Any] = Field(default_factory=dict)
 
 
 class VaultNote(_StrictModel):

@@ -1,0 +1,61 @@
+schema_version: 1
+client_id: avaliacao
+skills:
+  - name: consultar_saldo
+    description: Consulta o saldo e o total recebido de um período.
+    examples:
+      - quanto recebemos este mês
+      - qual o saldo de hoje
+    executor: { type: native, handler: av.consultar_saldo }
+    parameters:
+      periodo:
+        type: string
+        description: "Período em linguagem simples (hoje, ontem, mes_atual, mes_passado) ou intervalo ISO."
+  - name: registrar_recebimento
+    description: Registra um pagamento recebido de um cliente.
+    autonomia: A2
+    resumo: "Recebimento de R$ {valor} do cliente {cliente_id} em {data}"
+    examples:
+      - recebi 200 reais da Maria ontem
+    executor: { type: native, handler: av.registrar_recebimento }
+    parameters:
+      cliente_id:
+        type: string
+        required: true
+        description: "ID do cliente (ex.: c-001), obtido com vault_search."
+      valor:
+        type: number
+        required: true
+        description: "Valor em reais como número decimal (275 ou 1234.56). Nunca em centavos."
+      data:
+        type: string
+        required: true
+        description: "Data do recebimento no formato AAAA-MM-DD, calculada a partir da data de hoje."
+      forma:
+        type: string
+        description: "Forma de pagamento: pix, dinheiro, cartao ou boleto."
+  - name: agendar_atendimento
+    description: Agenda um atendimento para um cliente.
+    autonomia: A2
+    resumo: "Atendimento de {cliente_id} em {data} às {hora}"
+    executor: { type: native, handler: av.agendar_atendimento }
+    parameters:
+      cliente_id: { type: string, required: true, description: "ID do cliente (ex.: c-001)." }
+      data: { type: string, required: true, description: "Data AAAA-MM-DD." }
+      hora: { type: string, required: true, description: "Hora HH:MM." }
+  - name: registrar_observacao
+    description: Registra uma observação textual no cadastro de um cliente.
+    autonomia: A1
+    executor: { type: native, handler: av.registrar_observacao }
+    parameters:
+      cliente_id: { type: string, required: true, description: "ID do cliente (ex.: c-001)." }
+      texto: { type: string, required: true, description: "Texto da observação, literal." }
+  - name: estornar_lancamento
+    description: Estorna um lançamento financeiro. Irreversível.
+    autonomia: A3
+    irreversivel: true
+    aprovador: admin
+    executor: { type: native, handler: av.estornar_lancamento }
+    parameters:
+      lancamento_id: { type: string, required: true, description: "ID do lançamento (ex.: l-100)." }
+      motivo: { type: string, required: true, description: "Motivo do estorno." }

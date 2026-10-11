@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import yaml
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ from mcp_engine.core.models import (
     SkillSet,
     VaultAccess,
 )
+from mcp_engine.modules import BaseModule, resolve_skills
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -25,11 +27,19 @@ class ConfigLoadError(Exception):
         self.__cause__ = cause
 
 
-def _load(config_root: Path, client_id: str, filename: str, model: type[ModelT]) -> ModelT:
+def _load(
+    config_root: Path,
+    client_id: str,
+    filename: str,
+    model: type[ModelT],
+    prepare: Callable[[Any], Any] | None = None,
+) -> ModelT:
     path = config_root / client_id / "config" / filename
 
     try:
         data = yaml.safe_load(path.read_text())
+        if prepare is not None:
+            data = prepare(data)
     except Exception as exc:
         raise ConfigLoadError(client_id, path, exc) from exc
 
@@ -68,11 +78,24 @@ class FileSystemRuleProvider:
 
 
 class FileSystemSkillProvider:
+    """Skills do cliente. Entradas `usar: modulo.skill` só resolvem contra os
+    módulos habilitados em `modules` (opt-in duplo, spec 027)."""
+
     def __init__(self, config_root: Path) -> None:
         self._config_root = Path(config_root)
+        self.modules: Mapping[str, BaseModule] = {}
+        self.domain_allowlist: tuple[str, ...] = ()
 
     def get_skills(self, client_id: str) -> SkillSet:
-        return _load(self._config_root, client_id, "skills.yaml", SkillSet)
+        def prepare(data: Any) -> Any:
+            if isinstance(data, dict) and isinstance(data.get("skills"), list):
+                data = {
+                    **data,
+                    "skills": resolve_skills(data["skills"], self.modules, self.domain_allowlist),
+                }
+            return data
+
+        return _load(self._config_root, client_id, "skills.yaml", SkillSet, prepare)
 
     def save_skills(self, skillset: SkillSet) -> None:
         _save(self._config_root, skillset.client_id, "skills.yaml", skillset)

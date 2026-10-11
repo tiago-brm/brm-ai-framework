@@ -31,7 +31,7 @@ PROMOTER_ACTOR = "claude"
 INSTRUCTIONS = """\
 Você é um especialista em redigir regras de negócio e integrações para um sistema \
 de gestão jurídica (BRM). Quando receber uma descrição de uma regra ou skill em \
-markdown, colada pelo escritório no vault:
+markdown, colada pelo cliente no vault:
 
 1. Extraia a intenção (o que deve ser permitido, bloqueado, ou exigir aprovação; \
    ou qual chamada HTTP a skill deve fazer).

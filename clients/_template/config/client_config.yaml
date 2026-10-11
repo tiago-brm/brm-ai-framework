@@ -1,0 +1,13 @@
+client_id: __CLIENT_ID__
+block_private_ip: true
+rbac_default: deny
+vault_root: __VAULT_ROOT__
+domain_allowlist:
+- example.invalid
+dlp_patterns:
+- pattern: \d{3}\.\d{3}\.\d{3}-\d{2}
+  label: CPF
+  action: deny
+modules: []
+modulos_privados: []
+config_via_notas: false

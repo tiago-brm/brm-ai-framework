@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from contextvars import ContextVar, Token
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -52,6 +53,7 @@ ROLE_TOOLS: dict[Role, frozenset[str]] = {
             "atualizar_perfil_usuario",
             "listar_permissoes",
             "atualizar_permissao",
+            "rotacionar_token",
         }
     ),
 }
@@ -72,6 +74,26 @@ def set_current_user(profile: UserProfile) -> Token[UserProfile | None]:
 
 def get_current_user() -> UserProfile:
     return current_user_var.get() or ANONYMOUS_PROFILE
+
+
+trace_id_var: ContextVar[str | None] = ContextVar("trace_id", default=None)
+
+
+def get_trace_id() -> str | None:
+    return trace_id_var.get()
+
+
+def ensure_trace_id() -> tuple[str, Token[str | None] | None]:
+    """Devolve o trace_id corrente, criando um novo quando não há.
+
+    O token só vem preenchido quando este chamador criou o id e, portanto,
+    deve resetá-lo ao terminar; quem herda um id existente recebe None.
+    """
+    current = trace_id_var.get()
+    if current is not None:
+        return current, None
+    new_id = uuid.uuid4().hex
+    return new_id, trace_id_var.set(new_id)
 
 
 def resolve_stdio_identity(store: SQLUserStore) -> UserProfile:
@@ -113,7 +135,12 @@ def resolve_http_identity(store: SQLUserStore, authorization_header: str | None)
     return store.get_by_token(token) or ANONYMOUS_PROFILE
 
 
-def is_tool_allowed(role: Role, tool_name: str, store: SQLUserStore | None = None) -> bool:
+def is_tool_allowed(
+    role: Role,
+    tool_name: str,
+    store: SQLUserStore | None = None,
+    default: str = "allow",
+) -> bool:
     """True se `role` pode ver/executar `tool_name`.
 
     super_admin tem acesso irrestrito por construção — o bypass é
@@ -133,7 +160,7 @@ def is_tool_allowed(role: Role, tool_name: str, store: SQLUserStore | None = Non
         return True
 
     if store is not None:
-        return store.is_tool_allowed(role, tool_name)
+        return store.is_tool_allowed(role, tool_name, default)
 
     restricted_to = {t for tools in ROLE_TOOLS.values() for t in tools}
     if tool_name not in restricted_to:

@@ -103,6 +103,8 @@ skills:
 schema_version: 1
 client_id: clinica
 default: deny
+vinculo_campo: psicologo_responsavel
+identificador_campo: paciente_id
 policies:
   - id: reg
     when: { and: [ { "==": [ { var: note.tipo }, registro-documental ] }, { var: vinculo } ] }
@@ -168,10 +170,14 @@ def _run(client: TestClient, perfil: str, skill: str, argumentos: dict) -> dict:
 
 
 class TestAccess:
-    @pytest.mark.parametrize("token", ["lucas-tok", "camila-tok", "nenhum"])
+    @pytest.mark.parametrize("token", ["lucas-tok", "camila-tok"])
     def test_only_super_admin_can_use_the_simulator(self, client: TestClient, token: str) -> None:
         response = client.get("/api/simulador/perfis", headers=_auth(token))
         assert response.status_code == 403
+
+    def test_simulator_requires_credentials(self, client: TestClient) -> None:
+        response = client.get("/api/simulador/perfis", headers=_auth("nenhum"))
+        assert response.status_code == 401
 
     def test_disabled_simulator_returns_404(self, tmp_path: Path) -> None:
         cfg = tmp_path / "config" / "clinica" / "config"

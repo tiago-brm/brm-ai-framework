@@ -1,0 +1,12 @@
+schema_version: 1
+client_id: clinica-piloto
+default: deny
+write_roles: [admin, super_admin]
+vinculo_campo: responsavel
+identificador_campo: identificador
+write_denied_next_step: Peça a um administrador do cliente.
+policies:
+- id: modelos-abertos
+  when:
+    ==: [{var: note.tipo}, modelo]
+  effect: allow

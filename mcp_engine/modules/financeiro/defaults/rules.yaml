@@ -1,0 +1,104 @@
+rules:
+- id: lancamento-em-mes-fechado
+  description: Lançar em mês já fechado é recusado; o ajuste entra no mês corrente. O banco também
+    recusa, esta regra só dá a mensagem antes.
+  condition:
+    and:
+    - in:
+      - var: skill_name
+      - - registrar_recebimento
+        - registrar_despesa
+    - ==:
+      - var: mes_fechado
+      - true
+  effect: deny
+  message: Mês fechado. O lançamento não é aceito.
+  next_step: Lance o ajuste no mês corrente, com referência ao lançamento original.
+- id: reabrir-mes-so-super-admin
+  description: Reabrir mês fechado é exceção do super_admin, sempre auditada.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - reabrir_mes
+    - '!=':
+      - var: actor_role
+      - super_admin
+  effect: deny
+  message: Apenas o super_admin reabre um mês fechado.
+  next_step: Peça ao super_admin, informando o motivo.
+- id: lancamento-atipico-exige-gestor
+  description: Recebimento com valor atípico, retroativo (mais de 7 dias) ou de paciente a confirmar,
+    lançado por perfil comum, exige aprovação do gestor.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - registrar_recebimento
+    - ==:
+      - var: actor_role
+      - viewer
+    - or:
+      - ==:
+        - var: valor_atipico
+        - true
+      - '>':
+        - var: retroativo_dias
+        - 7
+      - ==:
+        - var: paciente_a_confirmar
+        - true
+  effect: require_approval
+  aprovador: admin
+  message: 'Lançamento fora do padrão (valor atípico, retroativo ou paciente a confirmar): o gestor
+    precisa aprovar.'
+  next_step: O gestor confere o resumo e aprova a operação.
+- id: despesa-retroativa-exige-gestor
+  description: Despesa retroativa (mais de 7 dias) lançada por perfil comum exige aprovação do gestor.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - registrar_despesa
+    - ==:
+      - var: actor_role
+      - viewer
+    - '>':
+      - var: retroativo_dias
+      - 7
+  effect: require_approval
+  aprovador: admin
+  message: 'Despesa retroativa: o gestor precisa aprovar.'
+  next_step: O gestor confere o resumo e aprova a operação.
+- id: duplicidade-confirmada-exige-gestor
+  description: Lançar valor idêntico já existente (confirmar_duplicidade) por perfil comum exige aprovação
+    do gestor.
+  condition:
+    and:
+    - in:
+      - var: skill_name
+      - - registrar_recebimento
+        - registrar_despesa
+    - ==:
+      - var: confirmar_duplicidade
+      - true
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: require_approval
+  aprovador: admin
+  message: 'Lançamento igual a outro já existente: o gestor precisa aprovar.'
+  next_step: O gestor confere e aprova a operação.
+- id: pendencia-so-gestor
+  description: Resolver pendências é do gestor.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - resolver_pendencia
+    - ==:
+      - var: actor_role
+      - viewer
+  effect: deny
+  message: Resolver pendências é restrito ao gestor.
+  next_step: Peça ao gestor.

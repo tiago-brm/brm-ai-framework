@@ -1,0 +1,11 @@
+skills:
+- usar: agenda.agenda_sessoes
+  autonomia: A0
+- usar: agenda.agenda_clientes
+  autonomia: A0
+- usar: agenda.agenda_servicos
+  autonomia: A0
+- usar: agenda.agenda_sessoes_sem_pagamento
+  autonomia: A0
+- usar: agenda.sincronizar_agenda
+  autonomia: A1

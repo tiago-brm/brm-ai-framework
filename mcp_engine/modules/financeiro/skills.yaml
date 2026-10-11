@@ -1,0 +1,349 @@
+skills:
+- name: registrar_recebimento
+  description: Registra o recebimento de um paciente no ledger (regime de caixa). O motor calcula taxa
+    e repasse; nunca some nem converta valores. Paciente precisa estar cadastrado na Agenda.
+  parameters:
+    data_pagamento:
+      type: string
+      description: Data do pagamento (AAAA-MM-DD ou DD/MM/AAAA).
+      required: true
+    paciente:
+      type: string
+      description: Nome do paciente como cadastrado.
+      required: true
+    forma:
+      type: string
+      description: pix, debito, credito, dinheiro, ted ou acordo.
+      required: true
+    valor:
+      type: string
+      description: 'Valor em reais, apenas o número (ex.: 275 ou 275,50). Nunca converta nem calcule:
+        repasse o que o usuário disse.'
+      required: true
+    meio:
+      type: string
+      description: 'Conta que recebeu (ex.: Sicoob, Stone). Dispensável em dinheiro e acordo.'
+    parcelas:
+      type: integer
+      description: Número de parcelas no crédito (padrão 1).
+    profissional:
+      type: string
+      description: 'Profissional; padrão: o do cadastro do paciente.'
+    unidade:
+      type: string
+      description: 'Unidade; padrão: a do cadastro do paciente.'
+    servico:
+      type: string
+      description: Serviço, quando a comissão depende dele.
+    tipo:
+      type: string
+      description: sessao, pacote, acordo ou juros (padrão sessao).
+    nf_status:
+      type: string
+      description: emitida, sem_nf ou pendente (padrão pendente).
+    nf_numero:
+      type: string
+      description: Número da NF, se emitida.
+    datas_sessoes:
+      type: string
+      description: Datas das sessões pagas, separadas por vírgula (AAAA-MM-DD).
+    observacao:
+      type: string
+      description: Observação livre.
+    pacote_id:
+      type: integer
+      description: Pacote ao qual o pagamento se vincula.
+    confirmar_duplicidade:
+      type: boolean
+      description: true somente se o usuário confirmou que é outro pagamento igual.
+  executor:
+    type: native
+    handler: financeiro.registrar_recebimento
+  autonomia: A2
+  fatos_de_modulo:
+  - financeiro.recebimento
+  examples:
+  - Registre o pix de 275 da Maria hoje no Sicoob
+  - Lance o pagamento em dinheiro de 250 do João
+- name: registrar_despesa
+  description: Registra uma despesa (saída) no ledger.
+  parameters:
+    data:
+      type: string
+      description: Data da despesa (AAAA-MM-DD ou DD/MM/AAAA).
+      required: true
+    descricao:
+      type: string
+      description: Descrição curta.
+      required: true
+    categoria:
+      type: string
+      description: 'Categoria da despesa (ex.: ALUGUEL, ENERGISA).'
+      required: true
+    grupo:
+      type: string
+      description: variada, fixa, imposto ou folha (só o gestor cria categoria nova).
+    valor:
+      type: string
+      description: 'Valor em reais, apenas o número (ex.: 275 ou 275,50). Nunca converta nem calcule:
+        repasse o que o usuário disse.'
+      required: true
+    forma:
+      type: string
+      description: Forma de pagamento (pix, ted, dinheiro...).
+    recorrente:
+      type: boolean
+      description: true se for despesa recorrente.
+    comprovante_ref:
+      type: string
+      description: Nome do arquivo do comprovante.
+    confirmar_duplicidade:
+      type: boolean
+      description: true somente se o usuário confirmou que é outra despesa igual.
+  executor:
+    type: native
+    handler: financeiro.registrar_despesa
+  autonomia: A2
+  fatos_de_modulo:
+  - financeiro.despesa
+  examples:
+  - Lance a conta de energia de 412,30
+- name: estornar_lancamento
+  description: Estorna um recebimento ou despesa por contra-lançamento (nada é apagado). Exige aprovação
+    do gestor.
+  parameters:
+    tipo:
+      type: string
+      description: recebimento ou despesa.
+      required: true
+    lancamento_id:
+      type: integer
+      description: Número do lançamento original.
+      required: true
+    valor:
+      type: string
+      description: Valor a estornar em reais; omita para o saldo total.
+    motivo:
+      type: string
+      description: Motivo do estorno.
+      required: true
+  executor:
+    type: native
+    handler: financeiro.estornar_lancamento
+  autonomia: A3
+  aprovador: admin
+  irreversivel: true
+  examples:
+  - Estorne o recebimento 123 por desistência
+- name: anexar_comprovante
+  description: Anexa a referência (nome do arquivo) do comprovante a um lançamento.
+  parameters:
+    tipo:
+      type: string
+      description: recebimento ou despesa.
+      required: true
+    lancamento_id:
+      type: integer
+      description: Número do lançamento.
+      required: true
+    comprovante_ref:
+      type: string
+      description: Nome do arquivo do comprovante.
+      required: true
+  executor:
+    type: native
+    handler: financeiro.anexar_comprovante
+  autonomia: A2
+  resumo: Comprovante {comprovante_ref} no {tipo} nº {lancamento_id}
+  examples:
+  - Anexe o comprovante pix_0201.pdf ao recebimento 55
+- name: atualizar_status_nf
+  description: Atualiza o status da nota fiscal de um recebimento (apenas status; emissão é outra fase).
+  parameters:
+    recebimento_id:
+      type: integer
+      description: Número do recebimento.
+      required: true
+    nf_status:
+      type: string
+      description: emitida, sem_nf ou pendente.
+      required: true
+    nf_numero:
+      type: string
+      description: Número da NF, se emitida.
+  executor:
+    type: native
+    handler: financeiro.atualizar_status_nf
+  autonomia: A2
+  examples:
+  - Marque o recebimento 55 com a NF 8462
+- name: registrar_falta
+  description: Registra falta, falta justificada ou cancelamento tardio de uma sessão da Agenda.
+  parameters:
+    agenda_id:
+      type: string
+      description: Identificador da sessão na Agenda.
+    paciente:
+      type: string
+      description: Paciente (alternativa ao agenda_id, com data_sessao).
+    data_sessao:
+      type: string
+      description: Data da sessão (AAAA-MM-DD).
+    tipo:
+      type: string
+      description: falta, falta_justificada ou cancelamento_tardio (padrão falta).
+    motivo:
+      type: string
+      description: Motivo informado.
+  executor:
+    type: native
+    handler: financeiro.registrar_falta
+  autonomia: A2
+  examples:
+  - A Maria faltou na sessão de ontem
+- name: registrar_pacote
+  description: Registra um pacote de sessões para um paciente a partir de um modelo vigente; gera a cobrança
+    prevista.
+  parameters:
+    paciente:
+      type: string
+      description: Paciente.
+      required: true
+    modelo:
+      type: string
+      description: Nome do modelo de pacote.
+      required: true
+    inicio:
+      type: string
+      description: Data de início (AAAA-MM-DD).
+      required: true
+    preco_acordado:
+      type: string
+      description: Preço acordado em reais, se diferente do modelo.
+    sessoes_totais:
+      type: integer
+      description: Total de sessões, se diferente do modelo.
+  executor:
+    type: native
+    handler: financeiro.registrar_pacote
+  autonomia: A2
+  examples:
+  - Abra o pacote mensal da Maria a partir de 01/03
+- name: resolver_pendencia
+  description: Resolve uma pendência operacional (descartar, aceitar a sugestão da importação ou manter
+    sessão realizada). Restrito ao gestor.
+  parameters:
+    pendencia_id:
+      type: integer
+      description: Número da pendência.
+      required: true
+    acao:
+      type: string
+      description: descartar, aceitar ou manter_realizada.
+      required: true
+    correcao:
+      type: object
+      description: 'Correções permitidas na aceitação: forma, meio, datas_sessoes, tipo.'
+  executor:
+    type: native
+    handler: financeiro.resolver_pendencia
+  autonomia: A2
+  examples:
+  - Descarte a pendência 12
+- name: fechar_mes
+  description: 'Fecha um mês (opcionalmente uma unidade): impede novos lançamentos nele e registra o hash
+    do conteúdo. Exige aprovação do gestor.'
+  parameters:
+    mes:
+      type: string
+      description: Mês no formato AAAA-MM.
+      required: true
+    unidade:
+      type: string
+      description: Unidade, para fechamento parcial.
+  executor:
+    type: native
+    handler: financeiro.fechar_mes
+  autonomia: A3
+  aprovador: admin
+  irreversivel: true
+  examples:
+  - Feche fevereiro de 2026
+- name: reabrir_mes
+  description: Reabre um mês fechado. Apenas o super_admin, com motivo, sempre auditado.
+  parameters:
+    mes:
+      type: string
+      description: Mês AAAA-MM.
+      required: true
+    unidade:
+      type: string
+      description: Unidade, se o fechamento foi parcial.
+    motivo:
+      type: string
+      description: Motivo da reabertura.
+      required: true
+  executor:
+    type: native
+    handler: financeiro.reabrir_mes
+  autonomia: A2
+  irreversivel: true
+  examples:
+  - Reabra janeiro de 2026
+- name: consultar_financeiro
+  description: 'Consulta o ledger por consultas nomeadas (sem SQL livre). Todo número vem daqui. Consultas:
+    resumo_mensal, por_forma, por_conta, por_profissional, por_unidade, sem_nf, despesas_por_categoria,
+    resultado_mensal, ultimos_lancamentos, repasse_por_profissional, taxas_por_meio, parte_clinica, a_receber,
+    saldo_pacote, faltas_por_periodo, pendencias, painel_financeiro, verificar_integridade, simular_repasse.'
+  parameters:
+    consulta:
+      type: string
+      description: Nome da consulta.
+      required: true
+    periodo:
+      type: string
+      description: 'AAAA-MM ou AAAA-MM-DD..AAAA-MM-DD (padrão: mês corrente).'
+    filtros:
+      type: object
+      description: 'Filtros opcionais: unidade, profissional, forma, meio, paciente, limite, pacote_id.'
+  executor:
+    type: native
+    handler: financeiro.consultar_financeiro
+  autonomia: A0
+  examples:
+  - Quanto entrou em fevereiro?
+  - Quanto entrou por forma de pagamento em fevereiro?
+  - Painel financeiro de março
+- name: listar_pendencias
+  description: Lista as pendências operacionais (importação, sessões sem desfecho, duplicidades).
+  parameters:
+    filtros:
+      type: object
+      description: 'Filtro opcional: limite.'
+  executor:
+    type: native
+    handler: financeiro.listar_pendencias
+  autonomia: A0
+  examples:
+  - Quais pendências estão abertas?
+- name: exportar_planilha
+  description: Exporta uma planilha .xlsx no layout atual da clínica (secretarias ou financeiro) para
+    o período, com totais calculados.
+  parameters:
+    tipo:
+      type: string
+      description: secretarias ou financeiro.
+      required: true
+    periodo:
+      type: string
+      description: Mês AAAA-MM.
+      required: true
+    unidade:
+      type: string
+      description: Unidade (obrigatória no layout secretarias).
+  executor:
+    type: native
+    handler: financeiro.exportar_planilha
+  autonomia: A1
+  examples:
+  - Exporte a planilha financeira de fevereiro

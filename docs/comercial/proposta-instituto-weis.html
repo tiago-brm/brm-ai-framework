@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Proposta de piloto de gestão financeira da BRM Solutions para o Instituto Ana Flávia Weis.">
+<title>Proposta de piloto · Instituto Ana Flávia Weis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+  :root{--ink:#17141f;--muted:#5c5668;--paper:#efedf4;--surface:#fff;--alt:#f7f5fa;--line:#d7d2e0;--brand:#5b3f8c;--brand-dark:#39245d;--brand-soft:#e8e0f5;--ok:#276342;--ok-soft:#dfefe6;--serif:"IBM Plex Serif",Georgia,serif;--sans:"IBM Plex Sans",Arial,sans-serif;--mono:"IBM Plex Mono",monospace}
+  *{box-sizing:border-box} html{scroll-behavior:smooth;scroll-padding-top:72px} body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans)} h1,h2,h3{font-family:var(--serif);line-height:1.18;margin:0} h1{font-size:clamp(2.15rem,5vw,3.45rem)} h2{font-size:clamp(1.65rem,3vw,2.25rem)} h3{font-size:1.08rem} p{margin:0} a{color:inherit}.shell{max-width:1120px;margin:auto;padding-inline:24px}.top{position:sticky;top:0;z-index:2;background:#efedf4ec;backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}.top .shell{min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:20px}.mark{font:700 1.1rem var(--serif)}.mark b{color:var(--brand)}nav{display:flex;gap:18px;flex-wrap:wrap;font-size:.84rem;color:var(--muted)}nav a{text-decoration:none}.hero{padding:clamp(58px,9vw,110px) 24px 64px}.hero-grid{max-width:1072px;margin:auto;display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center}.eyebrow{font:500 .74rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}.lede{font-size:1.12rem;line-height:1.65;color:var(--muted);max-width:62ch;margin-top:20px}.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}.badge{display:inline-flex;padding:5px 10px;border-radius:4px;background:var(--ok-soft);color:var(--ok);font:500 .72rem var(--mono);letter-spacing:.04em;text-transform:uppercase}.badge.alt{background:var(--brand-soft);color:var(--brand-dark)}.summary,.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:24px}.summary>span{display:block;font:500 .7rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}.summary dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:.9rem}.summary dt{color:var(--muted)}.summary dd{margin:0;text-align:right;font-weight:600}.section{padding:clamp(48px,7vw,84px) 0}.section.alt{background:var(--alt);border-block:1px solid var(--line)}.head{max-width:66ch;margin-bottom:32px}.head h2{margin-top:8px}.head p{color:var(--muted);margin-top:10px}.grid2,.grid3{display:grid;gap:18px}.grid2{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:repeat(3,1fr)}.card h3{margin-bottom:10px}.card p,.card li{color:var(--muted);font-size:.94rem}.card ul{margin:0;padding-left:20px}.card li+li{margin-top:7px}.card.feature{background:var(--brand-soft);border-color:#a68ad6}.card.feature p,.card.feature li{color:var(--ink)}.card.dashed{border-style:dashed}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}table{border-collapse:collapse;width:100%;min-width:680px;font-size:.91rem}th,td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}th{background:var(--alt);font:500 .72rem var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}tbody tr:last-child td{border-bottom:0}.number{text-align:right;font-family:var(--mono);white-space:nowrap}.emphasis td{background:var(--brand-soft);font-weight:600}.note{margin-top:18px;padding:16px 18px;border-left:4px solid var(--brand);border-radius:0 8px 8px 0;background:var(--surface);color:var(--muted)}.timeline{border-left:2px solid var(--line);margin:4px 0 0 9px}.step{position:relative;padding:0 0 26px 28px}.step:last-child{padding-bottom:0}.step:before{content:"";position:absolute;left:-7px;top:4px;width:10px;height:10px;border:2px solid var(--brand);border-radius:50%;background:var(--surface)}.step span{display:block;font:500 .72rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.step h3{margin:4px 0}.step p{color:var(--muted);font-size:.94rem}footer{border-top:1px solid var(--line);padding:44px 0;background:var(--paper)}footer .shell{display:flex;justify-content:space-between;gap:24px;align-items:end;flex-wrap:wrap}footer h2{max-width:24ch;font-size:1.45rem}footer p{color:var(--muted);font-size:.88rem}@media(max-width:850px){.hero-grid,.grid2,.grid3{grid-template-columns:1fr}}@media(max-width:600px){.shell{padding-inline:16px}.hero{padding-inline:16px}nav{display:none}.summary dl{font-size:.83rem}}@media print{.top{display:none}.section{padding:28px 0;break-inside:avoid}body{background:#fff}.card,.summary{box-shadow:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="shell">
+  <div class="mark">BRM<b>.</b> Solutions</div>
+  <nav aria-label="Navegação da proposta"><a href="#escopo">Escopo</a><a href="#cronograma">Cronograma</a><a href="#investimento">Investimento</a><a href="#condicoes">Condições</a><a href="#proximos-passos">Próximos passos</a></nav>
+</div></header>
+
+<main>
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">Proposta de piloto</span>
+        <h1>Gestão financeira simples e segura para o Instituto Ana Flávia Weis.</h1>
+        <p class="lede">Um piloto para transformar as planilhas já usadas pela clínica em um controle de recebimentos, repasses e fechamento mensal — com confirmação humana antes de qualquer alteração em valores.</p>
+        <div class="badges"><span class="badge">R$ 5.900 em 5 parcelas</span><span class="badge alt">30 dias ao lado das planilhas</span></div>
+      </div>
+      <aside class="summary" aria-label="Resumo da proposta">
+        <span>Resumo</span>
+        <dl>
+          <dt>Para</dt><dd>Instituto Ana Flávia Weis</dd>
+          <dt>De</dt><dd>BRM Solutions · Tiago Ramos</dd>
+          <dt>Emissão</dt><dd>9 de outubro de 2026</dd>
+          <dt>Validade</dt><dd>15 dias</dd>
+          <dt>Contato</dt><dd>tiago@brmsolutions.com.br<br>(67) 99908-7301</dd>
+        </dl>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section"><div class="shell">
+    <div class="head"><span class="eyebrow">Em poucas palavras</span><h2>Da planilha a um fechamento em que a direção confia</h2><p>O sistema registra recebimentos, aplica as regras de repasse de cada profissional e apoia o fechamento do mês. A equipe consulta e propõe lançamentos pelo Claude e acompanha totais e pendências no painel.</p></div>
+    <div class="grid3">
+      <article class="card feature"><h3>Sem susto</h3><p>O piloto funciona 30 dias em paralelo às planilhas. A virada só ocorre depois de um fechamento sem divergência não explicada.</p></article>
+      <article class="card"><h3>Controle humano</h3><p>Antes de um lançamento que altere valores, o sistema mostra o resumo e aguarda confirmação de uma pessoa.</p></article>
+      <article class="card"><h3>Parceria fundadora</h3><p>O Instituto participa como parceiro fundador, com preço de piloto e benefícios para as próximas etapas.</p></article>
+    </div>
+  </div></section>
+
+  <section id="escopo" class="section alt"><div class="shell">
+    <div class="head"><span class="eyebrow">Escopo do piloto</span><h2>O que vamos entregar</h2></div>
+    <div class="grid3">
+      <article class="card"><h3>Recebimentos</h3><p>Por paciente, profissional, forma de pagamento e meio de recebimento.</p></article>
+      <article class="card"><h3>Repasse e comissão</h3><p>Regras por profissional, percentuais ou valores fixos, com vigência por data.</p></article>
+      <article class="card"><h3>Planilhas</h3><p>Importação das planilhas de relatório financeiro e das secretárias disponibilizadas no levantamento, e exportação dos relatórios do piloto.</p></article>
+      <article class="card"><h3>Fechamento mensal</h3><p>Com aprovação do gestor e rastreabilidade das ações realizadas.</p></article>
+      <article class="card"><h3>Implantação</h3><p>Parametrização inicial, treinamento enxuto e acompanhamento do piloto paralelo.</p></article>
+      <article class="card"><h3>Acesso por perfil</h3><p>Cada pessoa vê e executa apenas as funções compatíveis com sua responsabilidade.</p></article>
+    </div>
+    <div class="grid2" style="margin-top:18px">
+      <article class="card feature"><h3>Proteção no dia a dia</h3><ul><li>Estornos e operações configuradas como sensíveis exigem aprovação.</li><li>Os registros preservam quem realizou cada ação e quando.</li><li>O assistente não deve receber CPF ou telefone.</li><li>Prontuário clínico não faz parte deste escopo.</li></ul></article>
+      <article class="card dashed"><h3>Fora do piloto</h3><p>Contas a pagar e a receber, previsão de caixa, pacotes de sessões, faltas, integração com a BRM Agenda, WhatsApp, SMS e outras automações podem ser tratados posteriormente em proposta própria.</p></article>
+    </div>
+  </div></section>
+
+  <section class="section"><div class="shell">
+    <div class="head"><span class="eyebrow">Situação da solução</span><h2>O que está pronto e o que é uma próxima etapa</h2></div>
+    <div class="grid2">
+      <article class="card feature"><h3>Implementado</h3><ul><li>Módulo de recebimentos, repasses e fechamento.</li><li>Importação e exportação de planilhas.</li><li>Perfis, aprovações e registros de auditoria.</li><li>Rotina de backup cifrado.</li></ul></article>
+      <article class="card dashed"><h3>Próximas etapas</h3><ul><li>Testes do assistente com o modelo de linguagem antes do início de uso; ajustes dentro do escopo do piloto.</li><li>Hospedagem em nuvem após a validação do piloto paralelo.</li><li>Integração com a Agenda, automações e edição direta do caderno de regras pelo Instituto.</li></ul></article>
+    </div>
+  </div></section>
+
+  <section id="cronograma" class="section alt"><div class="shell">
+    <div class="head"><span class="eyebrow">Cronograma estimado</span><h2>Cerca de 12 semanas no cenário provável</h2><p>O prazo conta a partir da autorização e do recebimento dos materiais de implantação. Atrasos na entrega ou validação pelo Instituto deslocam o cronograma na mesma medida.</p></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Etapa</th><th>O que acontece</th><th class="number">Otimista</th><th class="number">Provável</th><th class="number">Conservador</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Levantamento</strong></td><td>Profissionais, meios, taxas, regras de repasse e perfis.</td><td class="number">2 sem.</td><td class="number">3 sem.</td><td class="number">4 sem.</td></tr>
+        <tr><td><strong>Importação</strong></td><td>Leitura das planilhas e conferência dos totais.</td><td class="number">2 sem.*</td><td class="number">3 sem.</td><td class="number">5 sem.</td></tr>
+        <tr><td><strong>Homologação e treinamento</strong></td><td>Testes com a equipe e treinamento.</td><td class="number">1 sem.</td><td class="number">1 sem.</td><td class="number">2 sem.</td></tr>
+        <tr><td><strong>Piloto paralelo</strong></td><td>Operação ao lado das planilhas.</td><td class="number">4 sem.</td><td class="number">5 sem.</td><td class="number">8 sem.</td></tr>
+        <tr><td><strong>Virada</strong></td><td>Uso operacional do sistema.</td><td class="number">1 sem.</td><td class="number">1 sem.</td><td class="number">1 sem.</td></tr>
+        <tr class="emphasis"><td><strong>Início de uso estimado</strong></td><td></td><td class="number">semana 9</td><td class="number">semana 12</td><td class="number">semana 18</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">* Em parte, em paralelo ao levantamento. Para começar, precisamos das planilhas já separadas, da tabela de comissões e preços, das taxas de bancos e maquininhas, da definição de perfis e de uma pessoa de referência para validações e treinamento. O acesso ao Claude é contratado diretamente pelo Instituto, conforme as condições do fornecedor.</p>
+  </div></section>
+
+  <section id="investimento" class="section"><div class="shell">
+    <div class="head"><span class="eyebrow">Investimento</span><h2>R$ 5.900 em cinco parcelas e R$ 399 por mês</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Item</th><th class="number">Valor sem tributos</th><th class="number">Referência com tributos de até 20%*</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Implantação do piloto</strong></td><td class="number">R$ 5.900,00</td><td class="number">R$ 7.080,00</td></tr>
+        <tr><td><strong>Cada uma das 5 parcelas</strong></td><td class="number">R$ 1.180,00</td><td class="number">R$ 1.416,00</td></tr>
+        <tr><td><strong>Mensalidade</strong></td><td class="number">R$ 399,00</td><td class="number">R$ 478,80</td></tr>
+        <tr class="emphasis"><td><strong>Primeiro ano — implantação e 12 mensalidades</strong></td><td class="number">R$ 10.688,00</td><td class="number">R$ 12.825,60</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid2" style="margin-top:18px">
+      <article class="card feature"><h3>Implantação</h3><p>R$ 5.900,00 em cinco parcelas mensais de R$ 1.180,00. A primeira vence na autorização do projeto; as quatro seguintes vencem mensalmente.</p></article>
+      <article class="card"><h3>Mensalidade</h3><p>R$ 399,00 por mês, em contrato de 12 meses, a partir do início de uso. Inclui licença de uso da plataforma BRM (Agenda e Engine) e hospedagem.</p></article>
+    </div>
+    <p class="note">Os valores sem tributos não incluem encargos incidentes na emissão da nota fiscal. A referência considera até 20%; a alíquota e o valor final serão confirmados pela BRM antes do faturamento, conforme seu regime tributário. Custos de fornecedores escolhidos pelo Instituto — como acesso ao Claude, certificado A1, SMS ou WhatsApp — não estão incluídos. Qualquer trabalho fora do escopo será orçado e aprovado antes da execução. Defeitos reproduzíveis das entregas deste escopo reportados nos 90 dias posteriores ao início de uso serão corrigidos sem custo.</p>
+  </div></section>
+
+  <section class="section alt"><div class="shell">
+    <div class="head"><span class="eyebrow">Benefícios para a parceira fundadora</span><h2>Duas entregas além do piloto</h2></div>
+    <div class="grid2">
+      <article class="card feature"><h3>30 horas de consultoria</h3><p>Para novas implementações, módulos ou integrações durante os 12 meses do contrato. As horas não são convertidas em dinheiro, não são cumulativas e não se destinam a suporte rotineiro.</p></article>
+      <article class="card feature"><h3>Emissão assistida de NFS-e em Campo Grande/MS</h3><p>Além das 30 horas, desenvolvimento de emissão, consulta e cancelamento de NFS-e pelo sistema para um CNPJ, um certificado e um município, sempre com confirmação humana.</p></article>
+    </div>
+    <article class="card dashed" style="margin-top:18px"><h3>Condições do brinde de NFS-e</h3><ul><li>O desenvolvimento começa após o piloto estar em uso e não altera seu cronograma.</li><li>Depende de certificado digital A1, inscrição municipal, credenciais fornecidas pelo Instituto e confirmação de viabilidade técnica junto ao ambiente fiscal competente.</li><li>Mudanças posteriores de layout, legislação ou regras fiscais, e custos de terceiros, não integram o brinde e serão objeto de orçamento prévio.</li><li>A solução apoia a operação fiscal; a validação tributária permanece com a contabilidade do Instituto.</li></ul></article>
+  </div></section>
+
+  <section id="condicoes" class="section"><div class="shell">
+    <div class="head"><span class="eyebrow">Segurança, dados e condições</span><h2>Clareza sobre responsabilidades</h2></div>
+    <div class="grid2">
+      <article class="card feature"><h3>Dados e plataforma</h3><p>O Instituto é o controlador dos seus dados e a BRM atua como operadora, nos termos do contrato de tratamento de dados. Os dados podem ser exportados em formato aberto mediante solicitação, em até 15 dias úteis. A plataforma permanece de propriedade da BRM, com licença de uso durante a vigência contratual.</p></article>
+      <article class="card dashed"><h3>Limites honestos</h3><p>O sistema é uma ferramenta de apoio e não substitui a validação da contabilidade, da assessoria jurídica ou de órgãos profissionais. Não há promessa de disponibilidade ininterrupta nem de interpretação perfeita pelo assistente; operações que alteram valores exigem confirmação humana.</p></article>
+    </div>
+    <p class="note">A contratação será formalizada por contrato de prestação de serviços, confidencialidade e tratamento de dados. O instrumento definirá as condições de cancelamento, reajuste na renovação, atendimento e responsabilidades de cada parte.</p>
+  </div></section>
+
+  <section id="proximos-passos" class="section alt"><div class="shell">
+    <div class="head"><span class="eyebrow">Próximos passos</span><h2>Três passos para começar</h2></div>
+    <div class="timeline">
+      <div class="step"><span>Passo 1</span><h3>Reunião de alinhamento</h3><p>Conversa de até 60 minutos para dúvidas e levantamento inicial.</p></div>
+      <div class="step"><span>Passo 2</span><h3>Aprovação e primeira parcela</h3><p>Aprovação da proposta e pagamento da primeira parcela de implantação.</p></div>
+      <div class="step"><span>Passo 3</span><h3>Contratos e materiais</h3><p>Assinatura dos instrumentos contratuais e envio dos materiais de implantação.</p></div>
+    </div>
+  </div></section>
+</main>
+
+<footer><div class="shell">
+  <h2>Controle financeiro em que a direção confia.</h2>
+  <p><strong>BRM Solutions</strong> · Tiago Ramos<br>tiago@brmsolutions.com.br · (67) 99908-7301 · brmsolutions.com.br</p>
+</div></footer>
+</body>
+</html>

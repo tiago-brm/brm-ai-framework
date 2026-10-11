@@ -64,6 +64,18 @@ class SimulateSkillRequest(BaseModel):
     argumentos: dict[str, Any] = Field(default_factory=dict)
 
 
+class PausaGatilhosRequest(BaseModel):
+    pausado: bool
+
+
+class SimularGatilhoRequest(BaseModel):
+    evento: dict[str, Any] | None = None
+
+
+class ReprocessarGatilhoRequest(BaseModel):
+    janela: str
+
+
 class SimulateVaultRequest(BaseModel):
     perfil_email: str
     consulta: str
@@ -153,6 +165,43 @@ def build_api_router(engine: BRMEngine, mcp_server: RBACFastMCP) -> APIRouter:
         return engine.query_audit_log(
             start_date=start_date, end_date=end_date, action=action, decision=decision
         )
+
+    @router.get("/gatilhos")
+    def list_triggers() -> dict[str, Any]:
+        return engine.gatilhos.painel()
+
+    @router.post("/gatilhos/pausa")
+    def pause_triggers(payload: PausaGatilhosRequest) -> dict[str, Any]:
+        engine.gatilhos.pausar(payload.pausado, get_current_user().identity)
+        return {"pausado": engine.gatilhos.pausado()}
+
+    @router.post("/gatilhos/alertas/{alerta_id}/reconhecer")
+    def acknowledge_trigger_alert(alerta_id: int) -> dict[str, Any]:
+        if not engine.gatilhos.reconhecer_alerta(alerta_id, get_current_user().identity):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "alerta inexistente ou já reconhecido")
+        return {"reconhecido": True}
+
+    @router.post("/gatilhos/{gatilho_id}/reativar")
+    def reactivate_trigger(gatilho_id: str) -> dict[str, Any]:
+        if not engine.gatilhos.reativar(gatilho_id, get_current_user().identity):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "gatilho desconhecido")
+        return {"reativado": True}
+
+    @router.post("/gatilhos/{gatilho_id}/simular")
+    def simulate_trigger(gatilho_id: str, payload: SimularGatilhoRequest) -> dict[str, Any]:
+        resultado = engine.gatilhos.simular(config_id=gatilho_id, evento=payload.evento)
+        if resultado.get("allowed") is False:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, resultado.get("reason"))
+        return resultado
+
+    @router.post("/gatilhos/{gatilho_id}/reprocessar")
+    def reprocess_trigger(gatilho_id: str, payload: ReprocessarGatilhoRequest) -> dict[str, Any]:
+        resultado = engine.gatilhos.reprocessar(
+            gatilho_id, payload.janela, get_current_user().identity
+        )
+        if resultado.get("status") == "janela_desconhecida":
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "janela desconhecida")
+        return resultado
 
     def _require_simulator() -> None:
         if not engine.simulador_habilitado:
@@ -261,7 +310,8 @@ def build_api_router(engine: BRMEngine, mcp_server: RBACFastMCP) -> APIRouter:
             "decisao": decision,
             "resultado": result,
             "fatos_derivados": trace.get("fatos_derivados", {}),
-            "dlp": trace.get("dlp", {}),
+            "fatos_de_modulo": trace.get("fatos_de_modulo", {}),
+            "dlp": {**trace.get("dlp_entrada", {}), **trace.get("dlp", {})},
         }
 
     @router.post("/simulador/vault")

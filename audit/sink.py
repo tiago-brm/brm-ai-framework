@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Iterable, Iterator
 
+from mcp_engine.core.auth import get_current_user, get_trace_id
 from mcp_engine.core.models import AuditEvent
 
 
@@ -30,6 +33,27 @@ def _hash_line(line: str) -> str:
     return hashlib.sha256(line.encode("utf-8")).hexdigest()
 
 
+def _last_line(f) -> str | None:
+    """Última linha não vazia do arquivo aberto em binário, lendo do fim."""
+    f.seek(0, os.SEEK_END)
+    end = f.tell()
+    if end == 0:
+        return None
+    chunk = 4096
+    data = b""
+    pos = end
+    while pos > 0:
+        step = min(chunk, pos)
+        pos -= step
+        f.seek(pos)
+        data = f.read(step) + data
+        stripped = data.rstrip(b"\n")
+        if b"\n" in stripped or pos == 0:
+            break
+    lines = [ln for ln in data.split(b"\n") if ln]
+    return lines[-1].decode("utf-8") if lines else None
+
+
 class FileSystemAuditSink:
     def __init__(self, data_root: Path) -> None:
         self._data_root = Path(data_root)
@@ -37,21 +61,39 @@ class FileSystemAuditSink:
     def _path(self, client_id: str) -> Path:
         return self._data_root / client_id / "audit.jsonl"
 
+    def _with_context(self, event: AuditEvent) -> AuditEvent:
+        """Garante que nenhum evento sai sem identidade e rastro (spec 020)."""
+        updates: dict[str, str] = {}
+        if event.user_email is None or event.role is None:
+            user = get_current_user()
+            if event.user_email is None:
+                updates["user_email"] = user.identity
+            if event.role is None:
+                updates["role"] = user.role.value
+        if event.trace_id is None:
+            trace_id = get_trace_id()
+            if trace_id is not None:
+                updates["trace_id"] = trace_id
+        return event.model_copy(update=updates) if updates else event
+
     def record(self, event: AuditEvent) -> None:
+        event = self._with_context(event)
         path = self._path(event.client_id)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        previous_hash: str | None = None
-        if path.exists():
-            lines = path.read_text().splitlines()
-            if lines:
-                previous_hash = _hash_line(lines[-1])
-
         payload = event.model_dump(mode="json")
-        payload["previous_hash"] = previous_hash
 
-        with open(path, "a") as f:
-            f.write(json.dumps(payload, sort_keys=True) + "\n")
+        with open(path, "a+b") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                last = _last_line(f)
+                payload["previous_hash"] = _hash_line(last) if last else None
+                f.seek(0, os.SEEK_END)
+                f.write((json.dumps(payload, sort_keys=True) + "\n").encode("utf-8"))
+                f.flush()
+                os.fsync(f.fileno())
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
 
     def iter_events(self, client_id: str) -> Iterable[AuditEvent]:
         return self._iter_events(client_id)

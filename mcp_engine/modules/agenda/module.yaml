@@ -1,0 +1,12 @@
+name: agenda
+version: "1.0.0"
+api_version: 1
+compartilhavel: true
+skills:
+- agenda_sessoes
+- agenda_clientes
+- agenda_servicos
+- agenda_sessoes_sem_pagamento
+- sincronizar_agenda
+segredos_requeridos: [agenda_api_key, agenda_base_url]
+dominios_requeridos: [agenda.brmsolutions.com.br]

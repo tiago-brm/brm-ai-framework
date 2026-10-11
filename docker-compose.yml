@@ -1,0 +1,117 @@
+name: brm
+
+x-seguranca: &seguranca
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  engine:
+    <<: *seguranca
+    build:
+      context: .
+      target: runtime
+    image: brm-engine:${BRM_VERSION:-dev}
+    environment:
+      CLIENT_ID: ${CLIENT_ID:-example}
+      CONFIG_ROOT: /app/clients
+      DATA_ROOT: /data
+      BRM_DATA_DIR: /data
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "127.0.0.1:${ENGINE_PORT:-8000}:8000"
+    volumes:
+      - brm_data:/data
+      - ./clients/${CLIENT_ID:-example}/config:/app/clients/${CLIENT_ID:-example}/config:ro
+      - ./clients/${CLIENT_ID:-example}/vault:/app/clients/${CLIENT_ID:-example}/vault
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: ${ENGINE_MEM_LIMIT:-2g}
+
+  dashboard:
+    <<: *seguranca
+    build:
+      context: .
+      target: dashboard
+    image: brm-dashboard:${BRM_VERSION:-dev}
+    ports:
+      - "127.0.0.1:${DASHBOARD_PORT:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  silverbullet:
+    <<: *seguranca
+    profiles: ["editor"]
+    image: ghcr.io/silverbulletmd/silverbullet:2.12.0-slim
+    environment:
+      SB_USER: ${SB_USER:-defina-SB_USER-no-env}
+      SB_HOSTNAME: 0.0.0.0
+      SB_PORT: "3000"
+    cap_add:
+      - SETUID
+      - SETGID
+      - CHOWN
+    ports:
+      - "127.0.0.1:${EDITOR_PORT:-3000}:3000"
+    volumes:
+      - ./clients/${CLIENT_ID:-example}/vault:/data
+
+  backup:
+    <<: *seguranca
+    restart: "no"
+    profiles: ["backup"]
+    build:
+      context: .
+      target: backup
+    image: brm-backup:${BRM_VERSION:-dev}
+    environment:
+      CLIENT_ID: ${CLIENT_ID:-example}
+      DATA_ROOT: /data
+      VAULT_DIR: /vault
+      BACKUP_DIR: /backups
+      SEGUNDO_DESTINO: ${BACKUP_SEGUNDO_DESTINO:+1}
+      BRM_BACKUP_AGE_RECIPIENT: ${BRM_BACKUP_AGE_RECIPIENT:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - brm_data:/data
+      - ./clients/${CLIENT_ID:-example}/vault:/vault:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+      - ${BACKUP_SEGUNDO_DESTINO:-./backups/segundo-disco}:/backups2
+
+  proxy:
+    <<: *seguranca
+    profiles: ["remoto"]
+    image: caddy:2.10-alpine
+    cap_add:
+      - NET_BIND_SERVICE
+    environment:
+      BRM_DOMINIO: ${BRM_DOMINIO:-dominio.invalido}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - engine
+      - dashboard
+
+volumes:
+  brm_data:
+  caddy_data:
+  caddy_config:
