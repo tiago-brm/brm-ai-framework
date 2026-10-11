@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from mcp_engine.core.contracts import AuditSink
-from mcp_engine.core.interceptor import check_vault_egress
+from mcp_engine.core.interceptor import check_vault_egress, summarize_dlp_matches
 from mcp_engine.core.models import AuditDecision, ClientConfig, VaultNote
 from mcp_engine.vault._agent_common import AgnoAgentLike, record_audit, resolve_agent_model
 from mcp_engine.vault.draft_store import DraftNotFoundError, DraftStore
@@ -116,7 +116,7 @@ def propose_document(
         GENERATOR_ACTOR,
         "vault_document_egress_check",
         AuditDecision.ALLOWED if egress_decision.allowed else AuditDecision.DENIED,
-        {"dlp_matches": egress_decision.dlp_matches},
+        {"dlp_matches": summarize_dlp_matches(egress_decision.dlp_matches)},
     )
     if not egress_decision.allowed:
         return {"allowed": False, "reason": egress_decision.reason}

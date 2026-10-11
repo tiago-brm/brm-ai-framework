@@ -63,10 +63,10 @@ Skill do projeto: `.claude/skills/brm-onboarding`.
 6. Reiniciar o servidor para a regra valer.
 
 - **Failure:** nota com padrão DLP → bloqueada antes do LLM; JSONLogic/Pydantic inválido → rascunho rejeitado ou promoção com erro auditado; sem chave de LLM → erro claro ao usar o agente.
-- **Aviso:** hoje qualquer perfil consegue promover e o aprovador é registrado como `claude` ([SECURITY.md](SECURITY.md) L-01/L-02) — trate este fluxo como restrito a quem tem acesso operacional até a correção.
+- **Quem pode:** `admin`/`super_admin` (`tool_permissions`); a identidade de quem promoveu fica em `reviewed_by` e na auditoria.
 
 ### Flow A6 — Documento padronizado
-`vault_generate_document(instrucoes)` → rascunho `document` → revisão humana → `vault_promote_document(draft_id)` grava a nota no vault. Mesmas falhas e avisos do A5.
+`vault_generate_document(instrucoes)` → rascunho `document` → revisão humana → `vault_promote_document(draft_id)` grava a nota no vault. Mesmas falhas e permissões do A5.
 
 ---
 

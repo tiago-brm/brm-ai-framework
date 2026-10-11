@@ -104,9 +104,9 @@
 - **Purpose:** Transformar uma nota em português em rascunho (`rules.draft.jsonl` / `skills.draft.jsonl`), validado por Pydantic e JSONLogic.
 - **Acceptance Criteria:** nunca escreve direto em produção; DLP de saída **estrito** (qualquer padrão, inclusive `mask`, bloqueia o envio da nota ao LLM); promoção é chamada separada e nomeada; tudo auditado.
 - **Edge Cases:** sem credenciais LLM (`ANTHROPIC_API_KEY` ou `OPENROUTER_API_KEY`) → erro só quando o agente é usado.
-- **Estado:** 🟡 o gate humano é *procedural* e hoje **não exige perfil privilegiado nem registra quem aprovou** (ver [SECURITY.md](SECURITY.md) L-01/L-02).
+- **Estado:** o gate humano é *procedural*, mas agora exige `admin`/`super_admin` e registra a identidade de quem aprovou (L-01/L-02 resolvidas).
 
-### F-10 — Gerador de documentos padronizados ✅ (🟡 mesmo gate de F-09)
+### F-10 — Gerador de documentos padronizados ✅
 - **Purpose:** Redigir modelo (declaração, petição, contrato, checklist) como rascunho; promoção grava no vault.
 
 ### F-11 — Painel `super_admin` 🟡
@@ -141,7 +141,7 @@ Intencionalmente **fora** desta versão (Fase 1):
 ## 8. MVP Scope
 
 **Must have (Fase 1 — ✅ salvo indicação):** F-01 a F-08, F-12, F-13; hardening de segurança; deploy isolado por cliente.
-**Must have pendente:** corrigir o build do painel (F-11) e fechar as lacunas P0 de [SECURITY.md](SECURITY.md) antes de dado real de cliente.
+**Must have pendente:** corrigir o build do painel (F-11) e revisar as lacunas P1 restantes de [SECURITY.md](SECURITY.md) antes de dado real de cliente.
 **Nice to have:** F-09/F-10 com gate humano real; F-14 em produção; rate limit no provider Notion.
 **Future (Fase 2/3):**
 - Fase 2 — Control Plane: Rule/Skill Builder, sincronização com *staging → canary → produção*, mTLS/JWT rotativo, NER no DLP. Só após o gatilho de saída abaixo.
@@ -179,7 +179,7 @@ Intencionalmente **fora** desta versão (Fase 1):
 
 ## 12. Open Questions
 
-- **Quem aprova promoções?** Hoje qualquer perfil chama `vault_promote_*` e o aprovador é registrado como `"claude"`. Qual perfil mínimo (`admin`? `super_admin`?) e como registrar o humano?
+- **Quem aprova promoções?** Hoje `admin` e `super_admin` promovem e a identidade fica registrada. Deve ser só `super_admin`?
 - **Efeito padrão das regras:** manter `allow` sem regra casada (deny-list) ou migrar para `deny` por padrão em clientes de saúde?
 - **Execução HTTP real das skills:** quando e para qual cliente deixa de ser simulada? Exige timeout/retry/TLS/segredos por tenant.
 - **Deploy por cliente:** existe `docker-compose.yaml` por cliente? (previsto na spec, ausente no repo.)

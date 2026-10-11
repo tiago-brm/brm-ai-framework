@@ -759,3 +759,69 @@ class TestVaultInterpreterWiring:
         # Reflects immediately for a freshly constructed engine reading the same config_root.
         second_engine = BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
         assert any(r.id == "bloqueia-valor-alto" for r in second_engine._ruleset.rules)
+
+
+class TestPromotionApprover:
+    @pytest.fixture
+    def roots(self, tmp_path: Path) -> tuple[Path, Path]:
+        config_dir = tmp_path / "config" / "example" / "config"
+        config_dir.mkdir(parents=True)
+        config_dir.joinpath("rules.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nrules: []\n"
+        )
+        config_dir.joinpath("skills.yaml").write_text(
+            "schema_version: 1\nclient_id: example\nskills: []\n"
+        )
+        config_dir.joinpath("client_config.yaml").write_text(
+            "client_id: example\nblock_private_ip: true\ndomain_allowlist:\n  - api.example.com\n"
+        )
+        return tmp_path / "config", tmp_path / "data"
+
+    def test_promotion_records_logged_in_human_not_claude(self, roots: tuple[Path, Path]) -> None:
+        from mcp_engine.core.auth import Role, UserProfile, current_user_var, set_current_user
+
+        config_root, data_root = roots
+        engine = BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
+        rule = Rule(
+            id="regra-aprovada",
+            description="d",
+            condition={">": [{"var": "valor"}, 1]},
+            effect=RuleEffect.DENY,
+        )
+        engine._draft_store.create(
+            "example", "rule", "d1", "config_drafts/r.md", "t1", "interpreter_agent",
+            rule.model_dump(mode="json"),
+        )
+        token = set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
+        try:
+            result = engine.vault_promote_draft("d1", "rule")
+        finally:
+            current_user_var.reset(token)
+
+        assert result["promoted"] is True
+        draft = engine._draft_store.get_draft("example", "rule", "d1")
+        assert draft["reviewed_by"] == "socio@escritorio.com.br"
+        events = [e for e in engine._audit_sink.iter_events("example")
+                  if e.action == "vault_promote_draft"]
+        assert events[-1].actor == "socio@escritorio.com.br"
+
+    def test_viewer_cannot_call_promotion_through_mcp(self, roots: tuple[Path, Path]) -> None:
+        import asyncio
+
+        from mcp_engine.core.auth import Role, UserProfile, current_user_var, set_current_user
+        from mcp_engine.core.mcp_server import build_server
+
+        config_root, data_root = roots
+        engine = BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
+        server = build_server(engine)
+        token = set_current_user(UserProfile(identity="rec@escritorio.com.br", role=Role.VIEWER))
+        try:
+            names = {t.name for t in asyncio.run(server.list_tools())}
+            result = asyncio.run(
+                server.call_tool("vault_promote_draft", {"draft_id": "x", "kind": "rule"})
+            )
+        finally:
+            current_user_var.reset(token)
+
+        assert "vault_promote_draft" not in names
+        assert result["allowed"] is False

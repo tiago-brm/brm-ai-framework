@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from mcp_engine.core.config_loader import FileSystemRuleProvider, FileSystemSkillProvider
 from mcp_engine.core.contracts import AuditSink
-from mcp_engine.core.interceptor import check_vault_egress
+from mcp_engine.core.interceptor import check_vault_egress, summarize_dlp_matches
 from mcp_engine.core.models import (
     AuditDecision,
     ClientConfig,
@@ -136,7 +136,7 @@ def propose_draft(
         INTERPRETER_ACTOR,
         "vault_content_egress_check",
         AuditDecision.ALLOWED if egress_decision.allowed else AuditDecision.DENIED,
-        {"note_id": note_id, "dlp_matches": egress_decision.dlp_matches},
+        {"note_id": note_id, "dlp_matches": summarize_dlp_matches(egress_decision.dlp_matches)},
     )
     if not egress_decision.allowed:
         return {"allowed": False, "reason": egress_decision.reason}

@@ -632,6 +632,7 @@ class BRMEngine:
             self._draft_store,
             self._vault_provider,
             self._audit_sink,
+            approved_by=self._actor(),
         )
 
     def vault_promote_draft(self, draft_id: str, kind: str) -> dict[str, Any]:
@@ -643,6 +644,7 @@ class BRMEngine:
             self._rule_provider,
             self._skill_provider,
             self._audit_sink,
+            approved_by=self._actor(),
         )
 
     def consultar_processo_datajud(self, numero_processo: str) -> dict[str, Any]:

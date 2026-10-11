@@ -156,3 +156,44 @@ def test_different_clients_have_isolated_databases(tmp_path: Path) -> None:
 
     assert store_a.get_by_email("x@a.com.br") is not None
     assert store_b.get_by_email("x@a.com.br") is None
+
+
+class TestDefaultPermissions:
+    GATED = (
+        "vault_promote_draft",
+        "vault_promote_document",
+        "vault_interpret_and_propose",
+        "vault_generate_document",
+        "vault_add_note",
+        "query_audit_log",
+    )
+
+    def test_promotion_and_audit_tools_are_closed_to_viewer(self, store: SQLUserStore) -> None:
+        for tool in self.GATED:
+            assert store.is_tool_allowed(Role.ADMIN, tool), tool
+            assert not store.is_tool_allowed(Role.VIEWER, tool), tool
+
+    def test_existing_database_gains_missing_defaults_without_overriding_choices(
+        self, tmp_path: Path
+    ) -> None:
+        first = SQLUserStore(tmp_path, "example")
+        # Simula um banco anterior ao L-01: sem as linhas novas, e com uma escolha do super_admin.
+        from sqlalchemy import delete
+        from sqlalchemy.orm import Session
+
+        from mcp_engine.core.user_store import ToolPermissionRow
+
+        with Session(first._engine) as session:
+            session.execute(
+                delete(ToolPermissionRow).where(ToolPermissionRow.tool_name.in_(self.GATED))
+            )
+            session.commit()
+        first.set_permission(Role.VIEWER, "query_audit_log", True)
+        assert first.is_tool_allowed(Role.VIEWER, "vault_promote_draft")  # aberta: o bug
+
+        reopened = SQLUserStore(tmp_path, "example")
+
+        assert not reopened.is_tool_allowed(Role.VIEWER, "vault_promote_draft")
+        assert reopened.is_tool_allowed(Role.ADMIN, "vault_promote_draft")
+        # Escolha explícita do super_admin é preservada.
+        assert reopened.is_tool_allowed(Role.VIEWER, "query_audit_log")

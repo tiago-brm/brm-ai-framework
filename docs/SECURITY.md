@@ -8,7 +8,7 @@
 - **Provider:** próprio — `users.db` por cliente (ver [DATABASE.md](DATABASE.md)). Não há SSO/OAuth.
 - **stdio (local):** identidade lida **uma vez** na subida: `MCP_USER_EMAIL`, senão `MCP_API_TOKEN`. Um processo = uma sessão = um usuário.
 - **HTTP/SSE (remoto) e painel:** `Authorization: Bearer <token>`, resolvido **a cada request** pelo middleware.
-- **Sem credencial, header malformado ou token desconhecido:** perfil `anonymous` com papel `viewer` — nunca `admin`. (Atenção: `viewer` ainda enxerga tools sem restrição — L-01.)
+- **Sem credencial, header malformado ou token desconhecido:** perfil `anonymous` com papel `viewer` — nunca `admin`. (`viewer` só enxerga tools sem restrição; as sensíveis têm linha no seed.)
 - O painel pede URL do engine + token e guarda ambos no `localStorage` do navegador (L-10).
 
 ## 2. Authorization
@@ -64,7 +64,7 @@ Princípios: **autorização é aplicada no servidor, nunca no prompt**; `tools/
 **Nunca logar:** senhas, tokens, chaves de API, dado pessoal sensível, conteúdo de nota.
 **Logar (auditoria):** autenticação negada (RBAC), ações e decisões, regra aplicada, rascunhos gerados/promovidos, acessos privilegiados, divergência de fato, simulações, erros, eventos de segurança.
 
-- A auditoria guarda `payload_digest` (SHA-256), contagens e nomes de política — não o conteúdo. **Exceção real:** L-05.
+- A auditoria guarda `payload_digest` (SHA-256), contagens e nomes de política — não o conteúdo. 
 - Hash-chain **detecta** adulteração; não a impede (L-09).
 - O projeto não usa biblioteca de logging de aplicação; a trilha de auditoria é o log de negócio.
 
@@ -96,15 +96,15 @@ Para toda mudança:
 
 ## 10. Lacunas conhecidas
 
-> Verificadas em código em 2026-10-11. Prioridade: **P0** antes de dado real; **P1** antes de exposição fora de localhost; **P2** dívida assumida.
+> Verificadas em código em 2026-10-11. Prioridade: **P0** antes de dado real; **P1** antes de exposição fora de localhost; **P2** dívida assumida. L-01, L-02 e L-05 (P0) foram resolvidas; não há P0 aberta.
 
 | ID | P | Lacuna | Evidência / efeito | Mitigação proposta |
 |---|---|---|---|---|
-| L-01 | **P0** | Tools sem nenhuma linha em `tool_permissions` são abertas a **todos os perfis, inclusive `anonymous`**. Hoje isso inclui `vault_promote_draft`, `vault_promote_document`, `vault_interpret_and_propose`, `vault_generate_document`, `vault_add_note` (sem `vault_access.yaml`), `call_skill`, `query_audit_log`, `consultar_processo_datajud`. | `is_tool_allowed(Role.VIEWER, ...)` retorna `True` para todas (reproduzido). Um `viewer` pode **promover regra ou skill para produção**. | Seed com restrição (`admin`/`super_admin`) para promoção, geração e leitura de auditoria; considerar *deny-by-default* para tool sem linha. |
-| L-02 | **P0** | O "aprovador" de uma promoção é a constante `"claude"` (`PROMOTER_ACTOR`); o humano que aprovou não é registrado. O gate humano é só procedural. | `BRMEngine.vault_promote_*` não repassa a identidade; `reviewed_by` e o evento de auditoria saem como `claude`. | Passar `get_current_user().identity` como `approved_by` e exigir papel privilegiado (L-01). |
+| L-01 | ✅ resolvida | Resolvida: seed por tool restringe promoção, geração, escrita no vault e auditoria a `admin`/`super_admin`; bancos existentes recebem as linhas ausentes sem sobrescrever escolhas do `super_admin`. Resta avaliar *deny-by-default* para tool sem linha. |  |  |
+| L-02 | ✅ resolvida | Resolvida: `approved_by` = identidade logada (`reviewed_by` e auditoria). |  |  |
 | L-03 | P1 | Token de acesso em **texto puro** em `users.db`; sem expiração. | `SELECT api_token FROM users` devolve o token. Decisão D-011 assumida como dívida. | Guardar hash (ex.: SHA-256 com pepper ou argon2), exibir o token uma única vez, adicionar expiração/rotação. |
 | L-04 | P1 | CORS `*` e API REST autenticada só por Bearer. | `http_app.create_app`. | Restringir origens ao painel antes de expor fora de localhost. |
-| L-05 | **P0/P1** | O log de auditoria grava o **valor bruto** casado pelo DLP (`details.dlp_matches`), ex.: o CPF bloqueado. | Reproduzido: `{"details":{"dlp_matches":{"CPF":["123.456.789-00"]}}}` em `audit.jsonl`. | Gravar só rótulo e contagem (ou valor mascarado). |
+| L-05 | ✅ resolvida | Resolvida: a auditoria grava só rótulo → contagem (`{"CPF": 2}`), também nos eventos `*_egress_check`. O simulador ainda devolve os valores ao `super_admin` na resposta, sem persistir. |  |  |
 | L-06 | P1 | Sem rate limiting/limite de tamanho em REST, tools ou escrita no vault; Notion sem backoff (~3 req/s). | — | Limite por token/IP no FastAPI; fila/backoff no `NotionNoteSource`. |
 | L-07 | P2 | `notion_token` pode ficar em `client_config.yaml` (versionado). O exemplo usa `NOTION_TOKEN` no `.env`. | `NotionVaultProvider` aceita ambos. | Proibir o campo no YAML (ler só do ambiente). |
 | L-08 | P1 | Efeito padrão das regras é `allow`: o motor é *deny-list*. Esquecer uma regra libera a ação. | `rule_evaluator.DEFAULT_EFFECT = ALLOW`. | Opção `default_effect: deny` por cliente (obrigatória em saúde). |
@@ -122,10 +122,10 @@ Para toda mudança:
 | SSRF via skill preenchida pelo LLM | Allowlist de domínio + bloqueio de IP privado | 1 | ✅ |
 | Execução de código disfarçada de regra | JSONLogic puro; saída de LLM validada por Pydantic | 1 | ✅ |
 | LLM informa fato de segurança favorável | `derived_facts` calculados no motor; divergência auditada | 1 | ✅ |
-| Vazamento por leitura do vault | `vault_access.yaml`; `metadata_only`; auditoria sem conteúdo | 1 | ✅ (depende de L-01/L-05) |
+| Vazamento por leitura do vault | `vault_access.yaml`; `metadata_only`; auditoria sem conteúdo | 1 | ✅ |
 | DLP regex contornável | Regex + `mask`/`deny`; plano de NER (Presidio) | 1→2 | 🟡 |
 | Dado sensível vai para LLM externo | `check_vault_egress` estrito; embeddings locais | 1 | ✅ |
-| Geração automática chega à produção | Rascunho + promoção nomeada | 1 | 🟡 procedural (L-01/L-02) |
+| Geração automática chega à produção | Rascunho + promoção por `admin`/`super_admin`, identidade auditada | 1 | ✅ |
 | Falta de trilha imutável | Hash-chain append-only exportável | 1 | 🟡 detecta (L-09) |
 | Credenciais de legados na nuvem BRM | Segredos por tenant, nunca no repo | 1 | ⏳ sem cofre ainda |
 | Push instantâneo de regra ruim para todos | *Staging → canary → produção* | 2 | ⏳ (sem Control Plane) |

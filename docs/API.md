@@ -25,7 +25,7 @@
 
 ## 1. MCP — tools
 
-**Acesso padrão** é o que o seed de `tool_permissions` define. Tool sem nenhuma linha = aberta a todos os perfis, **inclusive `anonymous`** (L-01). `super_admin` acessa tudo. Altere em runtime com `atualizar_permissao` ou pelo painel.
+**Acesso padrão** é o que o seed de `tool_permissions` define. Tool sem nenhuma linha = aberta a todos os perfis, **inclusive `anonymous`** — por isso toda tool sensível precisa de linha no seed (`_DEFAULT_PERMISSIONS`). `super_admin` acessa tudo. Altere em runtime com `atualizar_permissao` ou pelo painel.
 
 ### 1.1 Skills do cliente (geradas de `skills.yaml`)
 
@@ -54,16 +54,16 @@ Efeitos: `enviar_email` envia de verdade só com Resend/SMTP configurados e fora
 | Tool | Parâmetros | Acesso padrão | O que faz / retorna |
 |---|---|---|---|
 | `call_skill` | `skill_name`, `arguments{}` | todos | Executa uma skill pelo nome (ver §1.1) |
-| `query_audit_log` | `start_date?`, `end_date?` (ISO-8601), `action?`, `decision?` (`allowed`\|`denied`\|`pending_approval`) | todos ⚠️ L-01 | `{total, events[{occurred_at, actor, action, decision, rule_id}]}` (sem `details`) |
+| `query_audit_log` | `start_date?`, `end_date?` (ISO-8601), `action?`, `decision?` (`allowed`\|`denied`\|`pending_approval`) | `admin` | `{total, events[{occurred_at, actor, action, decision, rule_id}]}` (sem `details`) |
 | `vault_search` | `query`, `limit=10` | todos | `{total, notes[VaultNote]}` filtrado por `vault_access`; com política: `+ ocultas`, `politicas[]` |
 | `vault_list_notes` | — | todos | `{total, notes[]}` filtrado por política |
 | `vault_get_related` | `note_id` | todos | `{total, notes[]}` (backlinks/links), filtrado |
-| `vault_add_note` | `title`, `content`, `tags?[]` | todos; **com `vault_access.yaml`**: só `write_roles` | `VaultNote`; negado → `{allowed:false, reason, proximo_passo}` e evento `DENIED` |
-| `vault_interpret_and_propose` | `note_id` | todos ⚠️ L-01 | `{draft_id, kind, preview}` ou `{allowed:false, reason}`; DLP de saída estrito |
+| `vault_add_note` | `title`, `content`, `tags?[]` | `admin`; **com `vault_access.yaml`**, além disso só `write_roles` | `VaultNote`; negado → `{allowed:false, reason, proximo_passo}` e evento `DENIED` |
+| `vault_interpret_and_propose` | `note_id` | `admin` | `{draft_id, kind, preview}` ou `{allowed:false, reason}`; DLP de saída estrito |
 | `vault_list_drafts` | `kind?` (`rule`\|`skill`\|`document`), `status?` | todos | `{total, drafts[]}` |
-| `vault_promote_draft` | `draft_id`, `kind` (`rule`\|`skill`) | todos ⚠️ L-01/L-02 | `{promoted:true, draft_id, kind}` ou `{allowed:false, reason}` |
-| `vault_generate_document` | `instrucoes` | todos ⚠️ L-01 | `{draft_id, kind:"document", preview}` ou `{allowed:false, reason}` (DLP/credenciais) |
-| `vault_promote_document` | `draft_id` | todos ⚠️ L-01/L-02 | `{promoted:true, draft_id, note_id}` (grava a nota no vault; auditado) ou `{allowed:false, reason}` |
+| `vault_promote_draft` | `draft_id`, `kind` (`rule`\|`skill`) | `admin` | `{promoted:true, draft_id, kind}` ou `{allowed:false, reason}` |
+| `vault_generate_document` | `instrucoes` | `admin` | `{draft_id, kind:"document"`, preview}` ou `{allowed:false, reason}` (DLP/credenciais) |
+| `vault_promote_document` | `draft_id` | `admin` | `{promoted:true, draft_id, note_id}` (grava a nota no vault; auditado) ou `{allowed:false, reason}` |
 | `consultar_processo_datajud` | `numero_processo` | todos | `{allowed, encontrado, tribunal, grau, classe, …, vault_note_id}` ou `{allowed:false, reason}`; grava nota no vault |
 | `consultar_dados` | — | `viewer`, `admin` (demo) | `{allowed, data[]}` |
 | `deletar_banco` | — | `admin` (demo, mock) | `{allowed, result}`; reconfere o perfil por dentro |

@@ -12,7 +12,7 @@ Tudo começa em [`docs/README.md`](docs/README.md). Atalhos: [PRD](docs/PRD.md) 
 
 **Gatilho de saída da Fase 1:** 2–3 clientes pagando e pelo menos um pedindo explicitamente self-service de regras. Antes disso, não migrar para o Control Plane.
 
-⚠️ Antes de usar dado real de cliente, leia as lacunas P0 em [`docs/SECURITY.md`](docs/SECURITY.md) §10 (promoção de rascunhos aberta a qualquer perfil, aprovador registrado como `claude`, valor bruto do DLP na auditoria). O build do painel falha em clone limpo — ver [`docs/TESTING.md`](docs/TESTING.md) §8.
+⚠️ Antes de usar dado real de cliente, leia as lacunas abertas em [`docs/SECURITY.md`](docs/SECURITY.md) §10 (tokens em texto puro, regra com efeito padrão `allow`, CORS `*`…). O build do painel falha em clone limpo — ver [`docs/TESTING.md`](docs/TESTING.md) §8.
 
 ## Setup
 

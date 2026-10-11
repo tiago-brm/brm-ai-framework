@@ -84,7 +84,7 @@ Expected: `iter_events` levanta `AuditChainError` na linha correta.
 
 - **Alvo prático:** sem meta numérica configurada. Toda linha de decisão de segurança (regras, RBAC, interceptor, vault_access, rascunhos) deve ter teste de caminho feliz e de **negação**.
 - **Priorizar:** lógica de negócio crítica, autenticação/autorização, mutações de dado (usuários, permissões, vault, config promovida), jornadas principais.
-- *Meta:* `pytest --cov` no CI para tornar as lacunas visíveis. Lacunas conhecidas sem teste: L-01…L-05 de [SECURITY.md](SECURITY.md) (cada correção deve entrar com seu teste), painel React, execução real de e-mail (`enviar_email`).
+- *Meta:* `pytest --cov` no CI para tornar as lacunas visíveis. Lacunas abertas de [SECURITY.md](SECURITY.md) §10 (cada correção deve entrar com seu teste), painel React, execução real de e-mail (`enviar_email`).
 
 ## 7. Commands
 

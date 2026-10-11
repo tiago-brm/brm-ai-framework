@@ -51,7 +51,7 @@ Fonte de verdade em runtime do RBAC por tool (substituiu o dict `ROLE_TOOLS`).
 
 `UNIQUE(role, tool_name)`.
 
-**Semântica (crítica):** *nenhuma* linha para uma tool = tool **aberta a todo perfil**, inclusive `anonymous`. *Ao menos uma* linha (de qualquer perfil) = tool **restrita**; um perfil sem linha própria é negado. `super_admin` nunca precisa de linha (bypass em `is_tool_allowed`). Seed inicial automático e idempotente (`_DEFAULT_PERMISSIONS`): `viewer`: `consultar_dados`; `admin`: `consultar_dados`, `deletar_banco`, `criar_usuario`, `listar_usuarios` (sim) e `atualizar_perfil_usuario`, `listar_permissoes`, `atualizar_permissao` (não).
+**Semântica (crítica):** *nenhuma* linha para uma tool = tool **aberta a todo perfil**, inclusive `anonymous`. *Ao menos uma* linha (de qualquer perfil) = tool **restrita**; um perfil sem linha própria é negado. `super_admin` nunca precisa de linha (bypass em `is_tool_allowed`). Seed automático e idempotente **por tool** (`_DEFAULT_PERMISSIONS`): só semeia tools sem nenhuma linha, então bancos antigos ganham os padrões novos sem perder escolhas do `super_admin`: `viewer`: `consultar_dados`; `admin`: `consultar_dados`, `deletar_banco`, `criar_usuario`, `listar_usuarios`, `vault_promote_draft`, `vault_promote_document`, `vault_interpret_and_propose`, `vault_generate_document`, `vault_add_note`, `query_audit_log` (sim) e `atualizar_perfil_usuario`, `listar_permissoes`, `atualizar_permissao` (não).
 
 ## 4. Relationships
 
@@ -104,7 +104,7 @@ Cada decisão relevante vira um `AuditEvent` em `audit.jsonl`.
 
 **Ações registradas:** `<skill>` (decisão da skill), `<skill>:fato_divergente`, `simulacao:<skill|vault>`, `vault_search`, `vault_list_notes`, `vault_get_related`, `vault_add_note`, `vault_external_edit`, `vault_write_conflict`, `vault_generate_draft`, `vault_promote_draft`, `vault_promote_error`, `vault_generate_document`, `vault_promote_document`, `vault_promote_document_error`, `vault_content_egress_check`, `vault_document_egress_check`, `consultar_processo_datajud`, e `<tool>` com `details.reason = "rbac_denied"`.
 
-> ⚠️ Em bloqueio por DLP o interceptor grava `details.dlp_matches` com **os valores encontrados** (ex.: o CPF). Isso viola a regra "nunca logar dado pessoal" — ver [SECURITY.md](SECURITY.md) L-05.
+> `details.dlp_matches` guarda só **rótulo → contagem** (ex.: `{"CPF": 2}`), nunca o valor casado (inclui os eventos `*_egress_check`).
 
 ## 10. Sensitive Data
 
@@ -113,7 +113,7 @@ Cada decisão relevante vira um `AuditEvent` em `audit.jsonl`.
 | `api_token` | `users.db` | Texto puro; arquivo fora do git; **sem hash** (L-03) |
 | Prontuário, hipóteses, CID, CPF, telefone | Vault (notas) e respostas | `vault_access.yaml` (nota a nota), DLP no retorno, DLP de saída antes de LLM, embeddings **locais** |
 | `notion_token` | `client_config.yaml` **ou** env `NOTION_TOKEN` | Preferir o env; `.env` no `.gitignore` (L-07) |
-| Conteúdo de nota | Auditoria | Não gravado (só contagens/políticas/`payload_digest`) — exceto L-05 |
+| Conteúdo de nota e valores de DLP | Auditoria | Não gravados (só contagens/políticas/`payload_digest`) |
 | Chaves de LLM/SMTP/Resend | Variáveis de ambiente | Nunca em arquivo versionado |
 
 Retenção e exclusão de dado pessoal (LGPD) **não estão definidas** — ver Open Questions em [PRD.md](PRD.md).
