@@ -18,12 +18,12 @@ Empacota o fluxo (hoje manual) de configurar um escritório novo no motor:
 config base → guardrails → vault → regras/skills → documentos padronizados.
 Cada etapa de geração por IA (regras, skills, documentos) sempre passa por
 **draft → revisão humana → promoção explícita** — nunca escreve direto em
-produção. Ver `docs/spec.md` para a arquitetura completa.
+produção. Ver `docs/ARCHITECTURE.md` (arquitetura), `docs/DATABASE.md` (schemas de config) e `docs/SECURITY.md` (guardrails).
 
 ## Passo 1 — Config base do cliente
 
 Criar `clients/<cliente>/config/{rules.yaml, skills.yaml, client_config.yaml}`.
-Referência completa com exemplos: `docs/guia-teste-claude-desktop.md` (passos 1-2).
+Fluxo completo e conexão ao Claude: `docs/UX_FLOWS.md` (Flow A2 e A4); schemas: `docs/DATABASE.md` §13.
 
 ```yaml
 # client_config.yaml — mínimo pra subir

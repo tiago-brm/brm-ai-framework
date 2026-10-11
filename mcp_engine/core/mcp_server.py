@@ -421,7 +421,7 @@ class BRMEngine:
                 "payload_digest": None,
             }
 
-        # Fase 1 é mocked-by-design (ver docs/spec.md) — enviar_email é a única
+        # Fase 1 é mocked-by-design (ver docs/ARCHITECTURE.md) — enviar_email é a única
         # exceção: dispara um envio SMTP real quando SMTP_* está configurado,
         # sempre depois (nunca antes) do gate de DLP/allowlist acima.
         if skill_name == "enviar_email" and email_configured() and not simulacao:
