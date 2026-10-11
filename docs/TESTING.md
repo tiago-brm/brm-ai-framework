@@ -106,9 +106,9 @@ cd dashboard && npm ci && npm run lint && npm run build   # build = tsc -b && vi
 ```
 Type check do Python: **não configurado** (*meta*, ver [CODE_STYLE.md](CODE_STYLE.md) §10).
 
-## 8. Known issues que afetam a verificação
+## 8. Pontos de atenção na verificação
 
-- **O painel não compila em clone limpo.** `npm run build` falha com `Cannot find module '@/lib/router'`, `@/lib/useLoadable` e (indiretamente) `@/lib/utils`: o `.gitignore` raiz contém `lib/` (padrão Python) e **ignora `dashboard/src/lib/`**, que nunca entrou no git. Enquanto isso não for corrigido (versionar `src/lib/` com `!dashboard/src/lib/` no `.gitignore` e recriar os arquivos), `lint`/`build` do painel só funcionam na máquina que ainda tem esses arquivos.
+- **`dashboard/src/lib/` precisa ficar versionado.** O `.gitignore` raiz ignora `lib/` (padrão Python); a exceção `!dashboard/src/lib/` o libera. Se `npm run build` acusar `Cannot find module '@/lib/...'`, confira `git check-ignore -v dashboard/src/lib/router.ts`.
 - **2 testes exigem rede:** `test_encode_returns_vectors_of_declared_dim` e `test_encode_is_deterministic` baixam `paraphrase-multilingual-MiniLM-L12-v2` (~470 MB). Falham com `ProxyError: 403` em ambientes sem acesso ao Hugging Face. Não é regressão; relate-os como "não executáveis aqui".
 - 1 teste é *skipped* fora da máquina do autor: `tests/test_vault_obsidian.py:359` valida o vault real apontado por `clients/example/config/client_config.yaml` (`vault_root: /Users/tiagopereiraramos/vault/brm-framework-vault`). Ou seja, o cliente `example` depende de um caminho pessoal — ver Open Questions em [PRD.md](PRD.md).
 

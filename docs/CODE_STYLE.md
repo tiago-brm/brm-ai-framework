@@ -49,7 +49,7 @@
 - Reutilize `Card`, `Empty`, `PageHeader`, `DecisionBadge`/`EffectBadge` antes de criar markup novo.
 - Todo acesso à API passa por `src/api.ts` (um único `request<T>`, erros via `ApiError`). Não chame `fetch` em páginas.
 - Estado de página: carregando → vazio → erro → sucesso ([DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) §12).
-- *Meta:* nenhum componente depende de arquivo ignorado pelo git (ver [TESTING.md](TESTING.md) sobre `src/lib/`).
+- *Meta:* nenhum componente depende de arquivo ignorado pelo git (cuidado com `lib/` no `.gitignore`: ver [TESTING.md](TESTING.md) §8).
 
 ## 6. Functions
 

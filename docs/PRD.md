@@ -109,11 +109,11 @@
 ### F-10 — Gerador de documentos padronizados ✅
 - **Purpose:** Redigir modelo (declaração, petição, contrato, checklist) como rascunho; promoção grava no vault.
 
-### F-11 — Painel `super_admin` 🟡
+### F-11 — Painel `super_admin` ✅
 - **Purpose:** Ver e administrar tudo o que o motor expõe.
 - **Telas:** Visão, Usuários, Matriz (permissões), Tools, Regras, Vault, Auditoria, Simular, Governança.
 - **Acceptance Criteria:** toda rota `/api/*` exige `super_admin`; login por URL + token Bearer.
-- **Estado:** 🟡 **o `build` falha em clone limpo** — `dashboard/src/lib/` está no `.gitignore` raiz (`lib/`) e nunca foi versionado (ver [TESTING.md](TESTING.md)). Regras e vault são somente leitura no painel.
+- **Estado:** `dashboard/src/lib/` (router e `useLoadable`) agora é versionado; `npm run build` e `lint` passam em clone limpo. Regras e vault são somente leitura no painel.
 
 ### F-12 — Simulador e matriz de governança ✅
 - **Purpose:** Executar como outro perfil (sem efeito externo) e cruzar cenários × perfis.
@@ -141,7 +141,7 @@ Intencionalmente **fora** desta versão (Fase 1):
 ## 8. MVP Scope
 
 **Must have (Fase 1 — ✅ salvo indicação):** F-01 a F-08, F-12, F-13; hardening de segurança; deploy isolado por cliente.
-**Must have pendente:** corrigir o build do painel (F-11) e revisar as lacunas P1 restantes de [SECURITY.md](SECURITY.md) antes de dado real de cliente.
+**Must have pendente:** revisar as lacunas P1 restantes de [SECURITY.md](SECURITY.md) antes de dado real de cliente.
 **Nice to have:** F-09/F-10 com gate humano real; F-14 em produção; rate limit no provider Notion.
 **Future (Fase 2/3):**
 - Fase 2 — Control Plane: Rule/Skill Builder, sincronização com *staging → canary → produção*, mTLS/JWT rotativo, NER no DLP. Só após o gatilho de saída abaixo.

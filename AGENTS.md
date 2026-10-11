@@ -73,7 +73,7 @@ Depois de implementar, rode (ver `docs/TESTING.md` §7):
 uv run ruff check .
 uv run pytest -q          # 2 testes de embeddings precisam de rede; relate se não puderem rodar
 # se dashboard/ mudou:
-cd dashboard && npm run lint && npm run build   # hoje falha em clone limpo (src/lib ignorado) — ver TESTING.md §8
+cd dashboard && npm run lint && npm run build
 ```
 
 Revise `git diff` em busca de mudanças não intencionais. Para decisão de segurança alterada, cubra o caminho feliz **e** a negação em teste. Verifique o fluxo crítico afetado (`docs/UX_FLOWS.md`).

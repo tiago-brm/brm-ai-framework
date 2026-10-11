@@ -72,7 +72,7 @@ Skill do projeto: `.claude/skills/brm-onboarding`.
 
 ## Parte B — Painel `super_admin`
 
-Entrada comum: URL do engine (padrão `http://localhost:8000`) + token Bearer. Subir: `CLIENT_ID=… uv run uvicorn mcp_engine.core.http_app:app --port 8000` e `cd dashboard && npm run dev` (porta 5173) ou `build` + `preview` (4173). Pré-requisito atual: o build precisa de `src/lib/` ([TESTING.md](TESTING.md) §8).
+Entrada comum: URL do engine (padrão `http://localhost:8000`) + token Bearer. Subir: `CLIENT_ID=… uv run uvicorn mcp_engine.core.http_app:app --port 8000` e `cd dashboard && npm run dev` (porta 5173) ou `build` + `preview` (4173).
 
 ### Flow B1 — Login
 1. Usuário abre o painel → "Carregando…" enquanto valida a sessão salva.
