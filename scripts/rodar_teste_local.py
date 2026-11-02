@@ -6,8 +6,9 @@
 
 O conector do chat é um só (conta de canal); as pessoas (`secretaria`, `gestor`) entram pelo
 token delas na página do link. Tudo fica em `$BRM_TESTE_DIR` (padrão `~/brm-teste`), fora do
-repositório. A Agenda é simulada (`FakeAgendaProvider`) com dois pacientes; use `--agenda-real`
-para usar os segredos `agenda_api_key` e `agenda_base_url` do ambiente.
+repositório. A Agenda é simulada (`FakeAgendaProvider`, dois pacientes) até existir
+`$BRM_TESTE_DIR/agenda.env` com as linhas `agenda_api_key=...` e `agenda_base_url=...`; com o
+arquivo, usa a Agenda real. `--agenda-simulada` força a simulada.
 """
 
 from __future__ import annotations
@@ -40,6 +41,18 @@ def ambiente() -> None:
         DATA_ROOT=str(DADOS),
         BRM_DATA_DIR=str(DADOS),
     )
+
+
+def agenda() -> None:
+    arquivo = TESTE / "agenda.env"
+    if "--agenda-simulada" in sys.argv or not arquivo.is_file():
+        agenda_falsa()
+        return
+    for linha in arquivo.read_text().splitlines():
+        nome, _, valor = linha.partition("=")
+        if nome.strip() in ("agenda_api_key", "agenda_base_url") and valor.strip():
+            os.environ[f"BRM_SECRET_CLINICA_PILOTO_{nome.strip().upper()}"] = valor.strip()
+    print("Agenda real (segredos de ~/brm-teste/agenda.env)", file=sys.stderr)
 
 
 def agenda_falsa() -> None:
@@ -128,8 +141,7 @@ def preparar() -> None:
 
 def api() -> None:
     ambiente()
-    if "--agenda-real" not in sys.argv:
-        agenda_falsa()
+    agenda()
     import uvicorn
 
     uvicorn.run("mcp_engine.core.http_app:app", host="127.0.0.1", port=8000)
@@ -138,8 +150,7 @@ def api() -> None:
 def mcp(perfil: str) -> None:
     ambiente()
     os.environ["MCP_USER_EMAIL"] = PERFIS[perfil]
-    if "--agenda-real" not in sys.argv:
-        agenda_falsa()
+    agenda()
     from mcp_engine.core.mcp_server import main
 
     main()
