@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { Shell } from "@/components/Shell";
 import { useHashRoute } from "@/lib/router";
 import { Auditoria } from "@/pages/Auditoria";
@@ -40,8 +41,11 @@ export default function App() {
 
   if (checking) {
     return (
-      <div className="grid min-h-screen place-items-center bg-paper font-mono text-[12px] text-ink/50">
-        Carregando…
+      <div className="grid min-h-screen place-items-center text-muted-foreground" aria-busy="true">
+        <span className="flex items-center gap-2">
+          <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />
+          Carregando…
+        </span>
       </div>
     );
   }
@@ -102,48 +106,58 @@ function LoginScreen({
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-paper font-sans text-[13px] text-ink">
-      <form
-        onSubmit={handleSubmit}
-        className="rise w-full max-w-sm rounded-md border border-line bg-surface/70 p-5"
-      >
-        <div className="mb-4 flex items-center gap-2">
-          <span className="grid size-6 place-items-center bg-navy font-mono text-[11px] text-surface">B</span>
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink/70">BRM Engine</span>
+    <div className="grid min-h-screen place-items-center p-4">
+      <form onSubmit={handleSubmit} className="card animate-fade-in-up w-full max-w-sm">
+        <div className="md2-gradient-card -mt-6 mx-4 flex items-center gap-3 p-4 shadow-lg">
+          <ShieldCheck size={28} aria-hidden="true" />
+          <div className="leading-tight">
+            <p className="text-lg font-semibold">BRM Engine</p>
+            <p className="text-sm text-white/80">Governança de IA</p>
+          </div>
         </div>
-        <h1 className="font-display text-[24px] italic leading-none text-ink">Painel super_admin</h1>
-        <p className="mt-1.5 text-[12px] text-ink/55">
-          Gestão de usuários, permissões e visão geral do MCP Engine.
-        </p>
+        <div className="card-body space-y-4">
+          <div>
+            <h1 className="text-xl font-semibold">Painel do super_admin</h1>
+            <p className="text-muted-foreground">Usuários, permissões, regras e auditoria do motor.</p>
+          </div>
 
-        <label className="mt-4 block">
-          <span className="font-mono text-[10px] uppercase tracking-wide text-ink/45">URL do BRM Engine</span>
-          <input
-            value={baseUrl}
-            onChange={(e) => setBaseUrlInput(e.target.value)}
-            className="mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-[11px] focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none"
-          />
-        </label>
-        <label className="mt-3 block">
-          <span className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Token de acesso (Bearer)</span>
-          <input
-            type="password"
-            value={token}
-            onChange={(e) => setTokenInput(e.target.value)}
-            placeholder="super-admin-token-demo"
-            className="mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-[11px] placeholder:text-ink/30 focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none"
-          />
-        </label>
+          <div>
+            <label htmlFor="base-url" className="label">
+              URL do BRM Engine
+            </label>
+            <input
+              id="base-url"
+              value={baseUrl}
+              onChange={(e) => setBaseUrlInput(e.target.value)}
+              className="input code"
+            />
+          </div>
+          <div>
+            <label htmlFor="token" className="label">
+              Token de acesso
+            </label>
+            <input
+              id="token"
+              type="password"
+              value={token}
+              onChange={(e) => setTokenInput(e.target.value)}
+              aria-invalid={!!error}
+              aria-describedby={error ? "login-error" : undefined}
+              className="input"
+            />
+          </div>
 
-        {error && <p className="mt-3 font-mono text-[10px] text-red">{error}</p>}
+          {error && (
+            <p id="login-error" role="alert" className="field-error">
+              {error}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-4 w-full rounded-md bg-navy px-3 py-1.5 font-mono text-[11px] text-surface transition-colors hover:bg-navy/90 disabled:opacity-60"
-        >
-          {loading ? "Entrando…" : "Entrar"}
-        </button>
+          <button type="submit" disabled={loading} className="btn btn-primary w-full">
+            {loading && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}
+            {loading ? "Entrando…" : "Entrar"}
+          </button>
+        </div>
       </form>
     </div>
   );

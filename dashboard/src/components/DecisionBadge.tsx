@@ -1,29 +1,35 @@
-const COLORS: Record<string, string> = {
-  allowed: "border-green/30 bg-green/10 text-green",
-  denied: "border-red/30 bg-red/10 text-red",
-  pending_approval: "border-amber/30 bg-amber/10 text-amber",
+import { CircleCheck, CircleX, Hourglass, type LucideIcon } from "lucide-react";
+
+type Visual = { label: string; cls: string; icon: LucideIcon };
+
+const DECISIONS: Record<string, Visual> = {
+  allowed: { label: "Permitido", cls: "badge-outline-success", icon: CircleCheck },
+  denied: { label: "Negado", cls: "badge-outline-danger", icon: CircleX },
+  pending_approval: { label: "Aguarda aprovação", cls: "badge-outline-warning", icon: Hourglass },
 };
 
-export function DecisionBadge({ decision }: { decision: string }) {
-  const cls = COLORS[decision] ?? "border-line bg-ink/5 text-ink/55";
+const EFFECTS: Record<string, Visual> = {
+  allow: { label: "Permite", cls: "badge-outline-success", icon: CircleCheck },
+  deny: { label: "Nega", cls: "badge-outline-danger", icon: CircleX },
+  require_approval: { label: "Exige aprovação", cls: "badge-outline-warning", icon: Hourglass },
+};
+
+function Badge({ value, map }: { value: string; map: Record<string, Visual> }) {
+  const v = map[value];
+  if (!v) return <span className="badge-outline-muted">{value}</span>;
+  const Icon = v.icon;
   return (
-    <span className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide ${cls}`}>
-      {decision}
+    <span className={v.cls} title={value}>
+      <Icon size={12} aria-hidden="true" />
+      {v.label}
     </span>
   );
 }
 
-const EFFECT_COLORS: Record<string, string> = {
-  allow: "border-green/30 bg-green/10 text-green",
-  deny: "border-red/30 bg-red/10 text-red",
-  require_approval: "border-amber/30 bg-amber/10 text-amber",
-};
+export function DecisionBadge({ decision }: { decision: string }) {
+  return <Badge value={decision} map={DECISIONS} />;
+}
 
 export function EffectBadge({ effect }: { effect: string }) {
-  const cls = EFFECT_COLORS[effect] ?? "border-line bg-ink/5 text-ink/55";
-  return (
-    <span className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide ${cls}`}>
-      {effect}
-    </span>
-  );
+  return <Badge value={effect} map={EFFECTS} />;
 }

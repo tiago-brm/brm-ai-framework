@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { Wrench } from "lucide-react";
 import { api } from "@/api";
-import { Card, Empty } from "@/components/Card";
+import { Card, Empty, ErrorState } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { useLoadable } from "@/lib/useLoadable";
 
@@ -19,17 +20,22 @@ export function Tools() {
   return (
     <>
       <PageHeader
-        crumb="tools"
         title="Catálogo de tools"
+        description="O que o MCP expõe ao chat. As permissões ficam em Permissões."
+        icon={Wrench}
         actions={
           <>
+            <label htmlFor="tools-filtro" className="sr-only">
+              Filtrar tools
+            </label>
             <input
-              placeholder="filtrar…"
+              id="tools-filtro"
+              placeholder="Filtrar…"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="rounded-md border border-line bg-surface px-2.5 py-1 font-mono text-[11px] placeholder:text-ink/30 focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none"
+              className="input w-56"
             />
-            <span className="rounded bg-ink/10 px-1.5 py-1 font-mono text-[9px] text-ink/55">somente leitura</span>
+            <span className="badge-outline-muted">somente leitura</span>
           </>
         }
       />
@@ -37,23 +43,28 @@ export function Tools() {
       <Card
         title="Tools expostas pelo MCP"
         extra={
-          <span className="font-mono text-[10px] text-ink/40">
+          <span className="text-xs text-muted-foreground">
             {filtered.length} de {data?.total ?? 0}
           </span>
         }
       >
-        {error && <Empty>{error}</Empty>}
+        {error && <ErrorState>{error}</ErrorState>}
         {filtered.length === 0 ? (
           <Empty>Nenhuma tool corresponde ao filtro.</Empty>
         ) : (
-          <div className="divide-y divide-line/60">
+          <ul className="preview-list px-6 pb-2">
             {filtered.map((t) => (
-              <div key={t.name} className="px-3 py-2">
-                <p className="font-mono text-[11px] text-ink">{t.name}</p>
-                <p className="mt-0.5 text-[11px] text-ink/50">{t.description || "sem descrição"}</p>
-              </div>
+              <li key={t.name} className="preview-item">
+                <div className="icon-box icon-box-sm icon-box-info">
+                  <Wrench size={16} aria-hidden="true" />
+                </div>
+                <div className="preview-item-content">
+                  <p className="preview-subject code">{t.name}</p>
+                  <p className="text-muted-foreground">{t.description || "sem descrição"}</p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </Card>
     </>

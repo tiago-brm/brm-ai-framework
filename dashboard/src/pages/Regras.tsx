@@ -1,15 +1,23 @@
 import { useMemo, useState } from "react";
+import { Scale } from "lucide-react";
 import { api } from "@/api";
-import { Card, Empty } from "@/components/Card";
+import { Card, Empty, ErrorState } from "@/components/Card";
 import { EffectBadge } from "@/components/DecisionBadge";
 import { PageHeader } from "@/components/PageHeader";
 import { useLoadable } from "@/lib/useLoadable";
 
-const EFFECTS = ["todas", "allow", "deny", "require_approval"] as const;
+const EFFECTS = [
+  { value: "todas", label: "Todas" },
+  { value: "allow", label: "Permitem" },
+  { value: "deny", label: "Negam" },
+  { value: "require_approval", label: "Exigem aprovação" },
+] as const;
+
+type Effect = (typeof EFFECTS)[number]["value"];
 
 export function Regras() {
   const { data, error } = useLoadable(() => api.listRules());
-  const [effect, setEffect] = useState<(typeof EFFECTS)[number]>("todas");
+  const [effect, setEffect] = useState<Effect>("todas");
 
   const filtered = useMemo(() => {
     const rules = data?.rules ?? [];
@@ -19,40 +27,43 @@ export function Regras() {
   return (
     <>
       <PageHeader
-        crumb="regras"
         title="Regras de negócio"
+        description="Regras duras em JSONLogic, avaliadas pelo motor antes de qualquer ação."
+        icon={Scale}
         actions={EFFECTS.map((e) => (
           <button
-            key={e}
-            onClick={() => setEffect(e)}
-            className={`rounded-md border px-2 py-1 font-mono text-[10px] transition-colors ${
-              effect === e ? "border-navy/40 bg-navy/10 text-navy" : "border-line bg-surface/50 text-ink/55 hover:text-ink"
-            }`}
+            key={e.value}
+            type="button"
+            onClick={() => setEffect(e.value)}
+            aria-pressed={effect === e.value}
+            className="btn btn-ghost btn-sm border"
           >
-            {e}
+            {e.label}
           </button>
         ))}
       />
 
       <Card title="Regras">
-        {error && <Empty>{error}</Empty>}
+        {error && <ErrorState>{error}</ErrorState>}
         {filtered.length === 0 ? (
           <Empty>Nenhuma regra com esse efeito.</Empty>
         ) : (
-          <div className="divide-y divide-line/60">
+          <ul className="preview-list px-6 pb-2">
             {filtered.map((r) => (
-              <div key={r.id} className="px-3 py-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-mono text-[11px] text-ink">{r.id}</span>
-                  <EffectBadge effect={r.effect} />
+              <li key={r.id} className="preview-item">
+                <div className="preview-item-content">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="preview-subject code">{r.id}</span>
+                    <EffectBadge effect={r.effect} />
+                  </div>
+                  <p className="mt-1 text-muted-foreground">{r.description}</p>
+                  <pre className="code mt-2 overflow-x-auto rounded-lg bg-muted px-3 py-2 text-xs">
+                    {JSON.stringify(r.condition)}
+                  </pre>
                 </div>
-                <p className="mt-0.5 text-[11px] text-ink/55">{r.description}</p>
-                <pre className="mt-1.5 overflow-x-auto rounded bg-ink/5 px-2 py-1.5 font-mono text-[10px] text-ink/60">
-                  {JSON.stringify(r.condition)}
-                </pre>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </Card>
     </>

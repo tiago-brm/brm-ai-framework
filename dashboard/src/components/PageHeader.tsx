@@ -1,23 +1,33 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 
 export function PageHeader({
-  crumb,
   title,
+  description,
+  icon: Icon,
   actions,
 }: {
-  crumb: string;
   title: string;
+  description?: string;
+  icon: LucideIcon;
   actions?: ReactNode;
 }) {
+  useEffect(() => {
+    document.title = `${title} · BRM Engine`;
+  }, [title]);
+
   return (
-    <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink/40">
-          super_admin · <span className="text-navy">{crumb}</span>
-        </p>
-        <h1 className="font-display text-[28px] leading-none italic text-ink">{title}</h1>
+    <div className="grid-margin flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <div className="icon-box icon-box-sm icon-box-dark">
+          <Icon size={20} aria-hidden="true" />
+        </div>
+        <div>
+          <h1 className="text-2xl leading-tight font-semibold">{title}</h1>
+          {description && <p className="text-muted-foreground">{description}</p>}
+        </div>
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }

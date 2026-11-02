@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { KeyRound, LoaderCircle, UserPlus, Users } from "lucide-react";
 import { api, ApiError, type User } from "@/api";
-import { Card, Empty } from "@/components/Card";
+import { Card, Empty, ErrorState } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { useLoadable } from "@/lib/useLoadable";
 
@@ -44,93 +45,107 @@ export function Usuarios() {
   return (
     <>
       <PageHeader
-        crumb="usuários"
         title="Usuários"
-        actions={
-          <span className="rounded-md border border-line bg-surface/50 px-2 py-1 font-mono text-[10px] text-ink/50">
-            {data?.total ?? 0} perfis
-          </span>
-        }
+        description="Quem acessa o motor e com qual perfil."
+        icon={Users}
+        actions={<span className="badge-outline-muted">{data?.total ?? 0} perfis</span>}
       />
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card title="Perfis cadastrados">
-          <div className="grid grid-cols-[1fr_120px_160px] gap-2 border-b border-line px-3 py-1 font-mono text-[9px] uppercase tracking-wide text-ink/35">
-            <span>Identity</span>
-            <span>Role</span>
-            <span>Trocar perfil</span>
-          </div>
-          {error && <Empty>{error}</Empty>}
+          {error && <ErrorState>{error}</ErrorState>}
           {data && data.users.length === 0 ? (
             <Empty>Nenhum usuário cadastrado ainda.</Empty>
           ) : (
-            <div className="divide-y divide-line/60">
-              {(data?.users ?? []).map((u: User) => (
-                <div key={u.identity} className="grid grid-cols-[1fr_120px_160px] items-center gap-2 px-3 py-2">
-                  <span className="truncate font-mono text-[11px] text-ink">{u.identity}</span>
-                  <span className="rounded bg-ink/10 px-1.5 py-0.5 font-mono text-[9px] text-ink/60 w-fit">
-                    {u.role}
-                  </span>
-                  <select
-                    value={u.role}
-                    onChange={(e) => handleRoleChange(u.identity, e.target.value)}
-                    className="rounded-md border border-line bg-surface px-2 py-1 font-mono text-[10px] focus:border-navy focus:outline-none"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+            <div className="overflow-x-auto px-3 pb-3">
+              <table className="data-table min-w-[520px]">
+                <thead>
+                  <tr>
+                    <th>Identidade</th>
+                    <th className="w-32">Perfil</th>
+                    <th className="w-44">Trocar perfil</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data?.users ?? []).map((u: User) => (
+                    <tr key={u.identity}>
+                      <td className="max-w-0 truncate">{u.identity}</td>
+                      <td>
+                        <span className="badge-outline-muted">{u.role}</span>
+                      </td>
+                      <td>
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.identity, e.target.value)}
+                          aria-label={`Perfil de ${u.identity}`}
+                          className="input py-1.5"
+                        >
+                          {ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </Card>
 
         <Card title="Novo usuário">
-          <form className="space-y-3 p-3" onSubmit={handleCreate}>
-            <label className="block">
-              <span className="font-mono text-[10px] uppercase tracking-wide text-ink/45">E-mail</span>
+          <form className="space-y-4 px-6 pb-6" onSubmit={handleCreate}>
+            <div>
+              <label htmlFor="novo-email" className="label">
+                E-mail
+              </label>
               <input
+                id="novo-email"
                 required
                 type="email"
-                placeholder="nova@escritorio.com.br"
+                placeholder="pessoa@empresa.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-[11px] placeholder:text-ink/30 focus:border-navy focus:ring-2 focus:ring-navy/20 focus:outline-none"
+                className="input"
               />
-            </label>
-            <label className="block">
-              <span className="font-mono text-[10px] uppercase tracking-wide text-ink/45">Perfil</span>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-[11px] focus:border-navy focus:outline-none"
-              >
+            </div>
+            <div>
+              <label htmlFor="novo-perfil" className="label">
+                Perfil
+              </label>
+              <select id="novo-perfil" value={role} onChange={(e) => setRole(e.target.value)} className="input">
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
                 ))}
               </select>
-            </label>
-            {formError && <p className="font-mono text-[10px] text-red">{formError}</p>}
-            {createdToken && (
-              <p className="rounded-md border border-amber/30 bg-amber/5 px-2 py-1.5 font-mono text-[10px] leading-relaxed text-amber break-all">
-                Token gerado (só aparece agora): {createdToken}
+            </div>
+            {formError && (
+              <p role="alert" className="field-error">
+                {formError}
               </p>
             )}
-            <button
-              type="submit"
-              disabled={creating}
-              className="w-full rounded-md bg-navy px-3 py-1.5 font-mono text-[11px] text-surface transition-colors hover:bg-navy/90 disabled:opacity-60"
-            >
+            {createdToken && (
+              <div role="status" className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-warning">
+                <p className="flex items-center gap-2 font-medium">
+                  <KeyRound size={16} aria-hidden="true" />
+                  Token gerado: copie agora, ele não aparece de novo.
+                </p>
+                <p className="code mt-1 break-all text-foreground">{createdToken}</p>
+              </div>
+            )}
+            <button type="submit" disabled={creating} className="btn btn-primary w-full">
+              {creating ? (
+                <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
+              ) : (
+                <UserPlus size={16} aria-hidden="true" />
+              )}
               {creating ? "Criando…" : "Criar e gerar token"}
             </button>
-            <p className="font-mono text-[10px] leading-relaxed text-ink/40">
-              O token em texto puro só aparece na resposta desta criação.
-            </p>
+            <p className="hint">O token em texto puro só aparece na resposta desta criação.</p>
           </form>
         </Card>
       </div>

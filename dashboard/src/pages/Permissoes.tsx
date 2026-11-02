@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { CircleCheck, CircleX, Grid3x3 } from "lucide-react";
 import { api, type Tool } from "@/api";
-import { Card, Empty } from "@/components/Card";
+import { Card, Empty, ErrorState } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { useLoadable } from "@/lib/useLoadable";
 
@@ -30,54 +31,51 @@ export function Permissoes() {
   return (
     <>
       <PageHeader
-        crumb="matriz"
-        title="Matriz de permissões"
-        actions={
-          <span className="rounded-md border border-line bg-surface/50 px-2 py-1 font-mono text-[10px] text-ink/50">
-            {permData?.total ?? 0} entradas
-          </span>
-        }
+        title="Permissões"
+        description="Quais tools cada perfil pode ver e chamar. Clique para trocar."
+        icon={Grid3x3}
+        actions={<span className="badge-outline-muted">{permData?.total ?? 0} entradas</span>}
       />
 
       <Card
         title="Perfil × tool"
-        extra={<span className="font-mono text-[10px] text-ink/40">sem entrada = aberta a qualquer perfil</span>}
+        extra={<span className="text-xs text-muted-foreground">Sem entrada, vale o padrão do cliente (rbac_default)</span>}
       >
-        {(permError || toolsError) && <Empty>{permError || toolsError}</Empty>}
+        {(permError || toolsError) && <ErrorState>{permError || toolsError}</ErrorState>}
         {toolNames.length === 0 ? (
           <Empty>Catálogo de tools vazio.</Empty>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] border-collapse">
+          <div className="overflow-x-auto px-3 pb-3">
+            <table className="data-table min-w-[480px]">
               <thead>
-                <tr className="border-b border-line text-left font-mono text-[9px] uppercase tracking-wide text-ink/35">
-                  <th className="px-3 py-1.5 font-medium">tool</th>
+                <tr>
+                  <th>Tool</th>
                   {EDITABLE_ROLES.map((r) => (
-                    <th key={r} className="w-[120px] px-3 py-1.5 text-center font-medium">
+                    <th key={r} className="w-36 text-center">
                       {r}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line/60">
+              <tbody>
                 {toolNames.map((toolName) => (
                   <tr key={toolName}>
-                    <td className="truncate px-3 py-2 font-mono text-[11px] text-ink">{toolName}</td>
+                    <td className="code max-w-0 truncate">{toolName}</td>
                     {EDITABLE_ROLES.map((role) => {
                       const key = `${role}:${toolName}`;
                       const allowed = permMap.get(key) ?? false;
+                      const Icon = allowed ? CircleCheck : CircleX;
                       return (
-                        <td key={role} className="px-3 py-2 text-center">
+                        <td key={role} className="text-center">
                           <button
+                            type="button"
                             disabled={saving === key}
                             onClick={() => toggle(role, toolName, allowed)}
-                            className={`rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-wide transition-colors disabled:opacity-50 ${
-                              allowed
-                                ? "border-green/30 bg-green/10 text-green hover:bg-green/20"
-                                : "border-line bg-surface/50 text-ink/45 hover:text-ink"
-                            }`}
+                            aria-label={`${toolName} para ${role}: ${allowed ? "permitido" : "negado"}. Trocar.`}
+                            className={`${allowed ? "badge-outline-success" : "badge-outline-muted"} cursor-pointer disabled:opacity-50`}
                           >
-                            {allowed ? "permitido" : "negado"}
+                            <Icon size={12} aria-hidden="true" />
+                            {allowed ? "Permitido" : "Negado"}
                           </button>
                         </td>
                       );

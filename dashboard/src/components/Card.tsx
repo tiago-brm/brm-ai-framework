@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CircleAlert, Inbox, type LucideIcon } from "lucide-react";
 
 export function Card({
   title,
@@ -12,18 +13,32 @@ export function Card({
   children?: ReactNode;
 }) {
   return (
-    <div className={`rise overflow-hidden rounded-md border border-line bg-surface/60 ${className}`}>
+    <section className={`card overflow-hidden ${className}`}>
       {(title || extra) && (
-        <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2">
-          {title && <p className="font-mono text-[11px] uppercase tracking-wide text-ink/55">{title}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-3">
+          {title && <h2 className="card-title">{title}</h2>}
           {extra}
         </div>
       )}
       {children}
+    </section>
+  );
+}
+
+export function Empty({ icon: Icon = Inbox, children }: { icon?: LucideIcon; children: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-6 py-8 text-center text-muted-foreground">
+      <Icon size={28} aria-hidden="true" />
+      <p>{children}</p>
     </div>
   );
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="px-3 py-6 text-center font-mono text-[11px] text-ink/40">{children}</p>;
+export function ErrorState({ children }: { children: ReactNode }) {
+  return (
+    <div role="alert" className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+      <CircleAlert size={28} className="text-danger" aria-hidden="true" />
+      <p>{children}</p>
+    </div>
+  );
 }
