@@ -103,11 +103,11 @@
       "cwd": "${workspaceFolder}"
     },
     {
-      "name": "10. Central de Ações: MCP stdio (secretaria ou gestor)",
+      "name": "10. Central de Ações: MCP stdio (conector único do chat)",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/scripts/rodar_teste_local.py",
-      "args": ["mcp", "${input:perfilCentral}"],
+      "args": ["mcp"],
       "python": "${workspaceFolder}/.venv/bin/python",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
@@ -141,13 +141,6 @@
     }
   ],
   "inputs": [
-    {
-      "id": "perfilCentral",
-      "type": "pickString",
-      "description": "Entrar no MCP como",
-      "options": ["secretaria", "gestor"],
-      "default": "secretaria"
-    },
     {
       "id": "perfilDemo",
       "type": "pickString",

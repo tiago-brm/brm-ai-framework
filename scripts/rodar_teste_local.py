@@ -2,11 +2,12 @@
 
     uv run python scripts/rodar_teste_local.py preparar
     uv run python scripts/rodar_teste_local.py api
-    uv run python scripts/rodar_teste_local.py mcp secretaria|gestor
+    uv run python scripts/rodar_teste_local.py mcp
 
-Tudo fica em `$BRM_TESTE_DIR` (padrão `~/brm-teste`), fora do repositório. A Agenda é simulada
-(`FakeAgendaProvider`) com dois pacientes; use `--agenda-real` para usar os segredos
-`agenda_api_key` e `agenda_base_url` do ambiente.
+O conector do chat é um só (conta de canal); as pessoas (`secretaria`, `gestor`) entram pelo
+token delas na página do link. Tudo fica em `$BRM_TESTE_DIR` (padrão `~/brm-teste`), fora do
+repositório. A Agenda é simulada (`FakeAgendaProvider`) com dois pacientes; use `--agenda-real`
+para usar os segredos `agenda_api_key` e `agenda_base_url` do ambiente.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ CLIENTES = TESTE / "clients"
 DADOS = TESTE / "data"
 PAINEL = os.getenv("BRM_TESTE_PAINEL", "http://localhost:5173")
 PERFIS = {
+    "chat": "chat@clinica-piloto.test",
     "secretaria": "secretaria@clinica-piloto.test",
     "gestor": "gestor@clinica-piloto.test",
 }
@@ -60,14 +62,20 @@ def agenda_falsa() -> None:
 
     fake = FakeAgendaProvider(
         [
-            sessao("a1", "c1", "Maria Silva", "11999990001", agora - timedelta(days=1), "COMPLETED"),
-            sessao("a2", "c2", "Pedro Alves", "11999990002", agora - timedelta(days=2), "COMPLETED"),
-            sessao("a3", "c1", "Maria Silva", "11999990001", agora + timedelta(days=6), "CONFIRMED"),
+            sessao(
+                "a1", "c1", "Maria Silva", "11999990001", agora - timedelta(days=1), "COMPLETED"
+            ),
+            sessao(
+                "a2", "c2", "Pedro Alves", "11999990002", agora - timedelta(days=2), "COMPLETED"
+            ),
+            sessao(
+                "a3", "c1", "Maria Silva", "11999990001", agora + timedelta(days=6), "CONFIRMED"
+            ),
         ]
     )
     fake.fichas["c1"] = FichaCliente(
-        "c1", "Maria Silva", "11999990001", "maria@exemplo.test", date(1990, 5, 1),
-        "52998224725", Endereco("01001000", "Rua das Flores", "10", None, "Centro", "São Paulo", "SP"),
+        "c1", "Maria Silva", "11999990001", "maria@exemplo.test", date(1990, 5, 1), "52998224725",
+        Endereco("01001000", "Rua das Flores", "10", None, "Centro", "São Paulo", "SP"),
     )  # fmt: skip
     fake.fichas["c2"] = FichaCliente(
         "c2", "Pedro Alves", "11999990002", None, date(2014, 3, 8), None, None,
@@ -95,7 +103,11 @@ def preparar() -> None:
 
     engine = BRMEngine(CLIENT_ID, CLIENTES, DADOS)
     tokens = []
-    for nome, papel in (("secretaria", Role.VIEWER), ("gestor", Role.ADMIN)):
+    for nome, papel in (
+        ("chat", Role.VIEWER),
+        ("secretaria", Role.VIEWER),
+        ("gestor", Role.ADMIN),
+    ):
         email = PERFIS[nome]
         if engine.user_store.get_by_email(email) is None:
             _, token = engine.user_store.create_user(email, papel)
@@ -107,7 +119,8 @@ def preparar() -> None:
     engine.documento_aprovar_modelo("contrato-sessao")
     if tokens:
         arquivo = TESTE / "tokens.txt"
-        arquivo.write_text("\n".join(tokens) + "\n")
+        with arquivo.open("a") as saida:
+            saida.write("\n".join(tokens) + "\n")
         arquivo.chmod(0o600)
         print(f"Tokens (aparecem só agora) salvos em {arquivo}")
     print(f"Pronto em {TESTE}. Modelo contrato-sessao aprovado.")
@@ -138,7 +151,7 @@ if __name__ == "__main__":
         preparar()
     elif comando == "api":
         api()
-    elif comando == "mcp" and len(sys.argv) > 2 and sys.argv[2] in PERFIS:
-        mcp(sys.argv[2])
+    elif comando == "mcp":
+        mcp("chat")
     else:
         sys.exit(__doc__)
