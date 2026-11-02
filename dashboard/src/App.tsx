@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { Shell } from "@/components/Shell";
 import { useHashRoute } from "@/lib/router";
+import { AcaoPage } from "@/pages/Acao";
 import { Auditoria } from "@/pages/Auditoria";
 import { Governanca } from "@/pages/Governanca";
 import { Overview } from "@/pages/Overview";
@@ -22,7 +23,21 @@ import {
   type Me,
 } from "./api";
 
+function acaoDaUrl(): string | null {
+  const alvo = window.location.pathname.startsWith("/acao/")
+    ? window.location.pathname
+    : window.location.hash.replace(/^#/, "");
+  const achado = alvo.match(/^\/acao\/([A-Za-z0-9_-]{8,64})\/?$/);
+  return achado ? achado[1] : null;
+}
+
 export default function App() {
+  const acaoId = acaoDaUrl();
+  if (acaoId) return <AcaoPage acaoId={acaoId} />;
+  return <Painel />;
+}
+
+function Painel() {
   const [me, setMe] = useState<Me | null>(null);
   const [checking, setChecking] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
