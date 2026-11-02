@@ -42,15 +42,16 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from mcp_engine.core.acoes_router import build_acoes_router
 from mcp_engine.core.api_router import build_api_router
 from mcp_engine.core.auth import (
     ANONYMOUS_PROFILE,
     current_user_var,
-    resolve_http_identity,
     set_current_user,
     trace_id_var,
 )
 from mcp_engine.core.health import tudo_ok, verificar_integridade
+from mcp_engine.core.identidade import identidade_var, set_identidade
 from mcp_engine.core.mcp_server import BRMEngine, build_server
 
 logger = logging.getLogger(__name__)
@@ -108,17 +109,24 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
         # engine.user_store) e o disponibiliza via get_current_user() para
         # o resto do código (RBACFastMCP, tools, rotas /api), que não sabe e
         # não precisa saber que a identidade veio de um header.
-        profile = resolve_http_identity(engine.user_store, request.headers.get("authorization"))
-        open_request = request.method == "OPTIONS" or request.url.path == "/health"
-        if profile is ANONYMOUS_PROFILE and not open_request:
-            return JSONResponse({"detail": "credencial ausente ou inválida"}, status_code=401)
-        token = set_current_user(profile)
+        # O resolvedor tenta os provedores do cliente (spec 035): token local e/ou JWT do
+        # produto. Credencial recusada é auditada e tratada como anônima.
         trace_token = trace_id_var.set(uuid.uuid4().hex)
         try:
-            return await call_next(request)
+            identidade = engine.identidade.resolver(request.headers.get("authorization"))
+            open_request = request.method == "OPTIONS" or request.url.path == "/health"
+            if identidade is None and not open_request:
+                return JSONResponse({"detail": "credencial ausente ou inválida"}, status_code=401)
+            token = set_current_user(identidade.perfil if identidade else ANONYMOUS_PROFILE)
+            ident_token = set_identidade(identidade) if identidade else None
+            try:
+                return await call_next(request)
+            finally:
+                if ident_token is not None:
+                    identidade_var.reset(ident_token)
+                current_user_var.reset(token)
         finally:
             trace_id_var.reset(trace_token)
-            current_user_var.reset(token)
 
     # /api/* é a superfície REST do painel super_admin (dashboard React) —
     # ver mcp_engine/core/api_router.py. Precisa ser incluída ANTES do
@@ -140,6 +148,7 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
             return JSONResponse(corpo, status_code=503)
         return {"status": "ok"}
 
+    app.include_router(build_acoes_router(engine), prefix="/api/central")
     app.include_router(build_api_router(engine, mcp_server), prefix="/api")
 
     app.mount("/", mcp_server.sse_app())

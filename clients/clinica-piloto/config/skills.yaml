@@ -16,6 +16,7 @@ skills:
   autonomia: A2
 - usar: financeiro.registrar_pacote
   autonomia: A2
+  fatos_de_modulo: [agenda.contrato]
 - usar: financeiro.resolver_pendencia
   autonomia: A2
 - usar: financeiro.fechar_mes
@@ -39,3 +40,5 @@ skills:
   autonomia: A0
 - usar: agenda.sincronizar_agenda
   autonomia: A1
+- usar: agenda.agenda_contratos_pendentes
+  autonomia: A0

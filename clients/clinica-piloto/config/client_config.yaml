@@ -13,3 +13,27 @@ modules:
 - financeiro
 - agenda
 modulos_privados: []
+# Spec 035. O provedor `agenda` valida o JWT do Supabase Auth da Agenda (segredo
+# `agenda_jwt_secret`); o papel vem da claim `brm_role`, emitida pelo hook de token da Agenda
+# (G16, runbook jwt-claims-hook do Agenda). Tokens emitidos antes da ativação do hook não a têm
+# e são recusados até o refresh.
+identidade:
+  provedores: [local, agenda]
+  agenda:
+    audiencia: authenticated
+    algoritmos: [HS256]
+    segredo: agenda_jwt_secret
+    claim_papel: brm_role
+    papeis:
+      SUPER_ADMIN: super_admin
+      MASTER: admin
+      ADMIN: admin
+      USER: viewer
+      READONLY: null
+central_acoes:
+  url_base: http://localhost:8000
+  validade_min: 30
+dados_do_emissor:
+  razao_social: Clínica Piloto (exemplo)
+  cnpj: 00.000.000/0001-00
+  cidade: São Paulo

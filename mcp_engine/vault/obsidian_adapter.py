@@ -163,9 +163,7 @@ class ObsidianVaultProvider:
         note_path.write_text(serialized, encoding="utf-8")
         index.reindex()
 
-        self._record_audit(
-            client_id, "vault_add_note", AuditDecision.ALLOWED, {"note_id": note_id}
-        )
+        self._record_audit(client_id, "vault_add_note", AuditDecision.ALLOWED, {"note_id": note_id})
 
         new_note = index.get_note(note_id)
         if new_note is None:

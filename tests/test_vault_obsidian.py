@@ -130,9 +130,7 @@ class TestVaultIndex:
 
     def test_get_related_via_backlinks(self, index: VaultIndex, tmp_path: Path) -> None:
         vault_root = tmp_path / "vault"
-        (vault_root / "note1.md").write_text(
-            "---\ntitle: Note 1\ntags: []\n---\nSee [[note2]]."
-        )
+        (vault_root / "note1.md").write_text("---\ntitle: Note 1\ntags: []\n---\nSee [[note2]].")
         (vault_root / "note2.md").write_text(
             "---\ntitle: Note 2\ntags: []\n---\nReference [[note1]]."
         )

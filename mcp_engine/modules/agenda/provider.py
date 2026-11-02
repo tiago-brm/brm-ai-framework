@@ -1,4 +1,9 @@
-"""Provider da Agenda (spec 026): contrato somente leitura e implementação HTTP."""
+"""Provider da Agenda (spec 026): contrato de leitura e implementação HTTP.
+
+`AgendaCadastroProvider` (spec 035) é o contrato da ficha completa, do histórico de status e da
+gravação de campo faltante. O `HttpAgendaCadastroProvider` usa a ficha da Agenda
+(`/api/v1/customers/:id/ficha`; pedidos G10, G11, G12 e G15 entregues); os testes usam o
+`FakeAgendaProvider`."""
 
 from __future__ import annotations
 
@@ -8,7 +13,7 @@ import time
 import uuid
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any, Protocol
 from urllib.parse import urlsplit
@@ -25,10 +30,12 @@ STATUS_AGENDA = (
     "COMPLETED",
     "CANCELLED",
 )
+STATUS_HISTORICO = (*STATUS_AGENDA, "NO_SHOW")
 LIMITE_PAGINA = 200
 MAX_PAGINAS = 500
 MAX_BYTES = 5_000_000
 ESPERA_MAX_S = 30.0
+JANELA_AGENDAMENTO_DIAS = 120
 
 
 class AgendaErro(ExecucaoFalhou):
@@ -49,6 +56,10 @@ class AgendaIndisponivel(AgendaErro):
 
 class AgendaRespostaInvalida(AgendaErro):
     pass
+
+
+class AgendaRecursoIndisponivel(AgendaErro):
+    """O recurso depende de um pedido ainda não entregue pela Agenda (G10-G15)."""
 
 
 @dataclass(frozen=True)
@@ -91,6 +102,65 @@ class Cliente:
     id: str
     nome: str
     telefone: str | None
+
+
+@dataclass(frozen=True)
+class Endereco:
+    cep: str | None = None
+    logradouro: str | None = None
+    numero: str | None = None
+    complemento: str | None = None
+    bairro: str | None = None
+    cidade: str | None = None
+    uf: str | None = None
+
+
+@dataclass(frozen=True)
+class Responsavel:
+    nome: str | None = None
+    cpf: str | None = None
+    parentesco: str | None = None
+    telefone: str | None = None
+    email: str | None = None
+    financeiro: bool = False
+
+
+@dataclass(frozen=True)
+class FichaCliente:
+    id: str
+    nome: str
+    telefone: str | None = None
+    email: str | None = None
+    nascimento: date | None = None
+    cpf: str | None = None
+    endereco: Endereco | None = None
+    responsaveis: tuple[Responsavel, ...] = ()
+
+
+@dataclass(frozen=True)
+class StatusSessao:
+    agendamento_id: str
+    status: str
+    inicio_utc: datetime
+
+
+class AgendaCadastroProvider(Protocol):
+    def obter_agendamento(self, agendamento_id: str) -> Agendamento | None: ...
+
+    def obter_cliente(
+        self,
+        customer_id: str,
+        *,
+        ator: str | None = None,
+        trace_id: str | None = None,
+        finalidade: str | None = None,
+    ) -> FichaCliente | None: ...
+
+    def historico_cliente(self, customer_id: str) -> list[StatusSessao]: ...
+
+    def atualizar_cliente(
+        self, customer_id: str, campos: dict[str, Any], *, ator: str, trace_id: str | None
+    ) -> None: ...
 
 
 class AgendaProvider(Protocol):
@@ -368,3 +438,226 @@ class HttpAgendaProvider:
             )
             for i in _lista({"data": corpo.get("data", corpo.get("customers"))})
         ]
+
+
+class HttpAgendaCadastroProvider(HttpAgendaProvider):
+    """Ficha do paciente, histórico de status e gravação de campo faltante na Agenda.
+
+    A leitura vem mascarada; só com ator e trace (e a finalidade) o CPF e o endereço completos
+    são pedidos, o que a Agenda registra em `pii_access_log`. Escrever é sempre `PATCH` com
+    `X-BRM-Actor` e `X-BRM-Trace-Id`."""
+
+    def _chamar(
+        self,
+        metodo: str,
+        caminho: str,
+        *,
+        params: dict[str, Any] | None = None,
+        corpo: dict[str, Any] | None = None,
+        ator: str | None = None,
+        trace_id: str | None = None,
+    ) -> tuple[int, dict[str, Any]]:
+        cabecalhos = {}
+        if ator:
+            cabecalhos["X-BRM-Actor"] = ator[:200]
+        if trace_id:
+            cabecalhos["X-BRM-Trace-Id"] = trace_id[:100]
+        tentativas = self._tentativas if metodo == "GET" else 1
+        falha: AgendaErro = AgendaIndisponivel("A Agenda está indisponível no momento.")
+        for tentativa in range(tentativas):
+            espera = self._espera(None, tentativa)
+            try:
+                with self._client.stream(
+                    metodo, caminho, params=params, json=corpo, headers=cabecalhos
+                ) as resposta:
+                    codigo = resposta.status_code
+                    if codigo in (401, 403):
+                        raise AgendaNaoAutorizada(
+                            "A Agenda recusou a chave de integração (inválida, expirada ou sem"
+                            " permissão). Peça ao administrador para conferir a chave."
+                        )
+                    if 300 <= codigo < 400:
+                        raise AgendaIndisponivel("A Agenda tentou redirecionar a consulta.")
+                    if codigo == 429 or codigo >= 500:
+                        falha = AgendaIndisponivel(
+                            "A Agenda está com erro ou limitou as consultas."
+                        )
+                        espera = self._espera(resposta, tentativa)
+                    else:
+                        try:
+                            return codigo, self._ler(resposta)
+                        except AgendaRespostaInvalida:
+                            if codigo == 404:
+                                return codigo, {}
+                            raise
+            except httpx.TimeoutException:
+                falha = AgendaIndisponivel("A Agenda não respondeu a tempo.")
+            except httpx.HTTPError:
+                falha = AgendaIndisponivel("Não foi possível falar com a Agenda.")
+            if tentativa + 1 < tentativas:
+                self._sleep(espera)
+        raise falha
+
+    def _ficha_bruta(
+        self,
+        customer_id: str,
+        *,
+        ator: str | None = None,
+        trace_id: str | None = None,
+        finalidade: str | None = None,
+    ) -> dict[str, Any] | None:
+        caminho = f"api/v1/customers/{_id_cliente(customer_id)}/ficha"
+        params: dict[str, Any] = {}
+        if ator and trace_id:
+            params["unmask"] = "1"
+            if finalidade:
+                params["purpose"] = finalidade[:200]
+        codigo, corpo = self._chamar("GET", caminho, params=params, ator=ator, trace_id=trace_id)
+        if codigo == 404:
+            return None
+        if codigo != 200:
+            raise _recusa(codigo, corpo)
+        dados = corpo.get("data")
+        if not isinstance(dados, dict) or not isinstance(dados.get("paciente"), dict):
+            raise _invalida("ficha")
+        return dados
+
+    def obter_agendamento(self, agendamento_id: str) -> Agendamento | None:
+        agora = datetime.now(UTC)
+        recentes = self.listar_agendamentos(
+            de=agora - timedelta(days=JANELA_AGENDAMENTO_DIAS), ate=agora + timedelta(days=1)
+        )
+        return next((a for a in recentes if a.id == agendamento_id), None)
+
+    def obter_cliente(
+        self,
+        customer_id: str,
+        *,
+        ator: str | None = None,
+        trace_id: str | None = None,
+        finalidade: str | None = None,
+    ) -> FichaCliente | None:
+        dados = self._ficha_bruta(customer_id, ator=ator, trace_id=trace_id, finalidade=finalidade)
+        return None if dados is None else _ficha(dados)
+
+    def historico_cliente(self, customer_id: str) -> list[StatusSessao]:
+        dados = self._ficha_bruta(customer_id)
+        if dados is None:
+            return []
+        itens = dados.get("historico")
+        if not isinstance(itens, list):
+            raise _invalida("historico")
+        return sorted(
+            (
+                StatusSessao(
+                    str(i.get("agendamento_id")), str(i.get("status")), _instante(i, "inicio_utc")
+                )
+                for i in itens
+                if isinstance(i, dict)
+            ),
+            key=lambda s: s.inicio_utc,
+        )
+
+    def atualizar_cliente(
+        self, customer_id: str, campos: dict[str, Any], *, ator: str, trace_id: str | None
+    ) -> None:
+        corpo = {k: v for k, v in campos.items() if k != "responsavel"}
+        trace = trace_id or uuid.uuid4().hex
+        if "responsavel" in campos:
+            dados = self._ficha_bruta(customer_id)
+            if dados is None:
+                raise AgendaErro("Cliente não encontrado na Agenda.")
+            corpo["responsaveis"] = _lista_responsaveis(
+                dados.get("responsaveis"), campos["responsavel"]
+            )
+        codigo, resposta = self._chamar(
+            "PATCH",
+            f"api/v1/customers/{_id_cliente(customer_id)}/ficha",
+            corpo=corpo,
+            ator=ator,
+            trace_id=trace,
+        )
+        if codigo == 404:
+            raise AgendaErro("Cliente não encontrado na Agenda.")
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
+
+
+_RECUSAS = {
+    "CPF_ALREADY_REGISTERED": "Este CPF já está cadastrado para outro paciente na Agenda.",
+    "INVALID_CPF": "A Agenda recusou o CPF (dígitos verificadores inválidos).",
+    "INVALID_CEP": "A Agenda recusou o CEP.",
+    "INVALID_UF": "A Agenda recusou a UF.",
+    "MULTIPLE_FINANCIAL_GUARDIANS": "Só um responsável pode ser o financeiro.",
+}
+
+
+def _id_cliente(customer_id: str) -> str:
+    try:
+        return str(uuid.UUID(str(customer_id)))
+    except ValueError:
+        raise AgendaConfigInvalida("Identificador de paciente inválido.") from None
+
+
+def _recusa(codigo: int, corpo: dict[str, Any]) -> AgendaErro:
+    motivo = _RECUSAS.get(str(corpo.get("code")))
+    if motivo:
+        return AgendaErro(motivo)
+    return AgendaErro(f"A Agenda recusou o pedido (HTTP {codigo}).")
+
+
+def _lista_responsaveis(existentes: Any, mudancas: dict[str, Any]) -> list[dict[str, Any]]:
+    """A Agenda substitui a lista inteira: quem não aparece é removido. Mantém todos pelo `id`
+    e aplica a mudança no responsável financeiro (ou no primeiro), como `montar_fontes`."""
+    atuais = [r for r in (existentes or []) if isinstance(r, dict) and r.get("id")]
+    if not atuais:
+        if not mudancas.get("nome"):
+            raise AgendaErro("Informe o nome do responsável para cadastrá-lo na Agenda.")
+        return [{**mudancas, "financeiro": True}]
+    alvo = next((r for r in atuais if r.get("financeiro")), atuais[0])
+    return [{"id": r["id"], **(mudancas if r is alvo else {})} for r in atuais]
+
+
+def _data(valor: Any) -> date | None:
+    if not isinstance(valor, str) or not valor:
+        return None
+    try:
+        return date.fromisoformat(valor[:10])
+    except ValueError:
+        raise _invalida("data") from None
+
+
+def _responsavel(item: dict[str, Any]) -> Responsavel:
+    return Responsavel(
+        nome=_texto(item, "nome"),
+        cpf=_texto(item, "cpf"),
+        parentesco=_texto(item, "parentesco"),
+        telefone=_texto(item, "telefone"),
+        email=_texto(item, "email"),
+        financeiro=item.get("financeiro") is True,
+    )
+
+
+def _ficha(dados: dict[str, Any]) -> FichaCliente:
+    p = dados["paciente"]
+    ender = p.get("endereco")
+    endereco = None
+    if isinstance(ender, dict):
+        endereco = Endereco(
+            **{
+                c: _texto(ender, c)
+                for c in ("cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf")
+            }
+        )
+    return FichaCliente(
+        id=_texto(p, "id", obrigatorio=True) or "",
+        nome=_texto(p, "nome", obrigatorio=True) or "",
+        telefone=_texto(p, "telefone"),
+        email=_texto(p, "email"),
+        nascimento=_data(p.get("nascimento")),
+        cpf=_texto(p, "cpf"),
+        endereco=endereco,
+        responsaveis=tuple(
+            _responsavel(r) for r in (dados.get("responsaveis") or []) if isinstance(r, dict)
+        ),
+    )

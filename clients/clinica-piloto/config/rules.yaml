@@ -104,3 +104,22 @@ rules:
   effect: deny
   message: Resolver pendências é restrito ao gestor.
   next_step: Peça ao gestor.
+- id: contrato-antes-do-pacote
+  description: (Exemplo, spec 035) Depois da primeira sessão concluída, vender pacote exige contrato
+    emitido. A exceção é liberada pelo gestor e fica auditada. Troque o efeito para deny se a
+    clínica quiser bloqueio sem exceção.
+  condition:
+    and:
+    - in:
+      - var: skill_name
+      - - registrar_pacote
+    - ==:
+      - var: primeira_sessao_concluida
+      - true
+    - ==:
+      - var: contrato_emitido
+      - false
+  effect: require_approval
+  aprovador: admin
+  message: O paciente já fez a primeira sessão e ainda não tem contrato emitido.
+  next_step: Emita o contrato pela Central de Ações ou peça a liberação do gestor.

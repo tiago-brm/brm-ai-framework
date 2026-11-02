@@ -111,8 +111,13 @@ class TestProposeDraft:
         agent = FakeInterpreterAgent(InterpreterResult(success=True))
 
         result = propose_draft(
-            "example", "faq/como-fazer-x.md", setup.vault_provider, setup.client_config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "faq/como-fazer-x.md",
+            setup.vault_provider,
+            setup.client_config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["allowed"] is False
@@ -123,8 +128,13 @@ class TestProposeDraft:
         agent = FakeInterpreterAgent(InterpreterResult(success=True))
 
         result = propose_draft(
-            "example", "config_drafts/missing.md", setup.vault_provider, setup.client_config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/missing.md",
+            setup.vault_provider,
+            setup.client_config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["allowed"] is False
@@ -132,7 +142,9 @@ class TestProposeDraft:
 
     def test_blocks_on_dlp_deny_before_calling_llm(self, setup: Setup) -> None:
         _write_note(
-            setup.vault_root, "config_drafts/regra.md", "Nova regra",
+            setup.vault_root,
+            "config_drafts/regra.md",
+            "Nova regra",
             "Bloquear se CPF 123.456.789-00 aparecer",
         )
         config = ClientConfig(
@@ -141,8 +153,13 @@ class TestProposeDraft:
         agent = FakeInterpreterAgent(InterpreterResult(success=True))
 
         result = propose_draft(
-            "example", "config_drafts/regra.md", setup.vault_provider, config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/regra.md",
+            setup.vault_provider,
+            config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["allowed"] is False
@@ -156,7 +173,9 @@ class TestProposeDraft:
 
     def test_blocks_on_dlp_mask_pattern_too(self, setup: Setup) -> None:
         _write_note(
-            setup.vault_root, "config_drafts/regra.md", "Nova regra",
+            setup.vault_root,
+            "config_drafts/regra.md",
+            "Nova regra",
             "Conta ACCT-123456 relacionada",
         )
         config = ClientConfig(
@@ -167,8 +186,13 @@ class TestProposeDraft:
         agent = FakeInterpreterAgent(InterpreterResult(success=True))
 
         result = propose_draft(
-            "example", "config_drafts/regra.md", setup.vault_provider, config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/regra.md",
+            setup.vault_provider,
+            config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["allowed"] is False
@@ -176,16 +200,21 @@ class TestProposeDraft:
 
     def test_generates_rule_draft_and_persists_pending(self, setup: Setup) -> None:
         _write_note(
-            setup.vault_root, "config_drafts/regra.md", "Bloqueia valor alto",
+            setup.vault_root,
+            "config_drafts/regra.md",
+            "Bloqueia valor alto",
             "Bloquear consultas acima de R$ 50.000",
         )
-        agent = FakeInterpreterAgent(
-            InterpreterResult(success=True, kind="rule", rule=SAMPLE_RULE)
-        )
+        agent = FakeInterpreterAgent(InterpreterResult(success=True, kind="rule", rule=SAMPLE_RULE))
 
         result = propose_draft(
-            "example", "config_drafts/regra.md", setup.vault_provider, setup.client_config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/regra.md",
+            setup.vault_provider,
+            setup.client_config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["kind"] == "rule"
@@ -207,7 +236,9 @@ class TestProposeDraft:
 
     def test_generates_skill_draft_and_persists_pending(self, setup: Setup) -> None:
         _write_note(
-            setup.vault_root, "config_drafts/skill.md", "Consultar processo",
+            setup.vault_root,
+            "config_drafts/skill.md",
+            "Consultar processo",
             "Chamar API do tribunal para consultar andamento",
         )
         agent = FakeInterpreterAgent(
@@ -215,8 +246,13 @@ class TestProposeDraft:
         )
 
         result = propose_draft(
-            "example", "config_drafts/skill.md", setup.vault_provider, setup.client_config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/skill.md",
+            setup.vault_provider,
+            setup.client_config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["kind"] == "skill"
@@ -230,8 +266,13 @@ class TestProposeDraft:
         )
 
         result = propose_draft(
-            "example", "config_drafts/vaga.md", setup.vault_provider, setup.client_config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/vaga.md",
+            setup.vault_provider,
+            setup.client_config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["allowed"] is False
@@ -253,8 +294,13 @@ class TestProposeDraft:
         agent = FakeInterpreterAgent(InterpreterResult(success=True, kind="rule", rule=bad_rule))
 
         result = propose_draft(
-            "example", "config_drafts/ruim.md", setup.vault_provider, setup.client_config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/ruim.md",
+            setup.vault_provider,
+            setup.client_config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert result["allowed"] is False
@@ -262,19 +308,20 @@ class TestProposeDraft:
         assert setup.draft_store.list_drafts("example", "rule") == []
 
     def test_prompt_includes_related_note_titles(self, setup: Setup) -> None:
-        _write_note(
-            setup.vault_root, "config_drafts/regra.md", "Nova regra", "Ver [[compliance]]"
-        )
+        _write_note(setup.vault_root, "config_drafts/regra.md", "Nova regra", "Ver [[compliance]]")
         _write_note(setup.vault_root, "compliance.md", "Compliance Internacional", "Contexto...")
         setup.vault_provider.reindex("example")
 
-        agent = FakeInterpreterAgent(
-            InterpreterResult(success=True, kind="rule", rule=SAMPLE_RULE)
-        )
+        agent = FakeInterpreterAgent(InterpreterResult(success=True, kind="rule", rule=SAMPLE_RULE))
 
         propose_draft(
-            "example", "config_drafts/regra.md", setup.vault_provider, setup.client_config,
-            setup.audit_sink, setup.draft_store, agent,
+            "example",
+            "config_drafts/regra.md",
+            setup.vault_provider,
+            setup.client_config,
+            setup.audit_sink,
+            setup.draft_store,
+            agent,
         )
 
         assert "Compliance Internacional" in agent.prompts[0]
@@ -283,13 +330,23 @@ class TestProposeDraft:
 class TestPromoteDraft:
     def test_promotes_rule_to_active_config(self, setup: Setup) -> None:
         setup.draft_store.create(
-            "example", "rule", "d1", "config_drafts/regra.md", "t1", "interpreter_agent",
+            "example",
+            "rule",
+            "d1",
+            "config_drafts/regra.md",
+            "t1",
+            "interpreter_agent",
             SAMPLE_RULE.model_dump(mode="json"),
         )
 
         result = promote_draft(
-            "example", "d1", "rule", setup.draft_store, setup.rule_provider,
-            setup.skill_provider, setup.audit_sink,
+            "example",
+            "d1",
+            "rule",
+            setup.draft_store,
+            setup.rule_provider,
+            setup.skill_provider,
+            setup.audit_sink,
         )
 
         assert result["promoted"] is True
@@ -307,13 +364,23 @@ class TestPromoteDraft:
 
     def test_promotes_skill_to_active_config(self, setup: Setup) -> None:
         setup.draft_store.create(
-            "example", "skill", "d2", "config_drafts/skill.md", "t1", "interpreter_agent",
+            "example",
+            "skill",
+            "d2",
+            "config_drafts/skill.md",
+            "t1",
+            "interpreter_agent",
             SAMPLE_SKILL.model_dump(mode="json"),
         )
 
         result = promote_draft(
-            "example", "d2", "skill", setup.draft_store, setup.rule_provider,
-            setup.skill_provider, setup.audit_sink,
+            "example",
+            "d2",
+            "skill",
+            setup.draft_store,
+            setup.rule_provider,
+            setup.skill_provider,
+            setup.audit_sink,
         )
 
         assert result["promoted"] is True
@@ -322,8 +389,13 @@ class TestPromoteDraft:
 
     def test_promote_missing_draft_returns_error(self, setup: Setup) -> None:
         result = promote_draft(
-            "example", "nope", "rule", setup.draft_store, setup.rule_provider,
-            setup.skill_provider, setup.audit_sink,
+            "example",
+            "nope",
+            "rule",
+            setup.draft_store,
+            setup.rule_provider,
+            setup.skill_provider,
+            setup.audit_sink,
         )
 
         assert result["allowed"] is False
@@ -335,17 +407,32 @@ class TestPromoteDraft:
 
     def test_promote_already_approved_draft_rejected(self, setup: Setup) -> None:
         setup.draft_store.create(
-            "example", "rule", "d1", "config_drafts/regra.md", "t1", "interpreter_agent",
+            "example",
+            "rule",
+            "d1",
+            "config_drafts/regra.md",
+            "t1",
+            "interpreter_agent",
             SAMPLE_RULE.model_dump(mode="json"),
         )
         promote_draft(
-            "example", "d1", "rule", setup.draft_store, setup.rule_provider,
-            setup.skill_provider, setup.audit_sink,
+            "example",
+            "d1",
+            "rule",
+            setup.draft_store,
+            setup.rule_provider,
+            setup.skill_provider,
+            setup.audit_sink,
         )
 
         second = promote_draft(
-            "example", "d1", "rule", setup.draft_store, setup.rule_provider,
-            setup.skill_provider, setup.audit_sink,
+            "example",
+            "d1",
+            "rule",
+            setup.draft_store,
+            setup.rule_provider,
+            setup.skill_provider,
+            setup.audit_sink,
         )
 
         assert second["allowed"] is False
@@ -356,13 +443,23 @@ class TestPromoteDraft:
 
     def test_promote_invalid_content_rejected(self, setup: Setup) -> None:
         setup.draft_store.create(
-            "example", "rule", "d1", "config_drafts/regra.md", "t1", "interpreter_agent",
+            "example",
+            "rule",
+            "d1",
+            "config_drafts/regra.md",
+            "t1",
+            "interpreter_agent",
             {"id": "regra-sem-campos-obrigatorios"},
         )
 
         result = promote_draft(
-            "example", "d1", "rule", setup.draft_store, setup.rule_provider,
-            setup.skill_provider, setup.audit_sink,
+            "example",
+            "d1",
+            "rule",
+            setup.draft_store,
+            setup.rule_provider,
+            setup.skill_provider,
+            setup.audit_sink,
         )
 
         assert result["allowed"] is False

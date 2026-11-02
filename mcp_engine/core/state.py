@@ -197,3 +197,83 @@ class GatilhoAlertaRow(StateBase):
     criado_em: Mapped[datetime]
     reconhecido_por: Mapped[str | None] = mapped_column(default=None)
     reconhecido_em: Mapped[datetime | None] = mapped_column(default=None)
+
+
+class AtributosUsuarioRow(StateBase):
+    """Atributos de governança de uma pessoa (spec 035), chaveados pelo provedor de identidade
+    e pelo id do usuário nele. Nunca guarda senha nem cadastro: só o hash do PIN e escopo."""
+
+    __tablename__ = "atributos_usuario"
+
+    provedor: Mapped[str] = mapped_column(primary_key=True)
+    usuario_id: Mapped[str] = mapped_column(primary_key=True)
+    pin_hash: Mapped[str | None] = mapped_column(default=None)
+    pin_falhas: Mapped[int] = mapped_column(default=0)
+    pin_bloqueado_ate: Mapped[datetime | None] = mapped_column(default=None)
+    unidades: Mapped[str] = mapped_column(Text, default="[]")
+    atualizado_em: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))
+    atualizado_por: Mapped[str | None] = mapped_column(default=None)
+
+
+class AcaoRow(StateBase):
+    """Ação da Central de Ações (spec 035): pedido guardado no servidor, uso único."""
+
+    __tablename__ = "acao"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    itens: Mapped[str] = mapped_column(Text)
+    digest: Mapped[str]
+    resumo: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(index=True)
+    criado_por: Mapped[str] = mapped_column(index=True)
+    criado_papel: Mapped[str]
+    criado_em: Mapped[datetime]
+    expira_em: Mapped[datetime]
+    trace_id: Mapped[str | None] = mapped_column(default=None)
+    sensivel: Mapped[bool] = mapped_column(default=False)
+    papel_minimo: Mapped[str] = mapped_column(default="viewer")
+    papel_liberacao: Mapped[str] = mapped_column(default="admin")
+    confirmado_por: Mapped[str | None] = mapped_column(default=None)
+    confirmado_papel: Mapped[str | None] = mapped_column(default=None)
+    confirmado_provedor: Mapped[str | None] = mapped_column(default=None)
+    metodo: Mapped[str | None] = mapped_column(default=None)
+    liberado_por: Mapped[str | None] = mapped_column(default=None)
+    resultado: Mapped[str | None] = mapped_column(Text, default=None)
+    motivo: Mapped[str | None] = mapped_column(default=None)
+    concluida_em: Mapped[datetime | None] = mapped_column(default=None)
+
+
+class ModeloAprovadoRow(StateBase):
+    """Hash de uma versão de modelo de documento aprovada para emissão. Nunca é alterada."""
+
+    __tablename__ = "modelo_aprovado"
+    __table_args__ = (UniqueConstraint("modelo_id", "versao"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    modelo_id: Mapped[str] = mapped_column(index=True)
+    versao: Mapped[int]
+    hash: Mapped[str]
+    aprovado_por: Mapped[str]
+    aprovado_em: Mapped[datetime]
+
+
+class DocumentoEmitidoRow(StateBase):
+    """Documento emitido: imutável (gatilhos do SQLite recusam UPDATE e DELETE)."""
+
+    __tablename__ = "documento_emitido"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    modelo_id: Mapped[str] = mapped_column(index=True)
+    modelo_versao: Mapped[int]
+    modelo_hash: Mapped[str]
+    titulo: Mapped[str]
+    sha256: Mapped[str]
+    dados: Mapped[str] = mapped_column(Text)
+    referencia: Mapped[str | None] = mapped_column(index=True, default=None)
+    metadados: Mapped[str] = mapped_column(Text, default="{}")
+    emitido_por: Mapped[str]
+    emitido_papel: Mapped[str]
+    emitido_em: Mapped[datetime]
+    acao_id: Mapped[str | None] = mapped_column(default=None)
+    trace_id: Mapped[str | None] = mapped_column(default=None)
+    substitui: Mapped[str | None] = mapped_column(default=None)

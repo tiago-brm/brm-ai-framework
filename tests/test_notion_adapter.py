@@ -187,9 +187,7 @@ def _to_read_shape(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         block_type = block["type"]
         data = dict(block[block_type])
         rich_text = data.get("rich_text", [])
-        data["rich_text"] = [
-            {"plain_text": rt["text"]["content"], **rt} for rt in rich_text
-        ]
+        data["rich_text"] = [{"plain_text": rt["text"]["content"], **rt} for rt in rich_text]
         read_blocks.append({"object": "block", "type": block_type, block_type: data})
     return read_blocks
 

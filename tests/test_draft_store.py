@@ -28,12 +28,8 @@ class TestDraftStore:
 
     def test_list_drafts_filters_by_status(self, tmp_path: Path) -> None:
         store = DraftStore(tmp_path)
-        store.create(
-            "example", "rule", "d1", "note1.md", "t1", "interpreter_agent", {"id": "r1"}
-        )
-        store.create(
-            "example", "rule", "d2", "note2.md", "t2", "interpreter_agent", {"id": "r2"}
-        )
+        store.create("example", "rule", "d1", "note1.md", "t1", "interpreter_agent", {"id": "r1"})
+        store.create("example", "rule", "d2", "note2.md", "t2", "interpreter_agent", {"id": "r2"})
         store.mark_status("example", "rule", "d1", "approved", reviewed_by="claude")
 
         pending = store.list_drafts("example", "rule", status="pending")
@@ -42,9 +38,7 @@ class TestDraftStore:
         assert [d["draft_id"] for d in pending] == ["d2"]
         assert [d["draft_id"] for d in approved] == ["d1"]
 
-    def test_mark_status_preserves_content_and_updates_review_fields(
-        self, tmp_path: Path
-    ) -> None:
+    def test_mark_status_preserves_content_and_updates_review_fields(self, tmp_path: Path) -> None:
         store = DraftStore(tmp_path)
         store.create(
             "example", "skill", "s1", "note.md", "t1", "interpreter_agent", {"name": "foo"}

@@ -74,3 +74,20 @@ skills:
   autonomia: A1
   examples:
   - Sincronize a Agenda agora
+- name: agenda_contratos_pendentes
+  description: Lista pacientes com sessão concluída no período e sem contrato emitido (somente
+    leitura). Perfis sem permissão de gestão recebem só a contagem.
+  parameters:
+    de:
+      type: string
+      description: 'Primeiro dia (AAAA-MM-DD). Padrão: seis dias atrás.'
+    ate:
+      type: string
+      description: 'Último dia (AAAA-MM-DD). Padrão: hoje.'
+  executor:
+    type: native
+    handler: agenda.contratos_pendentes
+  autonomia: A0
+  examples:
+  - Quais contratos estão pendentes?
+  - Falta contrato de alguém desta semana?

@@ -39,6 +39,7 @@ _REGISTERED: dict[str, BaseModule] = {}
 
 _USAR_OVERRIDES = {
     "usar",
+    "fatos_de_modulo",
     "description",
     "autonomia",
     "aprovador",
@@ -136,6 +137,7 @@ class ModuleHost:
     extensoes: Any = None
     modulos: Mapping[str, BaseModule] = field(default_factory=dict)
     leitor_operacoes: Callable[[], dict[str, Any]] | None = None
+    leitor_documentos: Callable[..., list[dict[str, Any]]] | None = None
 
     def module_api(self, nome: str) -> Any:
         """API pública de outro módulo habilitado no mesmo cliente (nunca o banco dele)."""
@@ -168,6 +170,22 @@ class ModuleHost:
             self.extensoes.provedores.registrar(f"{self.module}.{nome}", fn, fatos)
         except Exception as exc:
             raise ModuleError(str(exc)) from exc
+
+    def registrar_tipo_acao(self, tipo: Any) -> None:
+        """Registra um tipo de ação da Central de Ações (spec 035) como `<modulo>.<nome>`.
+        Sem registro do núcleo (host isolado), não faz nada."""
+        if self.extensoes is None:
+            return
+        try:
+            self.extensoes.acoes.registrar_do_modulo(self.module, tipo)
+        except ValueError as exc:
+            raise ModuleError(str(exc)) from exc
+
+    def documentos_emitidos(self, referencia: str, modelo_id: str | None = None) -> list[dict]:
+        """Documentos emitidos para uma referência (somente leitura, sem os dados)."""
+        if self.leitor_documentos is None:
+            return []
+        return self.leitor_documentos(referencia, modelo_id)
 
     def registrar_verificacao_saude(self, nome: str, fn: Callable[[], dict[str, Any]]) -> None:
         """Registra uma verificação de integridade chamada por /health. Deve devolver
@@ -334,6 +352,13 @@ def resolve_skills(
             if key in item:
                 merged[key] = item[key]
         merged["executor"] = {**merged.get("executor", {}), **executor_over}
+        if "fatos_de_modulo" in item:
+            extras = item["fatos_de_modulo"]
+            if not isinstance(extras, list) or not all(isinstance(f, str) for f in extras):
+                raise ModuleError(f"usar {ref!r}: fatos_de_modulo deve ser uma lista de nomes")
+            merged["fatos_de_modulo"] = list(
+                dict.fromkeys([*merged.get("fatos_de_modulo", []), *extras])
+            )
         for dominio in merged.get("allowed_domains", ()):
             if not _dominio_permitido(dominio, allowlist):
                 raise ModuleError(f"usar {ref!r}: domínio {dominio!r} fora da allowlist do cliente")
@@ -374,6 +399,7 @@ def install_modules(
     audit: Callable[[str, bool], None],
     extensoes: Any = None,
     leitor_operacoes: Callable[[], dict[str, Any]] | None = None,
+    leitor_documentos: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Callable[..., dict[str, Any]]]:
     tools: dict[str, Callable[..., dict[str, Any]]] = {}
     for name, module in modules.items():
@@ -388,6 +414,7 @@ def install_modules(
             extensoes=extensoes,
             modulos=modules,
             leitor_operacoes=leitor_operacoes,
+            leitor_documentos=leitor_documentos,
         )
         if module.migrations:
             _migrate(host, module.migrations)

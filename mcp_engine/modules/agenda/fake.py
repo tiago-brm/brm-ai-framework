@@ -1,16 +1,23 @@
-"""Provider falso para testes: memória, sem rede, só leitura."""
+"""Provider falso para testes: memória, sem rede. Implementa também o contrato de cadastro
+(spec 035), registrando cada gravação com ator e trace_id."""
 
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import datetime
+from dataclasses import replace
+from datetime import date, datetime
+from typing import Any
 
 from mcp_engine.modules.agenda.provider import (
     AgendaErro,
     Agendamento,
     Cliente,
+    Endereco,
+    FichaCliente,
     Profissional,
+    Responsavel,
     Servico,
+    StatusSessao,
 )
 
 
@@ -28,6 +35,9 @@ class FakeAgendaProvider:
         self.clientes = list(clientes)
         self.erro: AgendaErro | None = None
         self.consultas: list[dict[str, object]] = []
+        self.fichas: dict[str, FichaCliente] = {}
+        self.historicos: dict[str, list[StatusSessao]] = {}
+        self.escritas: list[dict[str, Any]] = []
 
     def semear(self, *agendamentos: Agendamento) -> None:
         for a in agendamentos:
@@ -74,3 +84,54 @@ class FakeAgendaProvider:
         self._checar()
         achados = [c for c in self.clientes if busca.lower() in c.nome.lower()]
         return achados[offset : offset + limite]
+
+    def obter_agendamento(self, agendamento_id: str) -> Agendamento | None:
+        self._checar()
+        return self.agendamentos.get(agendamento_id)
+
+    def obter_cliente(
+        self,
+        customer_id: str,
+        *,
+        ator: str | None = None,
+        trace_id: str | None = None,
+        finalidade: str | None = None,
+    ) -> FichaCliente | None:
+        self._checar()
+        return self.fichas.get(customer_id)
+
+    def historico_cliente(self, customer_id: str) -> list[StatusSessao]:
+        self._checar()
+        if customer_id in self.historicos:
+            return list(self.historicos[customer_id])
+        return sorted(
+            (
+                StatusSessao(a.id, a.status, a.inicio_utc)
+                for a in self.agendamentos.values()
+                if a.customer_id == customer_id
+            ),
+            key=lambda s: s.inicio_utc,
+        )
+
+    def atualizar_cliente(
+        self, customer_id: str, campos: dict[str, Any], *, ator: str, trace_id: str | None
+    ) -> None:
+        self._checar()
+        ficha = self.fichas.get(customer_id)
+        if ficha is None:
+            raise AgendaErro("Cliente não encontrado na Agenda.")
+        self.escritas.append(
+            {"customer_id": customer_id, "campos": campos, "ator": ator, "trace_id": trace_id}
+        )
+        mudancas: dict[str, Any] = {}
+        for chave, valor in campos.items():
+            if chave == "endereco":
+                mudancas["endereco"] = replace(ficha.endereco or Endereco(), **valor)
+            elif chave == "responsavel":
+                atual = ficha.responsaveis[0] if ficha.responsaveis else Responsavel()
+                mudancas["responsaveis"] = (replace(atual, **valor), *ficha.responsaveis[1:])
+            elif chave == "nascimento":
+                mudancas["nascimento"] = date.fromisoformat(valor)
+            else:
+                mudancas[chave] = valor
+        self.fichas[customer_id] = replace(ficha, **mudancas)

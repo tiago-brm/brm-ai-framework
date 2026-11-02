@@ -467,15 +467,12 @@ class TestUserManagement:
         config_dir = config_root / "example" / "config"
         config_dir.mkdir(parents=True)
 
-        (config_dir / "rules.yaml").write_text(
-            "schema_version: 1\nclient_id: example\nrules: []\n"
-        )
+        (config_dir / "rules.yaml").write_text("schema_version: 1\nclient_id: example\nrules: []\n")
         (config_dir / "skills.yaml").write_text(
             "schema_version: 1\nclient_id: example\nskills: []\n"
         )
         (config_dir / "client_config.yaml").write_text(
-            "client_id: example\nblock_private_ip: true\n"
-            "domain_allowlist:\n  - api.example.com\n"
+            "client_id: example\nblock_private_ip: true\ndomain_allowlist:\n  - api.example.com\n"
         )
 
         return BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
@@ -616,9 +613,7 @@ class TestVaultProviderFactory:
         data_root = tmp_path / "data"
         self._write_config(
             config_root,
-            "vault_provider: notion\n"
-            "notion_token: secret-token\n"
-            "notion_root_page_id: root-id\n",
+            "vault_provider: notion\nnotion_token: secret-token\nnotion_root_page_id: root-id\n",
         )
 
         engine = BRMEngine(client_id="example", config_root=config_root, data_root=data_root)
@@ -630,9 +625,7 @@ class TestVaultProviderFactory:
         data_root = tmp_path / "data"
         self._write_config(
             config_root,
-            "vault_provider: notion\n"
-            "notion_token: secret-token\n"
-            "notion_root_page_id: root-id\n",
+            "vault_provider: notion\nnotion_token: secret-token\nnotion_root_page_id: root-id\n",
         )
 
         fake_provider = object()
@@ -672,8 +665,7 @@ class TestVaultInterpreterWiring:
             "schema_version: 1\nclient_id: example\nskills: []\n"
         )
         config_dir.joinpath("client_config.yaml").write_text(
-            "client_id: example\nblock_private_ip: true\ndomain_allowlist:\n"
-            "  - api.example.com\n"
+            "client_id: example\nblock_private_ip: true\ndomain_allowlist:\n  - api.example.com\n"
         )
         return config_root, data_root
 
@@ -687,7 +679,9 @@ class TestVaultInterpreterWiring:
     ) -> None:
         config_root, data_root = roots
         self._write_note(
-            config_root, "config_drafts/regra.md", "Bloqueia valor alto",
+            config_root,
+            "config_drafts/regra.md",
+            "Bloqueia valor alto",
             "Bloquear consultas acima de R$ 50.000",
         )
         rule = Rule(
@@ -696,11 +690,11 @@ class TestVaultInterpreterWiring:
             condition={">": [{"var": "valor"}, 50000]},
             effect=RuleEffect.DENY,
         )
-        agent = FakeInterpreterAgent(
-            InterpreterResult(success=True, kind="rule", rule=rule)
-        )
+        agent = FakeInterpreterAgent(InterpreterResult(success=True, kind="rule", rule=rule))
         engine = BRMEngine(
-            client_id="example", config_root=config_root, data_root=data_root,
+            client_id="example",
+            config_root=config_root,
+            data_root=data_root,
             interpreter_agent=agent,
         )
 
@@ -720,7 +714,9 @@ class TestVaultInterpreterWiring:
         self._write_note(config_root, "faq/duvida.md", "Dúvida comum", "Resposta aqui")
         agent = FakeInterpreterAgent(InterpreterResult(success=True))
         engine = BRMEngine(
-            client_id="example", config_root=config_root, data_root=data_root,
+            client_id="example",
+            config_root=config_root,
+            data_root=data_root,
             interpreter_agent=agent,
         )
 
@@ -729,12 +725,12 @@ class TestVaultInterpreterWiring:
         assert result["allowed"] is False
         assert agent.prompts == []
 
-    def test_vault_promote_draft_writes_to_active_rules(
-        self, roots: tuple[Path, Path]
-    ) -> None:
+    def test_vault_promote_draft_writes_to_active_rules(self, roots: tuple[Path, Path]) -> None:
         config_root, data_root = roots
         self._write_note(
-            config_root, "config_drafts/regra.md", "Bloqueia valor alto",
+            config_root,
+            "config_drafts/regra.md",
+            "Bloqueia valor alto",
             "Bloquear consultas acima de R$ 50.000",
         )
         rule = Rule(
@@ -743,11 +739,11 @@ class TestVaultInterpreterWiring:
             condition={">": [{"var": "valor"}, 50000]},
             effect=RuleEffect.DENY,
         )
-        agent = FakeInterpreterAgent(
-            InterpreterResult(success=True, kind="rule", rule=rule)
-        )
+        agent = FakeInterpreterAgent(InterpreterResult(success=True, kind="rule", rule=rule))
         engine = BRMEngine(
-            client_id="example", config_root=config_root, data_root=data_root,
+            client_id="example",
+            config_root=config_root,
+            data_root=data_root,
             interpreter_agent=agent,
         )
         proposal = engine.vault_interpret_and_propose("config_drafts/regra.md")

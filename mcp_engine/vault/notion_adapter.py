@@ -325,9 +325,7 @@ class NotionVaultProvider:
         note_id = self._source(client_id).create_page(title, content)
         self._index(client_id).reindex()
 
-        self._record_audit(
-            client_id, "vault_add_note", AuditDecision.ALLOWED, {"note_id": note_id}
-        )
+        self._record_audit(client_id, "vault_add_note", AuditDecision.ALLOWED, {"note_id": note_id})
 
         new_note = self._index(client_id).get_note(note_id)
         if new_note is None:

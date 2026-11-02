@@ -194,8 +194,7 @@ class TestDefaultDeny:
 
         _write_client(
             config_root,
-            skills=SKILLS
-            + "  - name: nova_skill\n    description: x\n    method: GET\n"
+            skills=SKILLS + "  - name: nova_skill\n    description: x\n    method: GET\n"
             "    url_template: https://api.example.com/x\n    allowed_domains: [api.example.com]\n",
         )
         engine = BRMEngine("example", config_root, data_root)

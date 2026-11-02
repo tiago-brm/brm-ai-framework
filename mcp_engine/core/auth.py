@@ -41,9 +41,7 @@ ANONYMOUS_PROFILE = UserProfile(identity="anonymous", role=Role.VIEWER)
 # só para essas tools aparecerem corretamente em tools/list.
 ROLE_TOOLS: dict[Role, frozenset[str]] = {
     Role.VIEWER: frozenset({"consultar_dados"}),
-    Role.ADMIN: frozenset(
-        {"consultar_dados", "deletar_banco", "criar_usuario", "listar_usuarios"}
-    ),
+    Role.ADMIN: frozenset({"consultar_dados", "deletar_banco", "criar_usuario", "listar_usuarios"}),
     Role.SUPER_ADMIN: frozenset(
         {
             "consultar_dados",

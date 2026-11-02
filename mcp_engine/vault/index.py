@@ -69,9 +69,7 @@ class VaultIndex:
             """
         )
 
-        self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_meta_link_key ON notes_meta(link_key)"
-        )
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_link_key ON notes_meta(link_key)")
 
         # target_key is a resolved wikilink name (basename, no extension, lowercase),
         # never a note_id — see markdown.link_key.
@@ -84,9 +82,7 @@ class VaultIndex:
             """
         )
 
-        self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_links_target ON note_links(target_key)"
-        )
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_links_target ON note_links(target_key)")
 
         self._conn.execute(
             """
@@ -186,9 +182,7 @@ class VaultIndex:
             result = []
 
             for rowid, _score in rowids_with_scores:
-                cursor = self._conn.execute(
-                    "SELECT note_id FROM notes_meta WHERE id = ?", (rowid,)
-                )
+                cursor = self._conn.execute("SELECT note_id FROM notes_meta WHERE id = ?", (rowid,))
                 row = cursor.fetchone()
                 if row:
                     note = self.get_note(row["note_id"])

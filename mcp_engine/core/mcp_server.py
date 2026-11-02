@@ -12,9 +12,17 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from json_logic import jsonLogic
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from audit.sink import FileSystemAuditSink
+from mcp_engine.core.acoes import (
+    AcaoRecusada,
+    CentralAcoes,
+    Preparo,
+    Previa,
+    TipoAcao,
+)
+from mcp_engine.core.atributos_usuario import AtributosUsuarioStore
 from mcp_engine.core.auth import (
     ANONYMOUS_PROFILE,
     Role,
@@ -36,6 +44,7 @@ from mcp_engine.core.config_loader import (
 )
 from mcp_engine.core.config_notas import OPERACAO_ATIVAR, Extensoes
 from mcp_engine.core.config_notas_servico import Caderno
+from mcp_engine.core.documentos import DocumentoErro, DocumentoStore, ServicoDocumentos
 from mcp_engine.core.email_sender import EmailSendError, email_configured, send_email
 from mcp_engine.core.executor import (
     EVENTOS_CHAVE,
@@ -49,6 +58,7 @@ from mcp_engine.core.executor import (
 )
 from mcp_engine.core.fatos import ContextoFatos, FatosIndisponiveis
 from mcp_engine.core.gatilhos import Gatilhos
+from mcp_engine.core.identidade import construir_resolvedor, get_identidade
 from mcp_engine.core.interceptor import (
     intercept,
     redact_for_role,
@@ -118,7 +128,8 @@ TOOLS_DO_NUCLEO = frozenset(
         "aprovar_operacao", "rejeitar_operacao", "cancelar_operacao", "listar_operacoes",
         "rotacionar_token", "atualizar_permissao", "config_estado", "config_propor",
         "config_reverter", "config_rascunho", "memoria_registrar", "memoria_rascunhos",
-        "memoria_promover", "gerar_relatorio_mensal",
+        "memoria_promover", "gerar_relatorio_mensal", "criar_acao", "criar_lote_acoes",
+        "status_da_acao", "tipos_de_acao", "documento_modelos", "documento_aprovar_modelo",
     }
 )  # fmt: skip
 
@@ -185,6 +196,82 @@ def _make_skill_tool(engine: BRMEngine, skill: SkillDefinition) -> Any:
     return tool
 
 
+class _ArgsSkill(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    skill: str = Field(min_length=1, max_length=64)
+    argumentos: dict[str, Any] = Field(default_factory=dict)
+
+
+def _tipo_acao_skill(engine: BRMEngine) -> TipoAcao:
+    """Tipo nativo `nucleo.executar_skill`: qualquer skill do cliente confirmada pela página.
+
+    Na criação, as regras são avaliadas com quem pediu: negar não gera link; exigir aprovação,
+    autonomia A3 ou skill irreversível tornam a ação sensível (liberação de gestor). Na execução,
+    a skill roda com a identidade de quem confirmou, pelo mesmo pipeline do motor."""
+
+    def _skill(args: dict[str, Any]) -> SkillDefinition:
+        skill = engine._find_skill(args["skill"])
+        if skill is None:
+            raise AcaoRecusada(f"skill desconhecida: {args['skill']}")
+        return skill
+
+    def preparar(ctx: Any, args: dict[str, Any]) -> Preparo:
+        skill = _skill(args)
+        veredito = engine.avaliar_skill(skill.name, args["argumentos"])
+        if veredito["efeito"] == "deny":
+            raise AcaoRecusada(veredito["message"] or "As regras do cliente negam esta ação.")
+        sensivel = skill.autonomia == "A3" or skill.irreversivel
+        papel = skill.aprovador
+        meta: dict[str, Any] = {}
+        if veredito["efeito"] == "require_approval":
+            sensivel = True
+            meta["regra_id"] = veredito["rule_id"]
+            regra = next((r for r in engine.rules.rules if r.id == veredito["rule_id"]), None)
+            papel = (regra.aprovador if regra else None) or skill.aprovador
+        return Preparo(sensivel=sensivel, papel_liberacao=papel, meta=meta)
+
+    def resumir(args: dict[str, Any]) -> str:
+        skill = engine._find_skill(args["skill"])
+        return engine._resumo(skill, args["argumentos"]) if skill else args["skill"]
+
+    def carregar(ctx: Any, args: dict[str, Any]) -> Previa:
+        return Previa(
+            resumo=resumir(args),
+            dados={"skill": args["skill"], "argumentos": args["argumentos"]},
+        )
+
+    def executar(ctx: Any, args: dict[str, Any]) -> dict[str, Any]:
+        resultado = engine._call_skill(
+            args["skill"],
+            dict(args["argumentos"]),
+            idempotency_key=f"acao:{ctx.acao_id}:{ctx.item}",
+            _aprovada=True,
+            _regra_aprovada=ctx.meta.get("regra_id") if ctx.liberado_por else None,
+            _confirmado_por=ctx.ator,
+            _aprovado_por=ctx.liberado_por,
+        )
+        if not resultado.get("allowed"):
+            raise ExecucaoFalhou(str(resultado.get("reason") or "a ação foi negada"))
+        return {
+            "resumo": "Executada.",
+            "allowed": True,
+            "result": resultado.get("result"),
+            "payload_digest": resultado.get("payload_digest"),
+        }
+
+    return TipoAcao(
+        nome="nucleo.executar_skill",
+        titulo="Executar ação do cliente",
+        descricao="Executa uma skill do cliente depois da confirmação na Central de Ações.",
+        esquema=_ArgsSkill,
+        resumir=resumir,
+        carregar=carregar,
+        executar=executar,
+        preparar=preparar,
+    )
+
+
 class BRMEngine:
     def __init__(
         self,
@@ -246,6 +333,35 @@ class BRMEngine:
         self._vault_provider = vault_provider or self._build_vault_provider()
         self._draft_store = DraftStore(self._config_root)
         self.user_store = user_store or SQLUserStore(self._config_root, client_id)
+        cfg = self._client_config
+        self.identidade = construir_resolvedor(
+            cfg.identidade,
+            self.user_store,
+            self.secrets,
+            domain_allowlist=cfg.domain_allowlist,
+            auditar_recusa=self._auditar_recusa_identidade,
+        )
+        self.documentos = ServicoDocumentos(
+            DocumentoStore(self._state, self._data_root, client_id),
+            self._vault_root(),
+            cfg.dados_do_emissor,
+            self.auditar_evento,
+        )
+        self.extensoes.acoes.registrar(_tipo_acao_skill(self))
+        self.acoes = CentralAcoes(
+            client_id=client_id,
+            config=cfg.central_acoes,
+            state=self._state,
+            atributos=AtributosUsuarioStore(
+                self._state, cfg.central_acoes.pin_tentativas, cfg.central_acoes.pin_bloqueio_min
+            ),
+            registro=self.extensoes.acoes,
+            auditar=self.auditar_evento,
+            data_root=self._data_root,
+            documentos=self.documentos,
+            trace_id=get_trace_id,
+            verificar_entrada=self._dlp_entrada_acao,
+        )
         # Built lazily on first interpreter call: constructing agno's Agent is
         # cheap, but there's no reason to import agno/anthropic for engines
         # that never touch the interpreter.
@@ -262,6 +378,7 @@ class BRMEngine:
             audit=self._module_audit,
             extensoes=self.extensoes,
             leitor_operacoes=self.operacoes.contagens,
+            leitor_documentos=self.documentos.emitidos,
         )
         self._iniciar_caderno(skip_config_integrity)
         self._validar_fatos_de_modulo()
@@ -313,6 +430,25 @@ class BRMEngine:
     def _module_audit(self, action: str, allowed: bool) -> None:
         decision = AuditDecision.ALLOWED if allowed else AuditDecision.DENIED
         self._record_audit(DEFAULT_ACTOR, action, decision)
+
+    def auditar_evento(self, action: str, ok: bool, details: dict[str, Any]) -> None:
+        self._audit_sink.record(
+            AuditEvent(
+                client_id=self.client_id,
+                occurred_at=datetime.now(UTC),
+                actor=self._actor(),
+                action=action,
+                decision=AuditDecision.ALLOWED if ok else AuditDecision.DENIED,
+                details=details,
+            )
+        )
+
+    def _auditar_recusa_identidade(self, provedor: str, motivo: str) -> None:
+        self.auditar_evento(f"identidade:{provedor}:recusada", False, {"motivo": motivo})
+
+    def _dlp_entrada_acao(self, argumentos: dict[str, Any]) -> str | None:
+        scan = scan_request(argumentos, self._client_config, get_current_user().role)
+        return None if scan.allowed and not scan.dlp_matches else (scan.reason or "DLP")
 
     def _build_vault_provider(self) -> Any:
         if self._client_config.vault_provider == "notion":
@@ -706,8 +842,10 @@ class BRMEngine:
             return pending
 
         nivel = skill.autonomia
-        if nivel == "A1" and skill.a1_condicao is not None and not jsonLogic(
-            skill.a1_condicao, facts
+        if (
+            nivel == "A1"
+            and skill.a1_condicao is not None
+            and not jsonLogic(skill.a1_condicao, facts)
         ):
             nivel = "A2"
         if nivel in ("A2", "A3") and not _aprovada:
@@ -1102,9 +1240,8 @@ class BRMEngine:
                 op = self._carregar_operacao(op.id) or op
             if user.role is Role.SUPER_ADMIN or op.proposto_por == user.identity:
                 visiveis.append(op)
-            elif (
-                op.status == AGUARDANDO
-                and RANK[user.role.value] >= RANK.get(op.aprovador_papel or "admin", 1)
+            elif op.status == AGUARDANDO and RANK[user.role.value] >= RANK.get(
+                op.aprovador_papel or "admin", 1
             ):
                 visiveis.append(op)
         return {
@@ -1290,8 +1427,20 @@ class BRMEngine:
 
     def _get_document_agent(self) -> Any:
         if self._document_agent is None:
-            self._document_agent = build_document_agent()
+            guia = self._vault_root() / "_modelos" / "guia.md"
+            self._document_agent = build_document_agent(
+                contexto=self._client_config.context,
+                guia=guia.read_text(encoding="utf-8") if guia.is_file() else None,
+            )
         return self._document_agent
+
+    def _salvar_modelo(self, modelo_id: str, texto: str) -> str:
+        pasta = self._vault_root() / "_modelos"
+        pasta.mkdir(parents=True, exist_ok=True)
+        destino = pasta / f"{modelo_id}.md"
+        with open(destino, "x", encoding="utf-8") as arquivo:
+            arquivo.write(texto)
+        return f"_modelos/{destino.name}"
 
     def vault_generate_document(self, instrucoes: str) -> dict[str, Any]:
         return propose_document(
@@ -1311,7 +1460,70 @@ class BRMEngine:
             self._draft_store,
             self._vault_provider,
             self._audit_sink,
+            approved_by=self._actor(),
+            salvar_modelo=self._salvar_modelo,
         )
+
+    # ------------------------------------------------------------------
+    # Central de Ações e emissor de documentos (spec 035)
+    # ------------------------------------------------------------------
+
+    def criar_acao(self, tipo: str, argumentos: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self.acoes.criar(get_identidade(), [{"tipo": tipo, "argumentos": argumentos or {}}])
+
+    def criar_lote_acoes(self, itens: list[dict[str, Any]]) -> dict[str, Any]:
+        if not isinstance(itens, list) or not all(isinstance(i, dict) for i in itens):
+            return self._negado("itens deve ser uma lista de {tipo, argumentos}")
+        return self.acoes.criar(get_identidade(), itens)
+
+    def status_da_acao(self, acao_id: str) -> dict[str, Any]:
+        return self.acoes.status(get_identidade(), acao_id)
+
+    def tipos_de_acao(self) -> dict[str, Any]:
+        tipos = self.extensoes.acoes.listar()
+        return {
+            "total": len(tipos),
+            "tipos": [
+                {
+                    "tipo": t.nome,
+                    "titulo": t.titulo,
+                    "descricao": t.descricao,
+                    "argumentos": t.esquema.model_json_schema().get("properties", {}),
+                    "sensivel": t.sensivel,
+                }
+                for t in tipos
+            ],
+        }
+
+    def documento_modelos(self) -> dict[str, Any]:
+        if get_current_user().role not in (Role.ADMIN, Role.SUPER_ADMIN):
+            return self._negado("Somente gestor consulta os modelos de documento.")
+        modelos, erros = self.documentos.modelos()
+        itens = []
+        for modelo in modelos.values():
+            resumo = modelo.resumo()
+            resumo["aprovacao"] = self.documentos.store.aprovacao(modelo)
+            itens.append(resumo)
+        return {"total": len(itens), "modelos": itens, "erros": erros}
+
+    def documento_aprovar_modelo(self, modelo_id: str) -> dict[str, Any]:
+        user = get_current_user()
+        if user.role not in (Role.ADMIN, Role.SUPER_ADMIN):
+            self.auditar_evento("documento:modelo_aprovacao_negada", False, {"modelo": modelo_id})
+            return self._negado("Somente gestor aprova modelos de documento.")
+        try:
+            modelo = self.documentos.modelo(modelo_id)
+        except DocumentoErro as exc:
+            return self._negado(str(exc))
+        detalhes = {"modelo": modelo.id, "versao": modelo.versao, "hash": modelo.hash}
+        self.auditar_evento("documento:modelo_aprovando", True, detalhes)
+        if not self.documentos.store.aprovar_modelo(modelo, user.identity):
+            self.auditar_evento("documento:modelo_aprovacao_negada", False, detalhes)
+            return self._negado(
+                "Esta versão já foi aprovada com outro conteúdo; aumente o campo 'versao'."
+            )
+        self.auditar_evento("documento:modelo_aprovado", True, detalhes)
+        return {"allowed": True, **detalhes, "aprovado_por": user.identity}
 
     def config_estado(self) -> dict[str, Any]:
         """Estado de cada nota de configuração; também regenera as páginas de `sistema/`."""
@@ -1393,8 +1605,7 @@ class BRMEngine:
             return {
                 "allowed": False,
                 "reason": (
-                    f"Acesso negado: perfil '{user.role.value}' não pode "
-                    "executar 'deletar_banco'."
+                    f"Acesso negado: perfil '{user.role.value}' não pode executar 'deletar_banco'."
                 ),
             }
         return {
@@ -1576,9 +1787,7 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
         return engine.vault_search(query, limit)
 
     @server.tool()
-    def vault_add_note(
-        title: str, content: str, tags: list[str] | None = None
-    ) -> dict[str, Any]:
+    def vault_add_note(title: str, content: str, tags: list[str] | None = None) -> dict[str, Any]:
         """Cria uma nova nota markdown no vault do cliente."""
         return engine.vault_add_note(title, content, tags)
 
@@ -1617,17 +1826,18 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
 
     @server.tool()
     def vault_generate_document(instrucoes: str) -> dict[str, Any]:
-        """Redige um documento padronizado (modelo de petição,
-        contestação, contrato, checklist etc.) a partir de uma instrução em
-        português, e salva como draft pendente — nunca escreve direto no vault.
-        Ex.: "gere um modelo de notificação extrajudicial de cobrança"."""
+        """Redige um modelo de documento padronizado (contrato, termo, declaração,
+        checklist etc.) no estilo do segmento do cliente, com os campos que o emissor
+        vai preencher declarados, e salva como draft pendente — nunca escreve direto no
+        vault nem preenche dados de pessoas. Ex.: "gere um modelo de termo de consentimento"."""
         return engine.vault_generate_document(instrucoes)
 
     @server.tool()
     def vault_promote_document(draft_id: str) -> dict[str, Any]:
         """Promove um draft de documento pendente (id de vault_list_drafts,
         kind="document") para o vault de verdade — só depois de aprovação
-        humana explícita e nomeada."""
+        humana explícita e nomeada. Modelo com campos vai para _modelos/ e ainda
+        precisa de documento_aprovar_modelo para ser usado na emissão."""
         return engine.vault_promote_document(draft_id)
 
     @server.tool()
@@ -1682,6 +1892,44 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
         """Gera o relatório mensal (AAAA-MM) em relatorios/ por template determinístico:
         os números vêm do módulo, nunca do modelo. Restrita a gestor."""
         return engine.gerar_relatorio_mensal(periodo, unidade, gerador)
+
+    @server.tool()
+    def criar_acao(tipo: str, argumentos: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Prepara uma ação (efeito ou dado pessoal) para a pessoa confirmar na Central de
+        Ações e devolve só o link e um resumo. Mostre o link ao usuário; nada é executado aqui.
+        Use identificadores (ids), nunca dados pessoais, nos argumentos. Tipos e argumentos em
+        tipos_de_acao. Ex.: tipo="nucleo.executar_skill",
+        argumentos={"skill": "registrar_recebimento", "argumentos": {...}}."""
+        return engine.criar_acao(tipo, argumentos)
+
+    @server.tool()
+    def criar_lote_acoes(itens: list[dict[str, Any]]) -> dict[str, Any]:
+        """Como criar_acao, mas um único link para revisar e confirmar várias ações do mesmo
+        pedido. itens = [{"tipo": ..., "argumentos": {...}}, ...]."""
+        return engine.criar_lote_acoes(itens)
+
+    @server.tool()
+    def status_da_acao(acao_id: str) -> dict[str, Any]:
+        """Estado de uma ação criada por esta conta: pendente, em_execucao, confirmada,
+        expirada, falhou ou cancelada, com um resumo do resultado (sem dados pessoais)."""
+        return engine.status_da_acao(acao_id)
+
+    @server.tool()
+    def tipos_de_acao() -> dict[str, Any]:
+        """Lista os tipos de ação da Central de Ações deste cliente, com os argumentos."""
+        return engine.tipos_de_acao()
+
+    @server.tool()
+    def documento_modelos() -> dict[str, Any]:
+        """Lista os modelos de documento de _modelos/ com campos declarados e se a versão
+        atual está aprovada para emissão. Restrita a gestor."""
+        return engine.documento_modelos()
+
+    @server.tool()
+    def documento_aprovar_modelo(modelo_id: str) -> dict[str, Any]:
+        """Aprova a versão atual de um modelo de documento para emissão (guarda o hash).
+        Alterar o arquivo depois exige nova aprovação. Restrita a gestor."""
+        return engine.documento_aprovar_modelo(modelo_id)
 
     @server.tool()
     def consultar_dados() -> dict[str, Any]:

@@ -223,7 +223,11 @@ def promote_draft(
         draft = draft_store.get_draft(client_id, kind, draft_id)
     except DraftNotFoundError as exc:
         record_audit(
-            audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
+            audit_sink,
+            client_id,
+            approved_by,
+            "vault_promote_error",
+            AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": str(exc)},
         )
         return {"allowed": False, "reason": str(exc)}
@@ -231,7 +235,11 @@ def promote_draft(
     if draft is None:
         error = f"draft not found: {draft_id}"
         record_audit(
-            audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
+            audit_sink,
+            client_id,
+            approved_by,
+            "vault_promote_error",
+            AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": error},
         )
         return {"allowed": False, "reason": error}
@@ -239,7 +247,11 @@ def promote_draft(
     if draft["status"] != "pending":
         error = f"draft {draft_id} is not pending (status={draft['status']!r})"
         record_audit(
-            audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
+            audit_sink,
+            client_id,
+            approved_by,
+            "vault_promote_error",
+            AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": error},
         )
         return {"allowed": False, "reason": error}
@@ -261,7 +273,11 @@ def promote_draft(
             skill_provider.save_skills(new_skillset)
     except Exception as exc:
         record_audit(
-            audit_sink, client_id, approved_by, "vault_promote_error", AuditDecision.DENIED,
+            audit_sink,
+            client_id,
+            approved_by,
+            "vault_promote_error",
+            AuditDecision.DENIED,
             {"draft_id": draft_id, "kind": kind, "error": str(exc)},
         )
         return {"allowed": False, "reason": f"draft content invalid: {exc}"}
@@ -272,7 +288,11 @@ def promote_draft(
     )
 
     record_audit(
-        audit_sink, client_id, approved_by, "vault_promote_draft", AuditDecision.ALLOWED,
+        audit_sink,
+        client_id,
+        approved_by,
+        "vault_promote_draft",
+        AuditDecision.ALLOWED,
         {"draft_id": draft_id, "kind": kind, "from_note": draft["from_note_id"]},
     )
 

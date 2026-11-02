@@ -164,9 +164,7 @@ def check_vault_egress(text: str, client_config: ClientConfig) -> InterceptDecis
     return InterceptDecision(allowed=True)
 
 
-def scan_request(
-    arguments: dict[str, Any], client_config: ClientConfig, role: Role
-) -> RequestScan:
+def scan_request(arguments: dict[str, Any], client_config: ClientConfig, role: Role) -> RequestScan:
     """DLP sobre os argumentos que chegam, antes de qualquer regra ou execução.
 
     Padrões `deny` bloqueiam para todos os perfis. Padrões `mask` redigem o

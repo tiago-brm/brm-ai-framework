@@ -27,6 +27,7 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from mcp_engine.core.acoes import RegistroAcoes
 from mcp_engine.core.fatos import ProvedoresFatos
 from mcp_engine.core.models import Rule, RuleSet, SkillDefinition
 from mcp_engine.core.state import ConfigVersaoRow, StateStore
@@ -119,12 +120,13 @@ class TipoConfig:
 
 class Extensoes:
     """Registro por cliente de tipos de configuração, geradores de relatório, provedores de
-    fatos e verificações de saúde dos módulos."""
+    fatos, tipos de ação da Central de Ações e verificações de saúde dos módulos."""
 
     def __init__(self) -> None:
         self.tipos: dict[str, TipoConfig] = {}
         self.geradores: dict[str, Any] = {}
         self.provedores = ProvedoresFatos()
+        self.acoes = RegistroAcoes()
         self.verificacoes: dict[str, Callable[[], dict[str, Any]]] = {}
         for tipo in _tipos_nativos():
             self.tipos[tipo.nome] = tipo

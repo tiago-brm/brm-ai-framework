@@ -106,9 +106,7 @@ class TestPermissionsEndpoints:
         )
         assert update_response.status_code == 200
 
-        response = client.get(
-            "/api/tools", headers=_auth("admin-tok")
-        )  # still forbidden for admin
+        response = client.get("/api/tools", headers=_auth("admin-tok"))  # still forbidden for admin
         assert response.status_code == 403
 
 
