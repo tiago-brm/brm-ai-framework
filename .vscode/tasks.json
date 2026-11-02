@@ -2,6 +2,14 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Preparar teste da Central de Ações",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python scripts/rodar_teste_local.py preparar",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
       "label": "Preparar perfis da demo",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python scripts/preparar_demo_chat.py wagner > /dev/null && echo 'Perfis da demo prontos.'",

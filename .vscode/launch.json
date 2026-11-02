@@ -86,6 +86,33 @@
       }
     },
     {
+      "name": "8. Central de Ações: API (clinica-piloto, Agenda simulada, porta 8000)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/rodar_teste_local.py",
+      "args": ["api"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "9. Central de Ações: página (vite, porta 5173)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "cd dashboard && npm run dev -- --host 127.0.0.1 --open",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "10. Central de Ações: MCP stdio (secretaria ou gestor)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/rodar_teste_local.py",
+      "args": ["mcp", "${input:perfilCentral}"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Testes (pytest)",
       "type": "debugpy",
       "request": "launch",
@@ -98,6 +125,15 @@
   ],
   "compounds": [
     {
+      "name": "Central de Ações: preparar + API + página",
+      "configurations": [
+        "8. Central de Ações: API (clinica-piloto, Agenda simulada, porta 8000)",
+        "9. Central de Ações: página (vite, porta 5173)"
+      ],
+      "preLaunchTask": "Preparar teste da Central de Ações",
+      "stopAll": true
+    },
+    {
       "name": "Demo no painel: perfis + motor + painel",
       "configurations": ["5. Motor HTTP (instituto-afw, porta 8000)", "6. Painel (build + preview, porta 4173)"],
       "preLaunchTask": "Preparar perfis da demo",
@@ -105,6 +141,13 @@
     }
   ],
   "inputs": [
+    {
+      "id": "perfilCentral",
+      "type": "pickString",
+      "description": "Entrar no MCP como",
+      "options": ["secretaria", "gestor"],
+      "default": "secretaria"
+    },
     {
       "id": "perfilDemo",
       "type": "pickString",
