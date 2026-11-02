@@ -271,6 +271,7 @@ class CentralAcoesConfig(_StrictModel):
 class ClientConfig(_StrictModel):
     client_id: str
     context: str | None = None
+    foco_trabalho: bool | str = False
     identidade: IdentidadeConfig = Field(default_factory=IdentidadeConfig)
     central_acoes: CentralAcoesConfig = Field(default_factory=CentralAcoesConfig)
     dados_do_emissor: dict[str, str] = Field(default_factory=dict)

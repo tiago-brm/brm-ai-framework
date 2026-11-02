@@ -147,6 +147,16 @@ class TestSkillTools:
         assert "Clínica de psicologia de teste." in server.instructions
         assert "vault_search" in server.instructions
 
+    def test_work_focus_instruction_is_opt_in_and_customizable(self, engine: BRMEngine) -> None:
+        assert "uso exclusivo para o trabalho" not in build_server(engine).instructions
+        engine._client_config = engine._client_config.model_copy(update={"foco_trabalho": True})
+        assert "uso exclusivo para o trabalho" in build_server(engine).instructions
+        engine._client_config = engine._client_config.model_copy(
+            update={"foco_trabalho": "Só assuntos da clínica."}
+        )
+        texto = build_server(engine).instructions
+        assert "Só assuntos da clínica." in texto and "uso exclusivo" not in texto
+
     def test_generic_docstrings_are_not_legal_specific(self, engine: BRMEngine) -> None:
         _as("lucas@clinica.com")
         tools = {t.name: t for t in asyncio.run(build_server(engine).list_tools())}

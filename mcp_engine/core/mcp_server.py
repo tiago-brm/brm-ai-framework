@@ -486,6 +486,13 @@ class BRMEngine:
         return self._client_config.context
 
     @property
+    def foco_trabalho(self) -> str | None:
+        valor = self._client_config.foco_trabalho
+        if isinstance(valor, str):
+            return valor.strip() or None
+        return FOCO_TRABALHO_PADRAO if valor else None
+
+    @property
     def simulador_habilitado(self) -> bool:
         return self._client_config.simulador
 
@@ -1724,6 +1731,15 @@ class BRMEngine:
         }
 
 
+FOCO_TRABALHO_PADRAO = (
+    "Este conector é de uso exclusivo para o trabalho do cliente. Atenda apenas pedidos "
+    "ligados à rotina dele e às ferramentas daqui. Para qualquer outro assunto (pessoal, "
+    "entretenimento, tarefas escolares, programação, textos ou pesquisas sem relação com o "
+    "trabalho), recuse com educação em uma frase e diga que este canal é só para o trabalho. "
+    "Não use as ferramentas para outro fim."
+)
+
+
 def _server_instructions(engine: BRMEngine) -> str:
     lines = [f"Cliente: {engine.client_id}."]
     if engine.client_context:
@@ -1737,6 +1753,8 @@ def _server_instructions(engine: BRMEngine) -> str:
         "o motor os calcula. Se uma ação for negada ou ficar aguardando aprovação, explique o "
         "motivo e o proximo_passo ao usuário e não tente contornar a regra."
     )
+    if engine.foco_trabalho:
+        lines.append(engine.foco_trabalho)
     return " ".join(lines)
 
 
