@@ -106,6 +106,22 @@ class AtributosUsuarioStore:
             session.flush()
         return row
 
+    def nome(self, provedor: str, usuario_id: str) -> str | None:
+        with Session(self._engine) as session:
+            row = session.get(AtributosUsuarioRow, (provedor, usuario_id))
+            return row.nome if row else None
+
+    def definir_nome(self, provedor: str, usuario_id: str, nome: str, *, por: str) -> None:
+        limpo = " ".join(nome.split())
+        if not 2 <= len(limpo) <= 80:
+            raise ValueError("o nome deve ter entre 2 e 80 caracteres")
+        with Session(self._engine) as session:
+            row = self._linha(session, provedor, usuario_id)
+            row.nome = limpo
+            row.atualizado_em = datetime.now(UTC)
+            row.atualizado_por = por
+            session.commit()
+
     def pin_definido(self, provedor: str, usuario_id: str) -> bool:
         with Session(self._engine) as session:
             row = session.get(AtributosUsuarioRow, (provedor, usuario_id))

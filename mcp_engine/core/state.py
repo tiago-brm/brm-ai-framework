@@ -44,6 +44,10 @@ class StateStore:
             cur.close()
 
         StateBase.metadata.create_all(self.engine)
+        with self.engine.begin() as con:
+            colunas = {r[1] for r in con.exec_driver_sql("PRAGMA table_info(atributos_usuario)")}
+            if "nome" not in colunas:
+                con.exec_driver_sql("ALTER TABLE atributos_usuario ADD COLUMN nome VARCHAR")
 
     def get_execucao(self, idempotency_key: str) -> dict[str, Any] | None:
         with Session(self.engine) as session:
@@ -207,6 +211,7 @@ class AtributosUsuarioRow(StateBase):
 
     provedor: Mapped[str] = mapped_column(primary_key=True)
     usuario_id: Mapped[str] = mapped_column(primary_key=True)
+    nome: Mapped[str | None] = mapped_column(default=None)
     pin_hash: Mapped[str | None] = mapped_column(default=None)
     pin_falhas: Mapped[int] = mapped_column(default=0)
     pin_bloqueado_ate: Mapped[datetime | None] = mapped_column(default=None)

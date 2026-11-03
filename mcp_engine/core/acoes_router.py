@@ -68,6 +68,7 @@ def build_acoes_router(engine: BRMEngine) -> APIRouter:
         ident = get_identidade()
         return {
             **ident.publica(),
+            "nome": central.atributos.nome(ident.provedor, ident.id),
             "pin_definido": central.atributos.pin_definido(ident.provedor, ident.id),
             "unidades": central.atributos.unidades(ident.provedor, ident.id),
         }
@@ -92,6 +93,22 @@ def build_acoes_router(engine: BRMEngine) -> APIRouter:
             raise HTTPException(codigo, {"motivo": "PIN atual incorreto ou bloqueado."})
         auditar("pin:definido", True, pessoa=ident.perfil.identity, provedor=ident.provedor)
         return {"pin_definido": True}
+
+    @router.get("/pessoas")
+    def pessoas() -> dict[str, Any]:
+        _gestor()
+        lista = [
+            {
+                "usuario_id": u.identity,
+                "provedor": "local",
+                "nome": central.atributos.nome("local", u.identity),
+                "papel": u.role.value,
+                "pin_definido": central.atributos.pin_definido("local", u.identity),
+            }
+            for u in engine.user_store.list_users()
+            if u.identity != "anonymous"
+        ]
+        return {"total": len(lista), "pessoas": lista}
 
     @router.delete("/usuarios/{provedor}/{usuario_id}/pin")
     def redefinir_pin(provedor: str, usuario_id: str) -> dict[str, Any]:

@@ -574,6 +574,24 @@ class TestAPI:
         )
         assert unidades.json() == {"unidades": ["Centro", "Infantil"]}
 
+    def test_nome_de_exibicao_e_lista_de_pessoas(self, amb, client) -> None:
+        h = {"Authorization": "Bearer tok-sec"}
+        g = {"Authorization": "Bearer tok-gestor"}
+        amb.acoes.atributos.definir_nome("local", SEC.id, "  Ana   Souza ", por="teste")
+        assert client.get("/api/central/eu", headers=h).json()["nome"] == "Ana Souza"
+        acao = criar(amb)["acao_id"]
+        assert client.get(f"/api/central/acoes/{acao}", headers=h).json()["voce"]["nome"] == (
+            "Ana Souza"
+        )
+        client.post(f"/api/central/acoes/{acao}/confirmar", headers=h, json={"pin": PIN_SEC})
+        assert any(e.details.get("nome") == "Ana Souza" for e in eventos(amb))
+        assert client.get("/api/central/pessoas", headers=h).status_code == 403
+        pessoas = client.get("/api/central/pessoas", headers=g).json()["pessoas"]
+        ana = next(p for p in pessoas if p["usuario_id"] == SEC.id)
+        assert ana["nome"] == "Ana Souza" and ana["papel"] == "viewer" and ana["pin_definido"]
+        with pytest.raises(ValueError):
+            amb.acoes.atributos.definir_nome("local", SEC.id, "x", por="teste")
+
     def test_cancelar(self, amb, client) -> None:
         r = criar(amb)
         h = {"Authorization": "Bearer tok-sec"}

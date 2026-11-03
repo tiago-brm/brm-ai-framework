@@ -58,7 +58,7 @@ from mcp_engine.core.executor import (
 )
 from mcp_engine.core.fatos import ContextoFatos, FatosIndisponiveis
 from mcp_engine.core.gatilhos import Gatilhos
-from mcp_engine.core.identidade import construir_resolvedor, get_identidade
+from mcp_engine.core.identidade import construir_resolvedor, get_identidade, identidade_var
 from mcp_engine.core.interceptor import (
     intercept,
     redact_for_role,
@@ -431,7 +431,17 @@ class BRMEngine:
         decision = AuditDecision.ALLOWED if allowed else AuditDecision.DENIED
         self._record_audit(DEFAULT_ACTOR, action, decision)
 
+    def _nome_do_ator(self) -> str | None:
+        ident = identidade_var.get()
+        central = getattr(self, "acoes", None)
+        if ident is None or central is None:
+            return None
+        return central.atributos.nome(ident.provedor, ident.id)
+
     def auditar_evento(self, action: str, ok: bool, details: dict[str, Any]) -> None:
+        nome = self._nome_do_ator()
+        if nome and "nome" not in details:
+            details = {**details, "nome": nome}
         self._audit_sink.record(
             AuditEvent(
                 client_id=self.client_id,

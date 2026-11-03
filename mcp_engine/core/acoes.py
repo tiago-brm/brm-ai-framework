@@ -546,7 +546,10 @@ class CentralAcoes:
             "acao_id": acao.id,
             "status": acao.status,
             "resumo_pedido": acao.resumo,
-            "voce": identidade.publica(),
+            "voce": {
+                **identidade.publica(),
+                "nome": self.atributos.nome(identidade.provedor, identidade.id),
+            },
             "pedido_por": acao.criado_por,
             "pedido_em": acao.criado_em.isoformat(),
             "expira_em": acao.expira_em.isoformat(),
