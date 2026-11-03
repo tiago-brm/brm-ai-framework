@@ -72,8 +72,9 @@ Situação em 2026-11-01. G10, G11, G12, G14, G15 e G16 estão entregues; o fram
 | G14 | Unidade de quem não é profissional (`profile_locations`) | Entregue (`whoami` e `PUT .../locations`) |
 | G15 | Primeira sessão concluída por paciente | Entregue (`historico` e `primeira_sessao_concluida_em` na ficha; `first-session-completed`) |
 | G16 | Papel e tenant no JWT | Entregue (`brm_role`, `brm_tenant_id`) |
-| G17 | `GET /api/v1/appointments/:id` (ou filtro `id`) | **Novo.** O contrato parte de um agendamento e hoje o framework o procura na lista dos últimos 120 dias |
-| G18 | `PATCH /api/v1/clinic/appointments/:id/status` aceitar `IN_PROGRESS` (em atendimento) | **Novo.** A rota já existe e o framework a usa para concluir, faltar, confirmar e cancelar (com ator e trace). A secretária quer marcar "em atendimento" pelo chat e hoje a rota só aceita `CONFIRMED`, `COMPLETED`, `NO_SHOW` e `CANCELLED` |
+| G17 | `GET /api/v1/appointments/:id` | Entregue pelo Agenda (2026-11-03), aguardando o deploy do Worker. O framework já a usa e, enquanto ela não existir, procura na lista dos últimos 120 dias |
+| G18 | `PATCH /api/v1/clinic/appointments/:id/status` aceita `IN_PROGRESS` | Entregue pelo Agenda (2026-11-03), aguardando o deploy do Worker. Ação `agenda.atualizar_status_sessao` já aceita "em atendimento"; só passa a funcionar quando a rota estiver no ar |
+| G19 | CRP no cadastro do profissional: `crp` em `GET /api/v1/staff` e `PUT /api/v1/clinic/staff/:id/crp` | Entregue pelo Agenda (2026-11-03), depende da migration 117 e do deploy do Worker, nessa ordem. O contrato lê o CRP da Agenda e, na falta dele, da chave `crp_<nome>` do cliente; ação `agenda.definir_crp_profissional` (gestor) grava |
 
 **CPF e endereço são dado pessoal (LGPD).** Pedimos que a entrega venha com a regra de quem vê o CPF na
 tela do Agenda e com máscara na API de leitura. O framework só desmascara na hora de emitir o documento.
@@ -105,3 +106,12 @@ Para o Agenda isso não muda nada.
 2. O TOTP (G13) tem data? Sem ele, o piloto usa o PIN do gestor.
 3. O hook de token já está ativo no ambiente do Weis? Tokens emitidos antes da ativação não têm
    `brm_role` e são recusados até o refresh.
+
+## 10. Respostas do Agenda e o que decidimos (2026-11-03)
+
+- **Pagamento em dinheiro com a fatura aberta:** o valor entra como crédito do paciente e é aplicado
+  quando a fatura fecha (rotina da madrugada seguinte ao vencimento); com fatura antiga fechada, quita
+  essa primeiro. A página de confirmação do framework avisa isso antes de o pagamento ser confirmado.
+- **Recibo:** o Agenda vai incluir, na resposta da confirmação de pagamento, os dados para imprimir o
+  recibo (número sequencial, clínica, paciente, profissional, valor, forma, data, referência) e uma rota
+  para reimprimir. O framework gera o PDF a partir desse payload quando existir. Sem data.

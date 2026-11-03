@@ -23,6 +23,7 @@ from mcp_engine.modules.agenda.provider import (
     FichaCliente,
     HttpAgendaCadastroProvider,
     HttpAgendaProvider,
+    Profissional,
     Responsavel,
     StatusSessao,
 )
@@ -314,7 +315,7 @@ class TestStatusDaSessao:
     def test_motivo_so_vale_para_cancelamento_e_status_novo_e_recusado(self, engine) -> None:
         for args in (
             {"agendamento_id": "a1", "status": "COMPLETED", "motivo": "x"},
-            {"agendamento_id": "a1", "status": "IN_PROGRESS"},
+            {"agendamento_id": "a1", "status": "DONE"},
             {"agendamento_id": "a1", "paciente": "Maria", "status": "COMPLETED"},
         ):
             assert "acao_id" not in self.pedir_status(engine, **args)
@@ -548,6 +549,182 @@ class TestContratanteECrp:
         )
         assert fake.escritas[-1]["campos"] == {"responsavel": {"endereco": {"cep": "79102420"}}}
         assert fake.fichas["c1"].responsaveis[0].endereco.cep == "79102420"
+
+
+class TestNovidadesDaAgenda:
+    AID = "44444444-4444-4444-8444-444444444444"
+
+    def _http(self, handler):
+        return TestContratoDoProvider()._http(handler)
+
+    def _item(self, **kw):
+        from tests.test_agenda_provider import ITEM
+
+        return {**ITEM, "id": self.AID, **kw}
+
+    def test_agendamento_pela_rota_direta(self) -> None:
+        import httpx
+
+        vistos = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            vistos.append(req.url.path)
+            return httpx.Response(200, json={"data": self._item()})
+
+        ag = self._http(handler).obter_agendamento(self.AID)
+        assert ag.id == self.AID and vistos == [f"/api/v1/appointments/{self.AID}"]
+
+    def test_agendamento_inexistente_nao_procura_na_lista(self) -> None:
+        import httpx
+
+        vistos = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            vistos.append(req.url.path)
+            return httpx.Response(404, json={"code": "APPOINTMENT_NOT_FOUND"})
+
+        assert self._http(handler).obter_agendamento(self.AID) is None
+        assert len(vistos) == 1
+
+    def test_rota_ainda_nao_publicada_cai_na_lista(self) -> None:
+        import httpx
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            if req.url.path.endswith(self.AID):
+                return httpx.Response(404, text="<html>erro</html>")
+            return httpx.Response(200, json={"data": [self._item()], "next_cursor": None})
+
+        assert self._http(handler).obter_agendamento(self.AID).id == self.AID
+
+    def test_crp_vem_do_cadastro_do_profissional(self) -> None:
+        import httpx
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200, json={"data": [{"id": "s1", "name": "Ana", "role": "psi", "crp": "CRP 14/1"}]}
+            )
+
+        assert self._http(handler).listar_profissionais()[0].crp == "CRP 14/1"
+
+    def test_numero_do_crp_aceita_prefixo_e_prefere_o_da_agenda(self) -> None:
+        from mcp_engine.modules.agenda.contrato import crp_do_profissional
+
+        emissor = {"crp_ana": "14/00001-2"}
+        assert crp_do_profissional(emissor, "Ana", "CRP 14/03059-0") == "14/03059-0"
+        assert crp_do_profissional(emissor, "Ana", "crp14/03059-0") == "14/03059-0"
+        assert crp_do_profissional(emissor, "Ana", None) == "14/00001-2"
+        assert crp_do_profissional({}, "Ana", "") is None
+
+    def test_contrato_usa_o_crp_do_cadastro_da_agenda(self, engine, fake) -> None:
+        engine.documentos._emissor.pop("crp_ana_souza", None)
+        fake.profissionais = [Profissional("st1", "Ana Souza", "psi", True, "CRP 14/03059-0")]
+        r = pedir(engine)
+        itens = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]["dados"]["campos"]
+        assert not [c for c in itens if c["campo"] == "profissional_crp" and c["faltante"]]
+
+
+class TestEmAtendimentoECrp:
+    def sessao(self, fake, status):
+        agora = datetime.now(UTC).replace(microsecond=0)
+        fake.agendamentos.clear()
+        fake.agendamentos["s1"] = ag("s1", "c1", "Maria Silva", inicio=agora, status=status)
+
+    def status(self, engine, **args) -> dict:
+        como(SEC.perfil)
+        return engine.criar_acao(
+            "agenda.atualizar_status_sessao", {"paciente": "Maria Silva", **args}
+        )
+
+    def test_iniciar_atendimento_de_sessao_confirmada(self, engine, fake) -> None:
+        self.sessao(fake, "CONFIRMED")
+        r = self.status(engine, status="IN_PROGRESS")
+        item = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]
+        assert "em atendimento" in item["resumo"] and "não gera cobrança" in item["dados"]["aviso"]
+        engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        assert fake.agendamentos["s1"].status == "IN_PROGRESS"
+        concluir = self.status(engine, status="COMPLETED")
+        engine.acoes.confirmar(SEC, concluir["acao_id"], PIN)
+        assert fake.agendamentos["s1"].status == "COMPLETED"
+
+    @pytest.mark.parametrize("origem", ["COMPLETED", "NO_SHOW"])
+    def test_nao_inicia_atendimento_de_sessao_encerrada(self, engine, fake, origem) -> None:
+        self.sessao(fake, origem)
+        r = self.status(engine, status="IN_PROGRESS")
+        with pytest.raises(AcaoErro, match="Só dá para iniciar|já está"):
+            engine.acoes.abrir(SEC, r["acao_id"])
+
+    def test_http_traduz_transicao_invalida(self) -> None:
+        import httpx
+
+        provider = TestContratoDoProvider()._http(
+            lambda req: httpx.Response(409, json={"code": "INVALID_STATUS_TRANSITION"})
+        )
+        with pytest.raises(ExecucaoFalhou, match="não permite essa mudança"):
+            provider.atualizar_status(
+                "55555555-5555-4555-8555-555555555555",
+                "IN_PROGRESS",
+                motivo=None,
+                ator="a",
+                trace_id=None,
+            )
+
+    def crp(self, engine, perfil, **args) -> dict:
+        como(perfil)
+        return engine.criar_acao("agenda.definir_crp_profissional", args)
+
+    def test_so_o_gestor_pede_o_cadastro_do_crp(self, engine, fake) -> None:
+        fake.profissionais = [Profissional("st1", "Ana Souza", "psi", True)]
+        r = self.crp(engine, SEC.perfil, profissional="ana souza", crp="CRP 14/03059-0")
+        with pytest.raises(AcaoErro) as exc:
+            engine.acoes.abrir(SEC, r["acao_id"])
+        assert exc.value.status == 403
+        gestor = Identidade(
+            id=GESTOR_PERFIL.identity, perfil=GESTOR_PERFIL, provedor="local", metodo="token"
+        )
+        assert engine.acoes.abrir(gestor, r["acao_id"])["itens"][0]["dados"]["crp"] == (
+            "CRP 14/03059-0"
+        )
+
+    def test_cadastra_o_crp_na_agenda_com_ator(self, engine, fake) -> None:
+        fake.profissionais = [Profissional("st1", "Ana Souza", "psi", True)]
+        r = self.crp(engine, GESTOR_PERFIL, profissional="Ana Souza", crp="14/03059-0")
+        gestor = Identidade(
+            id=GESTOR_PERFIL.identity, perfil=GESTOR_PERFIL, provedor="local", metodo="token"
+        )
+        engine.acoes.atributos.definir_pin("local", gestor.id, "7391", por=gestor.id)
+        engine.acoes.confirmar(gestor, r["acao_id"], "7391")
+        assert fake.crps_escritos[-1] == {
+            "profissional_id": "st1",
+            "crp": "14/03059-0",
+            "ator": gestor.id,
+        }
+        assert fake.profissionais[0].crp == "14/03059-0"
+
+    @pytest.mark.parametrize("crp", ["123", "CRP", "14-03059", "14/03059-00", "x" * 25])
+    def test_crp_em_formato_estranho_e_recusado(self, engine, crp) -> None:
+        r = self.crp(engine, GESTOR_PERFIL, profissional="Ana", crp=crp)
+        assert "acao_id" not in r
+
+    def test_http_put_do_crp(self) -> None:
+        import json
+
+        import httpx
+
+        vistos = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            vistos.append(req)
+            return httpx.Response(200, json={"success": True})
+
+        TestContratoDoProvider()._http(handler).definir_crp(
+            "66666666-6666-4666-8666-666666666666", "CRP 14/1", ator="g@c.com", trace_id="t1"
+        )
+        req = vistos[0]
+        assert req.method == "PUT" and req.url.path.endswith(
+            "/staff/66666666-6666-4666-8666-666666666666/crp"
+        )
+        assert json.loads(req.content) == {"crp": "CRP 14/1"}
+        assert req.headers["x-brm-actor"] == "g@c.com"
 
 
 class TestFatosERegra:

@@ -33,12 +33,22 @@ ROTULOS = {
 }
 
 
+AVISOS = {
+    "IN_PROGRESS": "Entrar em atendimento não gera cobrança.",
+    "COMPLETED": "Concluir uma sessão a fatura na Agenda; a Agenda não avisa o paciente.",
+    "NO_SHOW": "A falta pode gerar cobrança na Agenda; a Agenda não avisa o paciente.",
+    "CANCELLED": "Cancelar pode gerar cobrança de cancelamento tardio; a Agenda não avisa o"
+    " paciente.",
+    "CONFIRMED": "A Agenda não avisa o paciente da confirmação.",
+}
+
+
 class AtualizarStatusArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     agendamento_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,64}$")
     paciente: str | None = Field(default=None, min_length=2, max_length=80)
-    status: Literal["CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELLED"]
+    status: Literal["CONFIRMED", "IN_PROGRESS", "COMPLETED", "NO_SHOW", "CANCELLED"]
     motivo: str | None = Field(default=None, min_length=1, max_length=500)
 
     @model_validator(mode="after")
@@ -52,12 +62,28 @@ class AtualizarStatusArgs(BaseModel):
         return self
 
 
+ORIGENS_ATENDIMENTO = ("PENDING_CONFIRMATION", "WAITING", "CONFIRMED")
+
+
+def _validar_origem(ag: Agendamento, status: str) -> None:
+    if ag.status == status:
+        raise ExecucaoFalhou(f"A sessão já está {ROTULOS[ag.status]} na Agenda.")
+    if status == "IN_PROGRESS" and ag.status not in ORIGENS_ATENDIMENTO:
+        raise ExecucaoFalhou(
+            "Só dá para iniciar o atendimento de uma sessão agendada, aguardando ou confirmada."
+        )
+
+
 def _mais_proxima(sessoes: list[Agendamento], status: str) -> Agendamento:
     agora = datetime.now(UTC)
-    pendentes = [a for a in sessoes if a.status != status]
-    if not pendentes:
+    candidatos = [a for a in sessoes if a.status != status]
+    if status == "IN_PROGRESS":
+        candidatos = [a for a in candidatos if a.status in ORIGENS_ATENDIMENTO]
+    if not candidatos:
+        if status == "IN_PROGRESS" and sessoes:
+            _validar_origem(sessoes[0], status)
         raise ExecucaoFalhou(f"A sessão já está {ROTULOS[status]} na Agenda.")
-    return min(pendentes, key=lambda a: abs((a.inicio_utc - agora).total_seconds()))
+    return min(candidatos, key=lambda a: abs((a.inicio_utc - agora).total_seconds()))
 
 
 def tipo_atualizar_status(
@@ -69,8 +95,7 @@ def tipo_atualizar_status(
                 ag = provider.obter_agendamento(args["agendamento_id"])
                 if ag is None:
                     raise ExecucaoFalhou("Agendamento não encontrado na Agenda.")
-                if ag.status == args["status"]:
-                    raise ExecucaoFalhou(f"A sessão já está {ROTULOS[ag.status]} na Agenda.")
+                _validar_origem(ag, args["status"])
                 return ag
             return _mais_proxima(sessoes_do_paciente(provider, args["paciente"]), args["status"])
 
@@ -93,7 +118,7 @@ def tipo_atualizar_status(
         dados: dict[str, Any] = {
             "status_atual": ag.status,
             "novo_status": args["status"],
-            "aviso": "Concluir uma sessão a fatura na Agenda; a Agenda não avisa o paciente.",
+            "aviso": AVISOS[args["status"]],
         }
         if args.get("motivo"):
             dados["motivo"] = args["motivo"]
@@ -119,8 +144,9 @@ def tipo_atualizar_status(
         nome="atualizar_status_sessao",
         titulo="Atualizar status da sessão",
         descricao=(
-            "Muda o status de uma sessão na Agenda: CONFIRMED (confirmada), COMPLETED (concluída),"
-            " NO_SHOW (falta) ou CANCELLED (cancelada, exige `motivo` e a liberação do gestor)."
+            "Muda o status de uma sessão na Agenda: CONFIRMED (confirmada), IN_PROGRESS (em"
+            " atendimento), COMPLETED (concluída), NO_SHOW (falta) ou CANCELLED (cancelada, exige"
+            " `motivo` e a liberação do gestor)."
             " Informe o `paciente` (nome como o usuário digitou; usa a sessão mais próxima de"
             " agora) ou o `agendamento_id`. Concluir fatura a sessão na Agenda."
         ),

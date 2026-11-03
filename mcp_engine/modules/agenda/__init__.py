@@ -16,6 +16,7 @@ from mcp_engine.modules.agenda.contrato import (
     handler_contratos_pendentes,
     tipo_emitir_contrato,
 )
+from mcp_engine.modules.agenda.crp import tipo_definir_crp
 from mcp_engine.modules.agenda.handlers import criar_handlers
 from mcp_engine.modules.agenda.pagamento import tipo_registrar_pagamento
 from mcp_engine.modules.agenda.provider import (
@@ -77,6 +78,7 @@ class AgendaModule(BaseModule):
         host.registrar_tipo_acao(tipo_emitir_contrato(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_atualizar_status(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_registrar_pagamento(host, self.abrir_provider))
+        host.registrar_tipo_acao(tipo_definir_crp(host, self.abrir_provider))
         host.module_api("financeiro").ao_faltar_paciente(lambda: executar_sincronizacao(host))
 
 

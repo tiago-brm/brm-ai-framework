@@ -95,6 +95,7 @@ class Profissional:
     nome: str
     funcao: str | None
     disponivel: bool
+    crp: str | None = None
 
 
 @dataclass(frozen=True)
@@ -187,6 +188,10 @@ class AgendaCadastroProvider(Protocol):
     ) -> dict[str, Any]: ...
 
     def saldo_cliente(self, customer_id: str) -> dict[str, Any] | None: ...
+
+    def definir_crp(
+        self, profissional_id: str, crp: str | None, *, ator: str, trace_id: str | None
+    ) -> None: ...
 
 
 class AgendaProvider(Protocol):
@@ -451,6 +456,7 @@ class HttpAgendaProvider:
                 nome=_texto(i, "name", obrigatorio=True) or "",
                 funcao=_texto(i, "role"),
                 disponivel=i.get("available") is not False,
+                crp=_texto(i, "crp"),
             )
             for i in _lista(self._get("api/v1/staff", {}))
         ]
@@ -551,6 +557,20 @@ class HttpAgendaCadastroProvider(HttpAgendaProvider):
         return dados
 
     def obter_agendamento(self, agendamento_id: str) -> Agendamento | None:
+        try:
+            alvo = _id_cliente(agendamento_id)
+        except AgendaConfigInvalida:
+            return None
+        codigo, corpo = self._chamar("GET", f"api/v1/appointments/{alvo}")
+        if codigo == 200:
+            item = corpo.get("data", corpo)
+            if not isinstance(item, dict):
+                raise _invalida("agendamento")
+            return _agendamento(item)
+        if codigo == 404 and corpo.get("code") == "APPOINTMENT_NOT_FOUND":
+            return None
+        if codigo not in (404, 400):
+            raise _recusa(codigo, corpo)
         agora = datetime.now(UTC)
         recentes = self.listar_agendamentos(
             de=agora - timedelta(days=JANELA_AGENDAMENTO_DIAS), ate=agora + timedelta(days=1)
@@ -664,6 +684,19 @@ class HttpAgendaCadastroProvider(HttpAgendaProvider):
             raise _recusa(codigo, resposta)
         return resposta
 
+    def definir_crp(
+        self, profissional_id: str, crp: str | None, *, ator: str, trace_id: str | None
+    ) -> None:
+        codigo, resposta = self._chamar(
+            "PUT",
+            f"api/v1/clinic/staff/{_id_cliente(profissional_id)}/crp",
+            corpo={"crp": crp},
+            ator=ator,
+            trace_id=trace_id or uuid.uuid4().hex,
+        )
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
+
     def saldo_cliente(self, customer_id: str) -> dict[str, Any] | None:
         codigo, resposta = self._chamar(
             "GET", f"api/v1/finance/customers/{_id_cliente(customer_id)}/balance"
@@ -673,6 +706,10 @@ class HttpAgendaCadastroProvider(HttpAgendaProvider):
 
 
 _RECUSAS = {
+    "INVALID_STATUS_TRANSITION": "A Agenda não permite essa mudança de status para a situação"
+    " atual da sessão.",
+    "STAFF_NOT_FOUND": "Profissional não encontrado na Agenda.",
+    "INVALID_CRP": "A Agenda recusou o CRP (use um formato como 06/123456).",
     "CUSTOMER_NOT_FOUND": "Paciente não encontrado na Agenda.",
     "PAYMENT_REF_CONFLICT": "Esta referência de pagamento já foi usada em outro pagamento.",
     "APPOINTMENT_NOT_FOUND": "Agendamento não encontrado na Agenda.",

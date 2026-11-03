@@ -40,6 +40,7 @@ class FakeAgendaProvider:
         self.escritas: list[dict[str, Any]] = []
         self.status_escritos: list[dict[str, Any]] = []
         self.pagamentos: list[dict[str, Any]] = []
+        self.crps_escritos: list[dict[str, Any]] = []
         self.saldos: dict[str, dict[str, Any]] = {}
 
     def semear(self, *agendamentos: Agendamento) -> None:
@@ -155,6 +156,18 @@ class FakeAgendaProvider:
             }
         )
         return resposta
+
+    def definir_crp(
+        self, profissional_id: str, crp: str | None, *, ator: str, trace_id: str | None
+    ) -> None:
+        self._checar()
+        alvo = next((p for p in self.profissionais if p.id == profissional_id), None)
+        if alvo is None:
+            raise AgendaErro("Profissional não encontrado na Agenda.")
+        self.profissionais = [
+            replace(p, crp=crp) if p.id == profissional_id else p for p in self.profissionais
+        ]
+        self.crps_escritos.append({"profissional_id": profissional_id, "crp": crp, "ator": ator})
 
     def saldo_cliente(self, customer_id: str) -> dict[str, Any] | None:
         self._checar()

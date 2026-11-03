@@ -63,11 +63,24 @@ def _idade(nascimento: date, em: date) -> int:
     return em.year - nascimento.year - ((em.month, em.day) < (nascimento.month, nascimento.day))
 
 
-def crp_do_profissional(emissor: Mapping[str, str], nome: str | None) -> str | None:
-    """CRP do profissional, da configuração do cliente: chave `crp_<nome_sem_acento_com__>`."""
+def _numero_crp(valor: str | None) -> str | None:
+    """Número do CRP sem o prefixo: "CRP 14/03059-0" e "14/03059-0" viram "14/03059-0"."""
+    if not valor:
+        return None
+    limpo = re.sub(r"^\s*CRP[\s:.-]*", "", valor, flags=re.IGNORECASE).strip()
+    return limpo or None
+
+
+def crp_do_profissional(
+    emissor: Mapping[str, str], nome: str | None, da_agenda: str | None = None
+) -> str | None:
+    """CRP do profissional: o cadastrado na Agenda e, na falta dele, o da configuração do
+    cliente (chave `crp_<nome_sem_acento_com__>`)."""
+    if da_agenda:
+        return _numero_crp(da_agenda)
     if not nome:
         return None
-    return emissor.get("crp_" + _normalizar(nome).replace(" ", "_"))
+    return _numero_crp(emissor.get("crp_" + _normalizar(nome).replace(" ", "_")))
 
 
 def _endereco_dict(endereco: Any) -> dict[str, Any]:
@@ -215,7 +228,9 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
             raise ExecucaoFalhou("Agendamento não encontrado na Agenda.")
         return ag
 
-    def ler(ctx: ContextoAcao, args: dict[str, Any]) -> tuple[Agendamento, FichaCliente]:
+    def ler(
+        ctx: ContextoAcao, args: dict[str, Any]
+    ) -> tuple[Agendamento, FichaCliente, str | None]:
         ag = buscar(args)
         with abrir_provider(host) as provider:
             ficha = provider.obter_cliente(
@@ -224,9 +239,12 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
                 trace_id=ctx.trace_id,
                 finalidade=f"contrato de sessão {args['modelo']}",
             )
+            crp = next(
+                (p.crp for p in provider.listar_profissionais() if p.id == ag.staff_id), None
+            )
         if ficha is None:
             raise ExecucaoFalhou("Paciente do agendamento não encontrado na Agenda.")
-        return ag, ficha
+        return ag, ficha, crp_do_profissional(ctx.documentos.emissor, ag.staff_name, crp)
 
     def resumir(args: dict[str, Any]) -> str:
         alvo = (
@@ -240,13 +258,8 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
         return texto
 
     def carregar(ctx: ContextoAcao, args: dict[str, Any]) -> Previa:
-        ag, ficha = ler(ctx, args)
-        fontes = montar_fontes(
-            ag,
-            ficha,
-            args.get("valores"),
-            crp_do_profissional(ctx.documentos.emissor, ag.staff_name),
-        )
+        ag, ficha, crp = ler(ctx, args)
+        fontes = montar_fontes(ag, ficha, args.get("valores"), crp)
         try:
             linhas = ctx.documentos.previa(args["modelo"], fontes)
         except DocumentoErro as exc:
@@ -298,16 +311,11 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
             provider.atualizar_cliente(ag.customer_id, campos, ator=ctx.ator, trace_id=ctx.trace_id)
 
     def executar(ctx: ContextoAcao, args: dict[str, Any]) -> dict[str, Any]:
-        ag, ficha = ler(ctx, args)
+        ag, ficha, crp = ler(ctx, args)
         try:
             doc = ctx.emitir_documento(
                 args["modelo"],
-                montar_fontes(
-                    ag,
-                    ficha,
-                    args.get("valores"),
-                    crp_do_profissional(ctx.documentos.emissor, ag.staff_name),
-                ),
+                montar_fontes(ag, ficha, args.get("valores"), crp),
                 referencia=referencia_cliente(ag.customer_id),
                 metadados={"agendamento_id": ag.id, "customer_id": ag.customer_id},
                 substitui=args.get("substitui"),

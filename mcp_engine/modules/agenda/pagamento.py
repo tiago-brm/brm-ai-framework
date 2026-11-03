@@ -159,6 +159,11 @@ def tipo_registrar_pagamento(
             dados["saldo_vencido"] = _brl(saldo.get("outstanding"))
             dados["a_vencer_no_mes"] = _brl(saldo.get("accumulating"))
             dados["credito"] = _brl(saldo.get("credit"))
+            if float(saldo.get("outstanding") or 0) <= 0 < float(saldo.get("accumulating") or 0):
+                dados["aviso"] = (
+                    "A fatura do mês ainda está aberta: o valor entra como crédito do paciente e"
+                    " é aplicado quando a fatura fecha."
+                )
         if args.get("observacao"):
             dados["observacao"] = args["observacao"]
         return Previa(
