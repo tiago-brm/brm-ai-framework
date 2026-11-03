@@ -128,6 +128,7 @@ function formatarHora(iso: string): string {
 
 export function AcaoPage({ acaoId }: { acaoId: string }) {
   const [token, setToken] = useState(lerToken());
+  const [digitado, setDigitado] = useState("");
   const [baseUrl, setBaseUrlInput] = useState(getBaseUrl());
   const [eu, setEu] = useState<Eu | null>(null);
   const [acao, setAcao] = useState<Acao | null>(null);
@@ -170,7 +171,10 @@ export function AcaoPage({ acaoId }: { acaoId: string }) {
   function entrar(e: React.FormEvent) {
     e.preventDefault();
     setBaseUrl(baseUrl);
-    guardarToken(token.trim());
+    const novo = digitado.trim();
+    guardarToken(novo);
+    setToken(novo);
+    setDigitado("");
     void carregar();
   }
 
@@ -294,11 +298,11 @@ export function AcaoPage({ acaoId }: { acaoId: string }) {
                 type="password"
                 autoComplete="off"
                 className="input"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
+                value={digitado}
+                onChange={(e) => setDigitado(e.target.value)}
               />
             </div>
-            <button type="submit" className="btn btn-primary w-full" disabled={!token.trim()}>
+            <button type="submit" className="btn btn-primary w-full" disabled={!digitado.trim()}>
               Entrar
             </button>
           </form>
