@@ -473,6 +473,83 @@ class TestPagamentoNaAgenda:
             )
 
 
+class TestContratanteECrp:
+    MODELO = (
+        "---\ndocumento: contrato-sessao\nversao: 3\n---\n"
+        "Psicólogo {{ sessao.profissional }}, CRP {{ profissional.crp }}.\n\n"
+        "Contratante: {% if contratante.e_responsavel %}{{ responsavel.nome }}, CPF"
+        " {{ responsavel.cpf }}, CEP {{ responsavel.endereco.cep }}{% endif %}"
+        "{% if contratante.e_paciente %}{{ paciente.nome }}, CPF {{ paciente.cpf }}{% endif %}.\n\n"
+        "Emitido em {{ emissao.data }}.\n"
+    )
+
+    def _fontes(self, **kw):
+        return montar_fontes(ag("a1"), ficha(**kw), None, "14/03059-0")
+
+    def test_adulto_e_o_proprio_contratante(self) -> None:
+        f = self._fontes()
+        assert f["contratante"] == {"e_responsavel": False, "e_paciente": True}
+        assert f["profissional"]["crp"] == "14/03059-0" and f["emissao"]["data"]
+
+    def test_menor_tem_o_responsavel_como_contratante(self) -> None:
+        resp = Responsavel("Paulo", "11144477735", "pai", None, None, True, ENDERECO)
+        f = self._fontes(nascimento=date(2017, 3, 2), resp=[resp])
+        assert f["contratante"] == {"e_responsavel": True, "e_paciente": False}
+        assert f["responsavel"]["endereco"]["cep"] == "01001000"
+
+    def test_adulto_com_responsavel_financeiro_tambem(self) -> None:
+        resp = Responsavel("Lia", "11144477735", "esposa", None, None, True)
+        assert self._fontes(resp=[resp])["contratante"]["e_responsavel"] is True
+        sem_financeiro = Responsavel("Lia", "11144477735", "esposa", None, None, False)
+        assert self._fontes(resp=[sem_financeiro])["contratante"]["e_responsavel"] is False
+
+    def test_crp_pela_configuracao_ignora_acento_e_caixa(self) -> None:
+        from mcp_engine.modules.agenda.contrato import crp_do_profissional
+
+        emissor = {"crp_joao_conceicao": "14/00001-2"}
+        assert crp_do_profissional(emissor, "João Conceição") == "14/00001-2"
+        assert crp_do_profissional(emissor, "Outra Pessoa") is None
+        assert crp_do_profissional(emissor, None) is None
+
+    def test_modelo_renderiza_a_parte_certa(self) -> None:
+        from mcp_engine.core.documentos import parse_modelo, renderizar, resolver_valores
+
+        m = parse_modelo(self.MODELO)
+        adulto = renderizar(m, resolver_valores(m, self._fontes()))
+        assert "Contratante: Maria Silva, CPF 529.982.247-25." in adulto
+        assert "CEP" not in adulto and "CRP 14/03059-0" in adulto
+        resp = Responsavel("Paulo", "11144477735", "pai", None, None, True, ENDERECO)
+        menor = renderizar(
+            m, resolver_valores(m, self._fontes(nascimento=date(2017, 3, 2), resp=[resp]))
+        )
+        assert "Contratante: Paulo, CPF 111.444.777-35, CEP 01001000." in menor
+
+    def test_endereco_do_responsavel_faltante_e_gravado_na_agenda(self, engine, fake) -> None:
+        vault = engine._vault_root() / "_modelos"
+        (vault / f"{MODELO_CONTRATO}.md").write_text(self.MODELO)
+        como(GESTOR_PERFIL)
+        assert engine.documento_aprovar_modelo(MODELO_CONTRATO)["allowed"]
+        fake.fichas["c1"] = ficha(
+            nascimento=date(2017, 3, 2),
+            resp=[Responsavel("Paulo", "11144477735", "pai", None, None, True)],
+        )
+        r = pedir(engine)
+        sem_crp = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]["campos_faltantes"]
+        assert [(f["nome"], f["editavel"]) for f in sem_crp][0] == ("profissional_crp", False)
+        engine.documentos._emissor["crp_ana_souza"] = "14/03059-0"
+        faltantes = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]["campos_faltantes"]
+        assert [f["nome"] for f in faltantes] == ["responsavel_endereco_cep"]
+        assert faltantes[0]["editavel"] is True
+        engine.acoes.confirmar(
+            SEC,
+            r["acao_id"],
+            PIN,
+            [{"item": 0, "nome": "responsavel_endereco_cep", "valor": "79102-420"}],
+        )
+        assert fake.escritas[-1]["campos"] == {"responsavel": {"endereco": {"cep": "79102420"}}}
+        assert fake.fichas["c1"].responsaveis[0].endereco.cep == "79102420"
+
+
 class TestFatosERegra:
     def avaliar(self, engine, perfil=SEC.perfil) -> dict:
         como(perfil)

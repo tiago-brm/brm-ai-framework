@@ -123,6 +123,7 @@ class Responsavel:
     telefone: str | None = None
     email: str | None = None
     financeiro: bool = False
+    endereco: Endereco | None = None
 
 
 @dataclass(frozen=True)
@@ -732,20 +733,24 @@ def _responsavel(item: dict[str, Any]) -> Responsavel:
         telefone=_texto(item, "telefone"),
         email=_texto(item, "email"),
         financeiro=item.get("financeiro") is True,
+        endereco=_endereco(item.get("endereco")),
+    )
+
+
+def _endereco(ender: Any) -> Endereco | None:
+    if not isinstance(ender, dict):
+        return None
+    return Endereco(
+        **{
+            c: _texto(ender, c)
+            for c in ("cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf")
+        }
     )
 
 
 def _ficha(dados: dict[str, Any]) -> FichaCliente:
     p = dados["paciente"]
-    ender = p.get("endereco")
-    endereco = None
-    if isinstance(ender, dict):
-        endereco = Endereco(
-            **{
-                c: _texto(ender, c)
-                for c in ("cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf")
-            }
-        )
+    endereco = _endereco(p.get("endereco"))
     return FichaCliente(
         id=_texto(p, "id", obrigatorio=True) or "",
         nome=_texto(p, "nome", obrigatorio=True) or "",

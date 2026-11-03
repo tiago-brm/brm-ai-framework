@@ -128,7 +128,7 @@ def _tipo_por_nome(folha: str) -> TipoCampo:
         return "data"
     if folha == "preco" or folha.startswith("valor"):
         return "dinheiro"
-    if folha == "menor_de_idade":
+    if folha == "menor_de_idade" or folha.startswith(("e_", "tem_")):
         return "booleano"
     return "texto"
 
@@ -695,6 +695,10 @@ class ServicoDocumentos:
         self._vault_root = Path(vault_root)
         self._emissor = dict(dados_do_emissor)
         self._auditar = auditar
+
+    @property
+    def emissor(self) -> dict[str, str]:
+        return dict(self._emissor)
 
     def modelos(self) -> tuple[dict[str, ModeloDocumento], dict[str, str]]:
         return carregar_modelos(self._vault_root)

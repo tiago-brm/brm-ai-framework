@@ -8,7 +8,7 @@ O framework não copia o cadastro: a ficha é lida da Agenda na hora (G10/G11), 
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any
 
@@ -48,6 +48,10 @@ _EDITAVEIS: dict[str, tuple[str, ...]] = {
         f"responsavel.{c}": ("responsavel", c)
         for c in ("nome", "cpf", "parentesco", "telefone", "email")
     },
+    **{
+        f"responsavel.endereco.{c}": ("responsavel", "endereco", c)
+        for c in ("cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf")
+    },
 }
 
 
@@ -59,8 +63,25 @@ def _idade(nascimento: date, em: date) -> int:
     return em.year - nascimento.year - ((em.month, em.day) < (nascimento.month, nascimento.day))
 
 
+def crp_do_profissional(emissor: Mapping[str, str], nome: str | None) -> str | None:
+    """CRP do profissional, da configuração do cliente: chave `crp_<nome_sem_acento_com__>`."""
+    if not nome:
+        return None
+    return emissor.get("crp_" + _normalizar(nome).replace(" ", "_"))
+
+
+def _endereco_dict(endereco: Any) -> dict[str, Any]:
+    return {
+        c: getattr(endereco, c) if endereco else None
+        for c in ("cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf")
+    }
+
+
 def montar_fontes(
-    ag: Agendamento, ficha: FichaCliente, livre: dict[str, str] | None = None
+    ag: Agendamento,
+    ficha: FichaCliente,
+    livre: dict[str, str] | None = None,
+    crp: str | None = None,
 ) -> dict[str, Any]:
     inicio = para_local(ag.inicio_utc, FUSO_PADRAO)
     menor = None if ficha.nascimento is None else _idade(ficha.nascimento, inicio.date()) < 18
@@ -68,6 +89,7 @@ def montar_fontes(
         ficha.responsaveis[0] if ficha.responsaveis else None
     )
     endereco = ficha.endereco
+    e_responsavel = bool(menor and responsavel) or bool(responsavel and responsavel.financeiro)
     return {
         "livre": dict(livre or {}),
         "paciente": {
@@ -77,15 +99,18 @@ def montar_fontes(
             "telefone": ficha.telefone,
             "email": ficha.email,
             "menor_de_idade": menor,
-            "endereco": {
-                c: getattr(endereco, c) if endereco else None
-                for c in ("cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf")
-            },
+            "endereco": _endereco_dict(endereco),
         },
         "responsavel": {
-            c: getattr(responsavel, c) if responsavel else None
-            for c in ("nome", "cpf", "parentesco", "telefone", "email")
+            **{
+                c: getattr(responsavel, c) if responsavel else None
+                for c in ("nome", "cpf", "parentesco", "telefone", "email")
+            },
+            "endereco": _endereco_dict(responsavel.endereco if responsavel else None),
         },
+        "contratante": {"e_responsavel": e_responsavel, "e_paciente": not e_responsavel},
+        "profissional": {"nome": ag.staff_name, "crp": crp},
+        "emissao": {"data": datetime.now(FUSO_PADRAO).date().isoformat()},
         "sessao": {
             "agendamento_id": ag.id,
             "data": inicio.date().isoformat(),
@@ -216,7 +241,12 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
 
     def carregar(ctx: ContextoAcao, args: dict[str, Any]) -> Previa:
         ag, ficha = ler(ctx, args)
-        fontes = montar_fontes(ag, ficha, args.get("valores"))
+        fontes = montar_fontes(
+            ag,
+            ficha,
+            args.get("valores"),
+            crp_do_profissional(ctx.documentos.emissor, ag.staff_name),
+        )
         try:
             linhas = ctx.documentos.previa(args["modelo"], fontes)
         except DocumentoErro as exc:
@@ -259,10 +289,10 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
             if caminho is None:
                 raise ExecucaoFalhou(f"O campo {nome!r} não é gravado na Agenda.")
             limpo = _validar_campo(origens[nome], valor)
-            if len(caminho) == 1:
-                campos[caminho[0]] = limpo
-            else:
-                campos.setdefault(caminho[0], {})[caminho[1]] = limpo
+            pasta = campos
+            for parte in caminho[:-1]:
+                pasta = pasta.setdefault(parte, {})
+            pasta[caminho[-1]] = limpo
         ag = buscar(args)
         with abrir_provider(host) as provider:
             provider.atualizar_cliente(ag.customer_id, campos, ator=ctx.ator, trace_id=ctx.trace_id)
@@ -272,7 +302,12 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
         try:
             doc = ctx.emitir_documento(
                 args["modelo"],
-                montar_fontes(ag, ficha, args.get("valores")),
+                montar_fontes(
+                    ag,
+                    ficha,
+                    args.get("valores"),
+                    crp_do_profissional(ctx.documentos.emissor, ag.staff_name),
+                ),
                 referencia=referencia_cliente(ag.customer_id),
                 metadados={"agendamento_id": ag.id, "customer_id": ag.customer_id},
                 substitui=args.get("substitui"),

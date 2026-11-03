@@ -194,7 +194,10 @@ class FakeAgendaProvider:
                 mudancas["endereco"] = replace(ficha.endereco or Endereco(), **valor)
             elif chave == "responsavel":
                 atual = ficha.responsaveis[0] if ficha.responsaveis else Responsavel()
-                mudancas["responsaveis"] = (replace(atual, **valor), *ficha.responsaveis[1:])
+                novos = dict(valor)
+                if "endereco" in novos:
+                    novos["endereco"] = replace(atual.endereco or Endereco(), **novos["endereco"])
+                mudancas["responsaveis"] = (replace(atual, **novos), *ficha.responsaveis[1:])
             elif chave == "nascimento":
                 mudancas["nascimento"] = date.fromisoformat(valor)
             else:
