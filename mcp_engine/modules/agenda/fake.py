@@ -38,6 +38,7 @@ class FakeAgendaProvider:
         self.fichas: dict[str, FichaCliente] = {}
         self.historicos: dict[str, list[StatusSessao]] = {}
         self.escritas: list[dict[str, Any]] = []
+        self.status_escritos: list[dict[str, Any]] = []
 
     def semear(self, *agendamentos: Agendamento) -> None:
         for a in agendamentos:
@@ -111,6 +112,24 @@ class FakeAgendaProvider:
                 if a.customer_id == customer_id
             ),
             key=lambda s: s.inicio_utc,
+        )
+
+    def atualizar_status(
+        self,
+        agendamento_id: str,
+        status: str,
+        *,
+        motivo: str | None,
+        ator: str,
+        trace_id: str | None,
+    ) -> None:
+        self._checar()
+        atual = self.agendamentos.get(agendamento_id)
+        if atual is None:
+            raise AgendaErro("Agendamento não encontrado na Agenda.")
+        self.agendamentos[agendamento_id] = replace(atual, status=status)
+        self.status_escritos.append(
+            {"agendamento_id": agendamento_id, "status": status, "motivo": motivo, "ator": ator}
         )
 
     def atualizar_cliente(

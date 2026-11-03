@@ -162,6 +162,16 @@ class AgendaCadastroProvider(Protocol):
         self, customer_id: str, campos: dict[str, Any], *, ator: str, trace_id: str | None
     ) -> None: ...
 
+    def atualizar_status(
+        self,
+        agendamento_id: str,
+        status: str,
+        *,
+        motivo: str | None,
+        ator: str,
+        trace_id: str | None,
+    ) -> None: ...
+
 
 class AgendaProvider(Protocol):
     def listar_agendamentos(
@@ -584,8 +594,37 @@ class HttpAgendaCadastroProvider(HttpAgendaProvider):
         if codigo != 200:
             raise _recusa(codigo, resposta)
 
+    def atualizar_status(
+        self,
+        agendamento_id: str,
+        status: str,
+        *,
+        motivo: str | None,
+        ator: str,
+        trace_id: str | None,
+    ) -> None:
+        corpo: dict[str, Any] = {"status": status}
+        if motivo:
+            corpo["cancel_reason"] = motivo
+        codigo, resposta = self._chamar(
+            "PATCH",
+            f"api/v1/clinic/appointments/{_id_cliente(agendamento_id)}/status",
+            corpo=corpo,
+            ator=ator,
+            trace_id=trace_id or uuid.uuid4().hex,
+        )
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
+
 
 _RECUSAS = {
+    "APPOINTMENT_NOT_FOUND": "Agendamento não encontrado na Agenda.",
+    "SPLIT_RULE_MISSING": "A Agenda não tem regra de repasse para esse profissional.",
+    "PRICE_UNRESOLVED": "A Agenda não conseguiu definir o preço dessa sessão.",
+    "STAFF_NOT_IN_LOCATION": "O profissional não atende na unidade dessa sessão.",
+    "LOCATION_REQUIRED": "A sessão precisa de uma unidade na Agenda.",
+    "SLOT_UNAVAILABLE": "Conflito de horário do profissional na Agenda.",
+    "NOT_CLINIC_TENANT": "Esta Agenda não está configurada como clínica.",
     "CPF_ALREADY_REGISTERED": "Este CPF já está cadastrado para outro paciente na Agenda.",
     "INVALID_CPF": "A Agenda recusou o CPF (dígitos verificadores inválidos).",
     "INVALID_CEP": "A Agenda recusou o CEP.",

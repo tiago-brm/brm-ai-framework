@@ -10,6 +10,7 @@ import pytest
 
 from mcp_engine.core.acoes import AcaoErro
 from mcp_engine.core.auth import Role, UserProfile, current_user_var, set_current_user
+from mcp_engine.core.executor import ExecucaoFalhou
 from mcp_engine.core.identidade import Identidade
 from mcp_engine.core.mcp_server import BRMEngine
 from mcp_engine.modules.agenda import MODULE
@@ -258,6 +259,95 @@ class TestPacientePeloNome:
         assert r.get("allowed") is False or "acao_id" not in r
         r = engine.criar_acao("agenda.emitir_contrato_sessao", {})
         assert r.get("allowed") is False or "acao_id" not in r
+
+
+class TestStatusDaSessao:
+    TIPO = "agenda.atualizar_status_sessao"
+
+    def pedir_status(self, engine, **args) -> dict:
+        como(SEC.perfil)
+        return engine.criar_acao(self.TIPO, args)
+
+    def sessao(self, fake, id_, dias=0, status="CONFIRMED", nome="Maria Silva", cust="c1"):
+        agora = datetime.now(UTC).replace(microsecond=0)
+        fake.agendamentos[id_] = ag(
+            id_, cust, nome, inicio=agora + timedelta(days=dias), status=status
+        )
+
+    def test_conclui_a_sessao_mais_proxima_e_atualiza_a_agenda(self, engine, fake) -> None:
+        fake.agendamentos.clear()
+        self.sessao(fake, "antiga", dias=-30, status="COMPLETED")
+        self.sessao(fake, "hoje", dias=0)
+        self.sessao(fake, "futura", dias=7)
+        r = self.pedir_status(engine, paciente="maria silva", status="COMPLETED")
+        assert "acao_id" in r
+        pagina = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]
+        assert "Maria Silva" in pagina["resumo"] and "concluída" in pagina["resumo"]
+        assert pagina["dados"]["status_atual"] == "CONFIRMED"
+        saida = engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        assert saida["status"] == "confirmada"
+        assert fake.agendamentos["hoje"].status == "COMPLETED"
+        assert fake.agendamentos["futura"].status == "CONFIRMED"
+        escrita = fake.status_escritos[-1]
+        assert escrita["agendamento_id"] == "hoje" and escrita["ator"] == SEC.id
+
+    def test_pelo_id_do_agendamento(self, engine, fake) -> None:
+        r = self.pedir_status(engine, agendamento_id="a1", status="NO_SHOW")
+        saida = engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        assert saida["status"] == "confirmada" and fake.agendamentos["a1"].status == "NO_SHOW"
+
+    def test_mesmo_status_e_recusado(self, engine, fake) -> None:
+        r = self.pedir_status(engine, agendamento_id="a1", status="COMPLETED")
+        with pytest.raises(AcaoErro, match="já está concluída"):
+            engine.acoes.abrir(SEC, r["acao_id"])
+
+    def test_cancelar_exige_motivo_e_liberacao_do_gestor(self, engine, fake) -> None:
+        sem_motivo = self.pedir_status(engine, agendamento_id="a1", status="CANCELLED")
+        assert "acao_id" not in sem_motivo
+        r = self.pedir_status(engine, agendamento_id="a1", status="CANCELLED", motivo="Pediu")
+        assert engine.acoes.abrir(SEC, r["acao_id"])["requer"] == "liberacao_gestor"
+        with pytest.raises(AcaoErro):
+            engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        assert fake.agendamentos["a1"].status == "COMPLETED"
+
+    def test_motivo_so_vale_para_cancelamento_e_status_novo_e_recusado(self, engine) -> None:
+        for args in (
+            {"agendamento_id": "a1", "status": "COMPLETED", "motivo": "x"},
+            {"agendamento_id": "a1", "status": "IN_PROGRESS"},
+            {"agendamento_id": "a1", "paciente": "Maria", "status": "COMPLETED"},
+        ):
+            assert "acao_id" not in self.pedir_status(engine, **args)
+
+    def test_http_patch_no_endpoint_de_status_com_ator_e_trace(self) -> None:
+        import httpx
+
+        aid = "22222222-2222-4222-8222-222222222222"
+        vistos = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            vistos.append(req)
+            return httpx.Response(200, json={"success": True, "data": {"id": aid}})
+
+        TestContratoDoProvider()._http(handler).atualizar_status(
+            aid, "CANCELLED", motivo="Pediu", ator="ana@c.com", trace_id="tr1"
+        )
+        req = vistos[0]
+        assert req.method == "PATCH"
+        assert req.url.path.endswith(f"/api/v1/clinic/appointments/{aid}/status")
+        assert req.headers["x-brm-actor"] == "ana@c.com" and req.headers["x-brm-trace-id"] == "tr1"
+        import json
+
+        assert json.loads(req.content) == {"status": "CANCELLED", "cancel_reason": "Pediu"}
+
+    def test_http_traduz_recusas_da_agenda(self) -> None:
+        import httpx
+
+        aid = "22222222-2222-4222-8222-222222222222"
+        provider = TestContratoDoProvider()._http(
+            lambda req: httpx.Response(422, json={"code": "PRICE_UNRESOLVED", "error": "x"})
+        )
+        with pytest.raises(ExecucaoFalhou, match="definir o preço"):
+            provider.atualizar_status(aid, "COMPLETED", motivo=None, ator="a", trace_id=None)
 
 
 class TestFatosERegra:

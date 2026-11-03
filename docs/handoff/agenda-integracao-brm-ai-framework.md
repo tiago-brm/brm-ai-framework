@@ -39,7 +39,9 @@ Secretária no Claude ──► BRM AI Framework ──► BRM Agenda
 - Ficha: `GET /api/v1/customers/:id/ficha` mascarada para consultar o histórico e a pendência. O
   CPF e o endereço completos (`unmask=1`, com `purpose`) só são pedidos ao preparar ou emitir o
   contrato, sempre com `X-BRM-Actor` e `X-BRM-Trace-Id`.
-- Escrita: só `PATCH /api/v1/customers/:id/ficha`, com ator e trace, para gravar o campo que faltava.
+- Escrita: `PATCH /api/v1/customers/:id/ficha`, com ator e trace, para gravar o campo que faltava, e
+  `PATCH /api/v1/clinic/appointments/:id/status`, com ator e trace, para mudar o status da sessão
+  (sempre depois de a pessoa confirmar na Central de Ações; cancelar exige liberação do gestor).
   Como a Agenda substitui a lista de responsáveis, o framework reenvia todos pelo `id` e muda só o
   responsável financeiro (ou o primeiro).
 - Login: valida o JWT do Supabase e lê o papel da claim `brm_role` (hook de token do Agenda).
@@ -71,6 +73,7 @@ Situação em 2026-11-01. G10, G11, G12, G14, G15 e G16 estão entregues; o fram
 | G15 | Primeira sessão concluída por paciente | Entregue (`historico` e `primeira_sessao_concluida_em` na ficha; `first-session-completed`) |
 | G16 | Papel e tenant no JWT | Entregue (`brm_role`, `brm_tenant_id`) |
 | G17 | `GET /api/v1/appointments/:id` (ou filtro `id`) | **Novo.** O contrato parte de um agendamento e hoje o framework o procura na lista dos últimos 120 dias |
+| G18 | `PATCH /api/v1/clinic/appointments/:id/status` aceitar `IN_PROGRESS` (em atendimento) | **Novo.** A rota já existe e o framework a usa para concluir, faltar, confirmar e cancelar (com ator e trace). A secretária quer marcar "em atendimento" pelo chat e hoje a rota só aceita `CONFIRMED`, `COMPLETED`, `NO_SHOW` e `CANCELLED` |
 
 **CPF e endereço são dado pessoal (LGPD).** Pedimos que a entrega venha com a regra de quem vê o CPF na
 tela do Agenda e com máscara na API de leitura. O framework só desmascara na hora de emitir o documento.

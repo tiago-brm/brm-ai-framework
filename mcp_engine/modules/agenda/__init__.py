@@ -23,6 +23,7 @@ from mcp_engine.modules.agenda.provider import (
     HttpAgendaCadastroProvider,
 )
 from mcp_engine.modules.agenda.sincronizacao import executar_sincronizacao
+from mcp_engine.modules.agenda.status_sessao import tipo_atualizar_status
 from mcp_engine.modules.agenda.tempo import FUSO_PADRAO
 
 __all__ = ["MODULE", "AgendaModule", "executar_sincronizacao"]
@@ -73,6 +74,7 @@ class AgendaModule(BaseModule):
             "contrato", fatos_contrato(host, self.abrir_provider), FATOS_CONTRATO
         )
         host.registrar_tipo_acao(tipo_emitir_contrato(host, self.abrir_provider))
+        host.registrar_tipo_acao(tipo_atualizar_status(host, self.abrir_provider))
         host.module_api("financeiro").ao_faltar_paciente(lambda: executar_sincronizacao(host))
 
 

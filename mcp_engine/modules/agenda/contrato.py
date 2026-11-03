@@ -155,7 +155,7 @@ class EmitirContratoArgs(BaseModel):
         return self
 
 
-def resolver_paciente(provider: Any, nome: str) -> Agendamento:
+def sessoes_do_paciente(provider: Any, nome: str) -> list[Agendamento]:
     agora = datetime.now(UTC)
     itens = provider.listar_agendamentos(
         de=agora - timedelta(days=JANELA_AGENDAMENTO_DIAS), ate=agora + timedelta(days=30)
@@ -171,6 +171,11 @@ def resolver_paciente(provider: Any, nome: str) -> Agendamento:
         raise ExecucaoFalhou(
             "Mais de um paciente corresponde a esse nome; informe o nome completo."
         )
+    return achados
+
+
+def resolver_paciente(provider: Any, nome: str) -> Agendamento:
+    achados = sessoes_do_paciente(provider, nome)
     concluidas = [a for a in achados if a.status == "COMPLETED"]
     return max(concluidas or achados, key=lambda a: a.inicio_utc)
 
