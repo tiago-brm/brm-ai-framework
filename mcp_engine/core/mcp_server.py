@@ -1761,7 +1761,10 @@ def _server_instructions(engine: BRMEngine) -> str:
         "tool; se houver mais de um candidato, pergunte ao usuário antes de agir. Nunca "
         "informe fatos de segurança por conta própria (vínculo, matrícula, frequência, idade): "
         "o motor os calcula. Se uma ação for negada ou ficar aguardando aprovação, explique o "
-        "motivo e o proximo_passo ao usuário e não tente contornar a regra."
+        "motivo e o proximo_passo ao usuário e não tente contornar a regra. Para alterar algo "
+        "em um sistema de origem, emitir um documento ou fazer qualquer ação com efeito, use a "
+        "Central de Ações: consulte tipos_de_acao e gere o link com criar_acao. Só diga que "
+        "algo não é possível depois de consultar tipos_de_acao."
     )
     if engine.foco_trabalho:
         lines.append(engine.foco_trabalho)
