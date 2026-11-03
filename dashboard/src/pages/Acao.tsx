@@ -84,7 +84,7 @@ type Acao = {
   acao_id: string;
   status: string;
   resumo_pedido: string;
-  voce: string;
+  voce: { identidade: string; papel: string };
   pedido_por: string;
   pedido_em: string;
   expira_em: string;
@@ -348,7 +348,7 @@ export function AcaoPage({ acaoId }: { acaoId: string }) {
           <div className="card-body space-y-4">
             <p className="hint">
               Pedido por {acao.pedido_por} em {formatarHora(acao.pedido_em)}. Vale até{" "}
-              {formatarHora(acao.expira_em)}. Você é {acao.voce}.
+              {formatarHora(acao.expira_em)}. Você é {acao.voce.identidade}.
             </p>
 
             {acao.aviso && (
