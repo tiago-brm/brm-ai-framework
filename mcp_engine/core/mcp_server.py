@@ -1915,8 +1915,9 @@ def build_server(engine: BRMEngine) -> RBACFastMCP:
     def criar_acao(tipo: str, argumentos: dict[str, Any] | None = None) -> dict[str, Any]:
         """Prepara uma ação (efeito ou dado pessoal) para a pessoa confirmar na Central de
         Ações e devolve só o link e um resumo. Mostre o link ao usuário; nada é executado aqui.
-        Use identificadores (ids), nunca dados pessoais, nos argumentos. Tipos e argumentos em
-        tipos_de_acao. Ex.: tipo="nucleo.executar_skill",
+        Use identificadores (ids), nunca dados pessoais, nos argumentos; a exceção é um nome
+        digitado pelo próprio usuário, quando o tipo pedir. Tipos e argumentos em tipos_de_acao.
+        Ex.: tipo="nucleo.executar_skill",
         argumentos={"skill": "registrar_recebimento", "argumentos": {...}}."""
         return engine.criar_acao(tipo, argumentos)
 

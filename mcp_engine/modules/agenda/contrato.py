@@ -9,16 +9,17 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from mcp_engine.core.acoes import CampoFaltante, ContextoAcao, Previa, TipoAcao
 from mcp_engine.core.documentos import DocumentoErro, cpf_valido
 from mcp_engine.core.executor import ExecucaoFalhou, Handler, HandlerContext
 from mcp_engine.modules import ModuleHost
 from mcp_engine.modules.agenda.provider import (
+    JANELA_AGENDAMENTO_DIAS,
     AgendaConfigInvalida,
     Agendamento,
     AgendaRecursoIndisponivel,
@@ -139,17 +140,46 @@ def _validar_campo(origem: str, valor: str) -> str:
 class EmitirContratoArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    agendamento_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    agendamento_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    paciente: str | None = Field(default=None, min_length=2, max_length=80)
     modelo: str = Field(default=MODELO_CONTRATO, pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
     substitui: str | None = Field(default=None, pattern=r"^[0-9a-f]{32}$")
     valores: dict[Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,47}$")], str] = (
         Field(default_factory=dict, max_length=20)
     )
 
+    @model_validator(mode="after")
+    def _uma_referencia(self) -> EmitirContratoArgs:
+        if (self.agendamento_id is None) == (self.paciente is None):
+            raise ValueError("informe agendamento_id ou paciente (um dos dois)")
+        return self
+
+
+def resolver_paciente(provider: Any, nome: str) -> Agendamento:
+    agora = datetime.now(UTC)
+    itens = provider.listar_agendamentos(
+        de=agora - timedelta(days=JANELA_AGENDAMENTO_DIAS), ate=agora + timedelta(days=30)
+    )
+    alvo = _normalizar(nome)
+    achados = [a for a in itens if a.status != "CANCELLED" and alvo in _normalizar(a.customer_name)]
+    achados = [a for a in achados if _normalizar(a.customer_name) == alvo] or achados
+    if not achados:
+        raise ExecucaoFalhou(
+            f"Nenhuma sessão desse paciente nos últimos {JANELA_AGENDAMENTO_DIAS} dias na Agenda."
+        )
+    if len({a.customer_id for a in achados}) > 1:
+        raise ExecucaoFalhou(
+            "Mais de um paciente corresponde a esse nome; informe o nome completo."
+        )
+    concluidas = [a for a in achados if a.status == "COMPLETED"]
+    return max(concluidas or achados, key=lambda a: a.inicio_utc)
+
 
 def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost], Any]) -> TipoAcao:
     def buscar(args: dict[str, Any]) -> Agendamento:
         with abrir_provider(host) as provider:
+            if not args.get("agendamento_id"):
+                return resolver_paciente(provider, args["paciente"])
             ag = provider.obter_agendamento(args["agendamento_id"])
         if ag is None:
             raise ExecucaoFalhou("Agendamento não encontrado na Agenda.")
@@ -169,7 +199,12 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
         return ag, ficha
 
     def resumir(args: dict[str, Any]) -> str:
-        texto = f"Emitir contrato ({args['modelo']}) da sessão {args['agendamento_id']}"
+        alvo = (
+            f"da sessão {args['agendamento_id']}"
+            if args.get("agendamento_id")
+            else f"do paciente {args['paciente']}"
+        )
+        texto = f"Emitir contrato ({args['modelo']}) {alvo}"
         if args.get("substitui"):
             texto += f", corrigindo o documento {args['substitui']}"
         return texto
@@ -246,7 +281,9 @@ def tipo_emitir_contrato(host: ModuleHost, abrir_provider: Callable[[ModuleHost]
         titulo="Emitir contrato de sessão",
         descricao=(
             "Gera o PDF do contrato a partir do modelo aprovado e dos dados lidos da Agenda no"
-            " momento; campo faltante é preenchido na página e gravado na Agenda."
+            " momento; campo faltante é preenchido na página e gravado na Agenda. Informe o"
+            " `paciente` (nome como o usuário digitou; a sessão mais recente dele é usada) ou o"
+            " `agendamento_id`. O modelo padrão é contrato-sessao."
         ),
         esquema=EmitirContratoArgs,
         resumir=resumir,

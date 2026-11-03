@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import shutil
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -199,6 +199,65 @@ class TestFluxo:
         with pytest.raises(AcaoErro) as exc:
             engine.acoes.abrir(SEC, r["acao_id"])
         assert exc.value.status == 503
+
+
+class TestPacientePeloNome:
+    def pedir_nome(self, engine, nome="maria silva", **args) -> dict:
+        como(SEC.perfil)
+        return engine.criar_acao("agenda.emitir_contrato_sessao", {"paciente": nome, **args})
+
+    def sessao(self, fake, id_, nome="Maria Silva", cust="c1", dias=-1, status="COMPLETED"):
+        agora = datetime.now(UTC).replace(microsecond=0)
+        fake.agendamentos[id_] = ag(
+            id_, cust, nome, inicio=agora + timedelta(days=dias), status=status
+        )
+
+    def test_resolve_a_sessao_mais_recente_concluida_sem_expor_ids(self, engine, fake) -> None:
+        aprovar(engine)
+        fake.agendamentos.clear()
+        self.sessao(fake, "velha", dias=-20)
+        self.sessao(fake, "nova", dias=-2)
+        self.sessao(fake, "futura", dias=3, status="CONFIRMED")
+        r = self.pedir_nome(engine)
+        assert "nova" not in str(r) and "customer" not in str(r)
+        saida = engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        doc = engine.documentos.store.obter(saida["resultado"][0]["documento_id"])
+        assert doc.metadados["agendamento_id"] == "nova"
+
+    def test_sem_concluida_usa_a_mais_recente_nao_cancelada(self, engine, fake) -> None:
+        aprovar(engine)
+        fake.agendamentos.clear()
+        self.sessao(fake, "cancelada", dias=1, status="CANCELLED")
+        self.sessao(fake, "hoje", dias=0, status="CONFIRMED")
+        saida = engine.acoes.confirmar(SEC, self.pedir_nome(engine)["acao_id"], PIN)
+        doc = engine.documentos.store.obter(saida["resultado"][0]["documento_id"])
+        assert doc.metadados["agendamento_id"] == "hoje"
+
+    def test_nome_ambiguo_pede_nome_completo(self, engine, fake) -> None:
+        fake.agendamentos.clear()
+        self.sessao(fake, "s1", nome="Tiago Silva", cust="c1")
+        self.sessao(fake, "s2", nome="Tiago Souza", cust="c2")
+        r = self.pedir_nome(engine, "tiago")
+        with pytest.raises(AcaoErro, match="nome completo"):
+            engine.acoes.abrir(SEC, r["acao_id"])
+        self.sessao(fake, "s3", nome="Tiago Silva", cust="c1", dias=-3)
+        assert engine.acoes.abrir(SEC, self.pedir_nome(engine, "Tiago Silva")["acao_id"])
+
+    def test_sem_sessao_na_janela(self, engine, fake) -> None:
+        fake.agendamentos.clear()
+        self.sessao(fake, "antiga", dias=-400)
+        r = self.pedir_nome(engine)
+        with pytest.raises(AcaoErro, match="Nenhuma sessão"):
+            engine.acoes.abrir(SEC, r["acao_id"])
+
+    def test_exige_exatamente_uma_referencia(self, engine) -> None:
+        como(SEC.perfil)
+        r = engine.criar_acao(
+            "agenda.emitir_contrato_sessao", {"paciente": "Maria", "agendamento_id": "a1"}
+        )
+        assert r.get("allowed") is False or "acao_id" not in r
+        r = engine.criar_acao("agenda.emitir_contrato_sessao", {})
+        assert r.get("allowed") is False or "acao_id" not in r
 
 
 class TestFatosERegra:
