@@ -8,7 +8,7 @@ from datetime import date
 from typing import Any
 
 from mcp_engine.core.executor import EVENTOS_CHAVE, HandlerContext
-from mcp_engine.modules.financeiro import consultas, lancamentos, params, sessoes
+from mcp_engine.modules.financeiro import consultas, gancho, lancamentos, params, sessoes
 from mcp_engine.modules.financeiro.db import (
     ErroFinanceiro,
     abrir,
@@ -124,6 +124,28 @@ def _paciente(con: sqlite3.Connection, nome: str) -> sqlite3.Row | None:
     return rows[0] if rows else None
 
 
+PACIENTE_AUSENTE = (
+    "Paciente não encontrado pelo nome completo informado: confira como está cadastrado na"
+    " Agenda (a lista é atualizada automaticamente)."
+)
+
+
+def _garantir_paciente(ctx: HandlerContext, nome: str) -> None:
+    """Se o paciente não está no ledger, pede a atualização da lista antes de registrar."""
+    caminho = caminho_ledger(ctx.data_root, ctx.client_id)
+    con = None
+    try:
+        con = abrir(caminho)
+        if _paciente(con, nome) is not None:
+            return
+    except (sqlite3.Error, ErroFinanceiro):
+        return
+    finally:
+        if con is not None:
+            con.close()
+    gancho.atualizar(caminho)
+
+
 def _id_por_nome(con: sqlite3.Connection, tabela: str, nome: str, rotulo: str) -> int:
     campo = "nome_norm" if tabela in ("profissional",) else "nome"
     valor = normalizar_nome(nome) if campo == "nome_norm" else nome
@@ -146,6 +168,8 @@ def _recusa(
 
 
 def registrar_recebimento(ctx: HandlerContext, args: dict[str, Any]) -> dict[str, Any]:
+    _garantir_paciente(ctx, _texto(args, "paciente", obrigatorio=True, maximo=160))
+
     def run(con: sqlite3.Connection, quem: Quem, agora: date) -> dict[str, Any]:
         if ctx.idempotency_key:
             ja = con.execute(
@@ -160,7 +184,7 @@ def registrar_recebimento(ctx: HandlerContext, args: dict[str, Any]) -> dict[str
             return _recusa(
                 con,
                 "paciente_desconhecido",
-                "Paciente não cadastrado: cadastre na Agenda primeiro.",
+                PACIENTE_AUSENTE,
                 {"paciente": nome, "data_pagamento": data.isoformat()},
             )
         forma_nome = _texto(args, "forma", obrigatorio=True, maximo=30)
@@ -457,6 +481,8 @@ def registrar_falta(ctx: HandlerContext, args: dict[str, Any]) -> dict[str, Any]
 
 
 def registrar_pacote(ctx: HandlerContext, args: dict[str, Any]) -> dict[str, Any]:
+    _garantir_paciente(ctx, _texto(args, "paciente", obrigatorio=True, maximo=160))
+
     def run(con: sqlite3.Connection, quem: Quem, agora: date) -> dict[str, Any]:
         nome = _texto(args, "paciente", obrigatorio=True, maximo=160)
         paciente = _paciente(con, nome)
@@ -464,7 +490,7 @@ def registrar_pacote(ctx: HandlerContext, args: dict[str, Any]) -> dict[str, Any
             return _recusa(
                 con,
                 "paciente_desconhecido",
-                "Paciente não cadastrado: cadastre na Agenda primeiro.",
+                PACIENTE_AUSENTE,
                 {"paciente": nome},
             )
         res = sessoes.registrar_pacote(
@@ -560,6 +586,8 @@ def consultar_financeiro(
     args: dict[str, Any],
     operacoes: Callable[[], dict[str, Any] | None] | None = None,
 ) -> dict[str, Any]:
+    gancho.atualizar(caminho_ledger(ctx.data_root, ctx.client_id))
+
     def run(con: sqlite3.Connection, quem: Quem, agora: date) -> dict[str, Any]:
         filtros = args.get("filtros")
         if filtros is not None and not isinstance(filtros, dict):

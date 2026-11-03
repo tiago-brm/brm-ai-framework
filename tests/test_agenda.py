@@ -513,7 +513,7 @@ def test_sessoes_sem_pagamento_some_quando_ha_recebimento(amb):
     amb.sync()
     g = amb.chamar("sessoes_sem_pagamento", {"de": "2026-10-01", "ate": "2026-10-09"})
     assert g["total"] == 2 and g["valor_previsto"] == "R$ 300,00"
-    assert g["ultima_sincronizacao"] == "2026-10-09T15:00:00Z"
+    assert g["ultima_sincronizacao"] > "2026-10-09T15:00:00Z"
     r = h.registrar_recebimento(
         amb.ctx(**GESTOR_CTX),
         recebimento(
@@ -629,3 +629,37 @@ def test_comando_manual_sincroniza_com_provider_falso_e_falha_limpo_sem_segredos
     assert cmd.main(argv) == 0
     assert json.loads(capsys.readouterr().out)["processados"] == 1
     assert cmd.main(["--cliente", "cli-inexistente", "--config-root", str(cfg)]) == 1
+
+
+def _recebimento(paciente):
+    return {
+        "data_pagamento": "2026-10-09",
+        "paciente": paciente,
+        "forma": "dinheiro",
+        "valor": "200",
+    }
+
+
+def test_recebimento_de_paciente_novo_sincroniza_antes_de_recusar(amb):
+    amb.fake.semear(ag("a9", cust="c9", nome="Tiago Pereira Ramos"))
+    assert amb.sql("SELECT * FROM paciente_ref") == []
+    r = h.registrar_recebimento(amb.ctx(**GESTOR_CTX), _recebimento("tiago pereira ramos"))
+    assert r["registrado"] is True
+    assert amb.sql("SELECT nome FROM paciente_ref") == [{"nome": "Tiago Pereira Ramos"}]
+    assert amb.sql("SELECT * FROM pendencia_operacional WHERE tipo = 'paciente_desconhecido'") == []
+
+
+def test_nome_inexistente_sincroniza_uma_vez_e_depois_respeita_o_intervalo(amb):
+    amb.fake.semear(ag())
+    for _ in range(2):
+        r = h.registrar_recebimento(amb.ctx(**GESTOR_CTX), _recebimento("Fulano Inexistente"))
+        assert r["registrado"] is False and "nome completo" in r["motivo"]
+    assert len(amb.fake.consultas) == 1
+
+
+def test_paciente_ja_conhecido_nao_dispara_sincronizacao(amb):
+    amb.fake.semear(ag())
+    amb.sync()
+    antes = len(amb.fake.consultas)
+    r = h.registrar_recebimento(amb.ctx(**GESTOR_CTX), _recebimento("Maria Silva"))
+    assert r["registrado"] is True and len(amb.fake.consultas) == antes

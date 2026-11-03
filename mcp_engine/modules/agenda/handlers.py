@@ -147,6 +147,7 @@ def criar_handlers(
         dia = hoje()
         de, ate = _periodo(args, dia.replace(day=1), dia, 366)
         api = host.module_api("financeiro")
+        api.atualizar_lista()
         itens = api.sessoes_realizadas_sem_pagamento(de, ate, fuso)
         total = sum(i["valor_previsto_centavos"] or 0 for i in itens)
         resposta: dict[str, Any] = {

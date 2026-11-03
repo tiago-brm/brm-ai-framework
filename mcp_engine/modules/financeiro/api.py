@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from mcp_engine.modules.financeiro import sessoes
+from mcp_engine.modules.financeiro import gancho, sessoes
 from mcp_engine.modules.financeiro.db import (
     FUSO,
     ErroFinanceiro,
@@ -168,6 +168,14 @@ class LedgerAgenda:
 class FinanceiroAPI:
     def __init__(self, data_root: Path | str, client_id: str) -> None:
         self._caminho = caminho_ledger(data_root, client_id)
+
+    def ao_faltar_paciente(self, atualizar: Callable[[], object]) -> None:
+        """Função chamada (no máximo uma vez por minuto) quando um paciente não é achado."""
+        gancho.registrar(self._caminho, atualizar)
+
+    def atualizar_lista(self) -> bool:
+        """Pede a atualização da lista de pacientes (respeita o intervalo mínimo)."""
+        return gancho.atualizar(self._caminho)
 
     @contextmanager
     def transacao(self) -> Iterator[LedgerAgenda]:

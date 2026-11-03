@@ -73,6 +73,7 @@ class AgendaModule(BaseModule):
             "contrato", fatos_contrato(host, self.abrir_provider), FATOS_CONTRATO
         )
         host.registrar_tipo_acao(tipo_emitir_contrato(host, self.abrir_provider))
+        host.module_api("financeiro").ao_faltar_paciente(lambda: executar_sincronizacao(host))
 
 
 MODULE = AgendaModule(Path(__file__).parent)
