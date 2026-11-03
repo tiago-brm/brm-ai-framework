@@ -172,6 +172,21 @@ class AgendaCadastroProvider(Protocol):
         trace_id: str | None,
     ) -> None: ...
 
+    def registrar_pagamento(
+        self,
+        customer_id: str,
+        centavos: int,
+        metodo: str,
+        *,
+        recebido_em: datetime,
+        referencia: str,
+        nota: str | None,
+        ator: str,
+        trace_id: str | None,
+    ) -> dict[str, Any]: ...
+
+    def saldo_cliente(self, customer_id: str) -> dict[str, Any] | None: ...
+
 
 class AgendaProvider(Protocol):
     def listar_agendamentos(
@@ -616,8 +631,49 @@ class HttpAgendaCadastroProvider(HttpAgendaProvider):
         if codigo != 200:
             raise _recusa(codigo, resposta)
 
+    def registrar_pagamento(
+        self,
+        customer_id: str,
+        centavos: int,
+        metodo: str,
+        *,
+        recebido_em: datetime,
+        referencia: str,
+        nota: str | None,
+        ator: str,
+        trace_id: str | None,
+    ) -> dict[str, Any]:
+        corpo: dict[str, Any] = {
+            "customer_id": _id_cliente(customer_id),
+            "amount": round(centavos / 100, 2),
+            "method": metodo,
+            "external_ref": referencia[:200],
+            "received_at": recebido_em.isoformat(),
+        }
+        if nota:
+            corpo["note"] = nota[:500]
+        codigo, resposta = self._chamar(
+            "POST",
+            "api/v1/clinic/payments",
+            corpo=corpo,
+            ator=ator,
+            trace_id=trace_id or uuid.uuid4().hex,
+        )
+        if codigo not in (200, 201):
+            raise _recusa(codigo, resposta)
+        return resposta
+
+    def saldo_cliente(self, customer_id: str) -> dict[str, Any] | None:
+        codigo, resposta = self._chamar(
+            "GET", f"api/v1/finance/customers/{_id_cliente(customer_id)}/balance"
+        )
+        dados = resposta.get("data")
+        return dados if codigo == 200 and isinstance(dados, dict) else None
+
 
 _RECUSAS = {
+    "CUSTOMER_NOT_FOUND": "Paciente não encontrado na Agenda.",
+    "PAYMENT_REF_CONFLICT": "Esta referência de pagamento já foi usada em outro pagamento.",
     "APPOINTMENT_NOT_FOUND": "Agendamento não encontrado na Agenda.",
     "SPLIT_RULE_MISSING": "A Agenda não tem regra de repasse para esse profissional.",
     "PRICE_UNRESOLVED": "A Agenda não conseguiu definir o preço dessa sessão.",

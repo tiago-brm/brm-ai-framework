@@ -1,8 +1,6 @@
 schema_version: 1
 client_id: clinica-piloto
 skills:
-- usar: financeiro.registrar_recebimento
-  autonomia: A2
 - usar: financeiro.registrar_despesa
   autonomia: A2
 - usar: financeiro.estornar_lancamento
@@ -35,8 +33,6 @@ skills:
 - usar: agenda.agenda_clientes
   autonomia: A0
 - usar: agenda.agenda_servicos
-  autonomia: A0
-- usar: agenda.agenda_sessoes_sem_pagamento
   autonomia: A0
 - usar: agenda.sincronizar_agenda
   autonomia: A1

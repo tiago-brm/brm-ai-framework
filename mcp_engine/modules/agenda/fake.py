@@ -39,6 +39,8 @@ class FakeAgendaProvider:
         self.historicos: dict[str, list[StatusSessao]] = {}
         self.escritas: list[dict[str, Any]] = []
         self.status_escritos: list[dict[str, Any]] = []
+        self.pagamentos: list[dict[str, Any]] = []
+        self.saldos: dict[str, dict[str, Any]] = {}
 
     def semear(self, *agendamentos: Agendamento) -> None:
         for a in agendamentos:
@@ -113,6 +115,50 @@ class FakeAgendaProvider:
             ),
             key=lambda s: s.inicio_utc,
         )
+
+    def registrar_pagamento(
+        self,
+        customer_id: str,
+        centavos: int,
+        metodo: str,
+        *,
+        recebido_em: datetime,
+        referencia: str,
+        nota: str | None,
+        ator: str,
+        trace_id: str | None,
+    ) -> dict[str, Any]:
+        self._checar()
+        if customer_id not in {c.id for c in self.clientes}:
+            raise AgendaErro("Paciente não encontrado na Agenda.")
+        anterior = next((p for p in self.pagamentos if p["referencia"] == referencia), None)
+        if anterior is not None:
+            return {**anterior["resposta"], "duplicate": True}
+        resposta = {
+            "success": True,
+            "payment_id": f"p{len(self.pagamentos) + 1}",
+            "status": "CONFIRMED",
+            "duplicate": False,
+            "review_required": False,
+            "allocated_amount": 0,
+            "unallocated_amount": centavos / 100,
+        }
+        self.pagamentos.append(
+            {
+                "customer_id": customer_id,
+                "centavos": centavos,
+                "metodo": metodo,
+                "referencia": referencia,
+                "recebido_em": recebido_em,
+                "ator": ator,
+                "resposta": resposta,
+            }
+        )
+        return resposta
+
+    def saldo_cliente(self, customer_id: str) -> dict[str, Any] | None:
+        self._checar()
+        return self.saldos.get(customer_id)
 
     def atualizar_status(
         self,

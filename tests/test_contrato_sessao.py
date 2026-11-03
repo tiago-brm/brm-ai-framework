@@ -18,6 +18,7 @@ from mcp_engine.modules.agenda.contrato import MODELO_CONTRATO, montar_fontes, r
 from mcp_engine.modules.agenda.fake import FakeAgendaProvider
 from mcp_engine.modules.agenda.provider import (
     AgendaRecursoIndisponivel,
+    Cliente,
     Endereco,
     FichaCliente,
     HttpAgendaCadastroProvider,
@@ -348,6 +349,128 @@ class TestStatusDaSessao:
         )
         with pytest.raises(ExecucaoFalhou, match="definir o preço"):
             provider.atualizar_status(aid, "COMPLETED", motivo=None, ator="a", trace_id=None)
+
+
+class TestPagamentoNaAgenda:
+    TIPO = "agenda.registrar_pagamento"
+
+    @pytest.fixture(autouse=True)
+    def _clientes(self, fake) -> None:
+        fake.clientes = [
+            Cliente("c1", "Maria Silva", "11999990001"),
+            Cliente("c2", "Maria Souza", "11999990002"),
+            Cliente("c3", "Tiago Pereira Ramos", None),
+        ]
+        fake.saldos["c3"] = {"outstanding": 0, "accumulating": 200, "credit": 0}
+
+    def pedir_pagamento(self, engine, **args) -> dict:
+        como(SEC.perfil)
+        base = {"paciente": "tiago pereira ramos", "valor": "200", "forma": "dinheiro"}
+        return engine.criar_acao(self.TIPO, {**base, **args})
+
+    def test_grava_na_agenda_com_ator_e_mostra_o_saldo(self, engine, fake) -> None:
+        r = self.pedir_pagamento(engine)
+        item = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]
+        assert "R$ 200,00" in item["resumo"] and "Tiago Pereira Ramos" in item["resumo"]
+        assert item["dados"]["forma"] == "dinheiro" and item["dados"]["a_vencer_no_mes"]
+        saida = engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        assert saida["status"] == "confirmada"
+        pagamento = fake.pagamentos[0]
+        assert pagamento["customer_id"] == "c3" and pagamento["centavos"] == 20000
+        assert pagamento["metodo"] == "CASH" and pagamento["ator"] == SEC.id
+        assert pagamento["referencia"].startswith(f"brm-{r['acao_id']}-0-")
+        assert "registrado na Agenda" in saida["resultado"][0]["resumo"]
+
+    def test_repetir_a_confirmacao_nao_duplica(self, engine, fake) -> None:
+        r = self.pedir_pagamento(engine)
+        engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        with pytest.raises(AcaoErro):
+            engine.acoes.confirmar(SEC, r["acao_id"], PIN)
+        assert len(fake.pagamentos) == 1
+
+    def test_nome_ambiguo_e_inexistente(self, engine) -> None:
+        for nome, trecho in (("maria", "nome completo"), ("fulano", "não encontrado")):
+            r = self.pedir_pagamento(engine, paciente=nome)
+            with pytest.raises(AcaoErro, match=trecho):
+                engine.acoes.abrir(SEC, r["acao_id"])
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            {"valor": "0"},
+            {"valor": "abc"},
+            {"valor": "1,234"},
+            {"forma": "cheque"},
+            {"data": "2999-01-01"},
+            {"data": "03/11/2026"},
+        ],
+    )
+    def test_entradas_invalidas_nao_chegam_a_agenda(self, engine, fake, args) -> None:
+        r = self.pedir_pagamento(engine, **args)
+        if "acao_id" in r:
+            with pytest.raises(AcaoErro):
+                engine.acoes.abrir(SEC, r["acao_id"])
+        assert fake.pagamentos == []
+
+    def test_exige_paciente_ou_cliente_id(self, engine) -> None:
+        como(SEC.perfil)
+        assert "acao_id" not in engine.criar_acao(self.TIPO, {"valor": "10", "forma": "pix"})
+
+    def test_http_post_no_endpoint_de_pagamento(self) -> None:
+        import json
+        from datetime import timedelta, timezone
+
+        import httpx
+
+        cid = "33333333-3333-4333-8333-333333333333"
+        vistos = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            vistos.append(req)
+            return httpx.Response(
+                201, json={"success": True, "payment_id": "p", "status": "CONFIRMED"}
+            )
+
+        provider = TestContratoDoProvider()._http(handler)
+        resposta = provider.registrar_pagamento(
+            cid,
+            20050,
+            "CASH",
+            recebido_em=datetime(2026, 11, 3, 12, 0, tzinfo=timezone(timedelta(hours=-3))),
+            referencia="brm-x",
+            nota=None,
+            ator="ana@c.com",
+            trace_id="tr1",
+        )
+        assert resposta["status"] == "CONFIRMED"
+        req = vistos[0]
+        assert req.method == "POST" and req.url.path.endswith("/api/v1/clinic/payments")
+        assert req.headers["x-brm-actor"] == "ana@c.com"
+        assert json.loads(req.content) == {
+            "customer_id": cid,
+            "amount": 200.5,
+            "method": "CASH",
+            "external_ref": "brm-x",
+            "received_at": "2026-11-03T12:00:00-03:00",
+        }
+
+    def test_http_traduz_conflito_de_referencia(self) -> None:
+        import httpx
+
+        provider = TestContratoDoProvider()._http(
+            lambda req: httpx.Response(409, json={"code": "PAYMENT_REF_CONFLICT"})
+        )
+        with pytest.raises(ExecucaoFalhou, match="já foi usada"):
+            provider.registrar_pagamento(
+                "33333333-3333-4333-8333-333333333333",
+                100,
+                "PIX",
+                recebido_em=datetime.now(UTC),
+                referencia="x",
+                nota=None,
+                ator="a",
+                trace_id=None,
+            )
 
 
 class TestFatosERegra:
