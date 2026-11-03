@@ -324,6 +324,8 @@ class HttpAgendaProvider:
             dados = json.loads(bytes(corpo))
         except ValueError:
             raise _invalida("JSON") from None
+        if isinstance(dados, list):
+            return {"data": dados}
         if not isinstance(dados, dict):
             raise _invalida("objeto esperado")
         return dados

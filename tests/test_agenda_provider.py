@@ -111,6 +111,14 @@ def test_catalogos_e_clientes():
     assert p.buscar_clientes("mar", 20)[0].nome == "Maria"
 
 
+def test_clientes_aceita_lista_sem_envelope():
+    def handler(req):
+        return httpx.Response(200, json=[{"id": "c", "name": "Tiago", "phone": None}])
+
+    p, _ = montar(handler)
+    assert p.buscar_clientes("tiago")[0].nome == "Tiago"
+
+
 def test_401_nao_repete_e_nao_vaza():
     chamadas = []
 

@@ -10,4 +10,4 @@ skills:
 - sincronizar_agenda
 - agenda_contratos_pendentes
 segredos_requeridos: [agenda_api_key, agenda_base_url]
-dominios_requeridos: [agenda.brmsolutions.com.br]
+dominios_requeridos: [agenda.brmsolutions.com.br, worker-agenda.brmsolutions.com.br]
