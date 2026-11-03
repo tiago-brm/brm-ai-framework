@@ -285,6 +285,15 @@ class TestHttpSurface:
         )
         assert "access-control-allow-origin" not in bad.headers
 
+    def test_cors_headers_also_on_unauthorized_responses(self, engine: BRMEngine) -> None:
+        client = TestClient(create_app(engine=engine))
+        resposta = client.get(
+            "/api/central/eu",
+            headers={"Origin": "http://localhost:5173", "Authorization": "Bearer invalido"},
+        )
+        assert resposta.status_code == 401
+        assert resposta.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
     def test_sse_requires_a_credential(self, engine: BRMEngine) -> None:
         client = TestClient(create_app(engine=engine))
         assert client.get("/sse").status_code == 401

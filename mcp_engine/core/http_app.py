@@ -89,19 +89,6 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
 
     app = FastAPI(title="BRM Engine (remoto)", lifespan=lifespan)
 
-    # Dashboard React/Vite roda em outra origem (localhost:5173 em dev) e
-    # autentica com o mesmo Bearer token do SQLUserStore — não há cookie/
-    # sessão pra CSRF proteger. As origens permitidas vêm da configuração do
-    # cliente (`cors_origins`); `*` só com `cors_permitir_qualquer: true`.
-    if engine.cors_permitir_qualquer:
-        logger.warning("CORS aberto a qualquer origem (cors_permitir_qualquer: true)")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"] if engine.cors_permitir_qualquer else list(engine.cors_origins),
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     @app.middleware("http")
     async def identity_middleware(request: Request, call_next):
         # Única linha de todo o app ciente de "HTTP" — resolve o perfil do
@@ -127,6 +114,21 @@ def create_app(engine: BRMEngine | None = None) -> FastAPI:
                 current_user_var.reset(token)
         finally:
             trace_id_var.reset(trace_token)
+
+    # Dashboard React/Vite roda em outra origem (localhost:5173 em dev) e
+    # autentica com o mesmo Bearer token do SQLUserStore — não há cookie/
+    # sessão pra CSRF proteger. As origens permitidas vêm da configuração do
+    # cliente (`cors_origins`); `*` só com `cors_permitir_qualquer: true`.
+    # Registrado depois da identidade para ficar por fora: a resposta 401 também leva os
+    # cabeçalhos de CORS e o navegador mostra o erro real em vez de "bloqueado por CORS".
+    if engine.cors_permitir_qualquer:
+        logger.warning("CORS aberto a qualquer origem (cors_permitir_qualquer: true)")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"] if engine.cors_permitir_qualquer else list(engine.cors_origins),
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # /api/* é a superfície REST do painel super_admin (dashboard React) —
     # ver mcp_engine/core/api_router.py. Precisa ser incluída ANTES do
