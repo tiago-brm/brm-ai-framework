@@ -115,3 +115,19 @@ Para o Agenda isso não muda nada.
 - **Recibo:** o Agenda vai incluir, na resposta da confirmação de pagamento, os dados para imprimir o
   recibo (número sequencial, clínica, paciente, profissional, valor, forma, data, referência) e uma rota
   para reimprimir. O framework gera o PDF a partir desse payload quando existir. Sem data.
+
+## 11. Entregas do Agenda de 2026-11-05 e o que o framework passou a fazer
+
+- **Pagamento (migration 118):** a ação `agenda.registrar_pagamento` já avisa na página se o valor
+  bate com o saldo (baixa na hora, recibo) ou não (fica `PENDING_REVIEW` até a gerência). Repetição
+  (HTTP 200) vira "já estava registrado". A ação do gestor `agenda.confirmar_pagamento` chama
+  `POST /clinic/payments/:id/confirm`.
+- **Recibo:** `agenda.emitir_recibo_pagamento` relê `GET /clinic/payments/:id/receipt` (CPF sempre
+  mascarado; o framework nunca pede `unmask`) e gera o PDF a partir do modelo `recibo-pagamento` do
+  segundo cérebro (aprovado pelo gestor, com hash). Skill de leitura: `agenda_recibo_pagamento`.
+- **Bônus de indicação:** skill de leitura `agenda_bonus_indicacao` (gestor) e ações do gestor
+  `agenda.definir_corte_bonus_indicacao` e `agenda.definir_aptidao_bonus_indicacao`.
+- **A confirmar com o Agenda:** os nomes exatos dos campos do `receipt` (o framework lê `number`,
+  `amount`, `amount_in_words`, `paid_at`, `method`, `payer.name`, `payer.cpf`, `professionals[].name`
+  e `.crp`, `items[].description`, `registered_by`) e do `GET /clinic/staff/referral-bonus-eligibility`
+  (`id`, `referral_bonus_eligible`, `patients_6m_count`). Ajustar em `recibo.py` se divergirem.

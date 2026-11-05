@@ -91,3 +91,27 @@ skills:
   examples:
   - Quais contratos estão pendentes?
   - Falta contrato de alguém desta semana?
+- name: agenda_recibo_pagamento
+  description: Relê o recibo de um pagamento já confirmado na Agenda (somente leitura). O CPF
+    vem sempre mascarado.
+  parameters:
+    pagamento_id:
+      type: string
+      description: Identificador do pagamento na Agenda (devolvido ao registrar o pagamento).
+  executor:
+    type: native
+    handler: agenda.recibo_pagamento
+  autonomia: A0
+  examples:
+  - Me mostre o recibo desse pagamento
+- name: agenda_bonus_indicacao
+  description: Mostra a política do bônus de indicação (data de corte e faixas) e a aptidão de
+    cada profissional, com pacientes nos últimos 6 meses (meta 10), CRP e contrato. Somente
+    leitura e só para o gestor.
+  parameters: {}
+  executor:
+    type: native
+    handler: agenda.bonus_indicacao
+  autonomia: A0
+  examples:
+  - Quem está apto ao bônus de indicação?

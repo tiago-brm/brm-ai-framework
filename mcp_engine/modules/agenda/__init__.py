@@ -10,6 +10,7 @@ from pathlib import Path
 
 from mcp_engine.core.executor import ExecucaoFalhou
 from mcp_engine.modules import BaseModule, ModuleError, ModuleHost
+from mcp_engine.modules.agenda.bonus import tipo_definir_aptidao_bonus, tipo_definir_corte_bonus
 from mcp_engine.modules.agenda.contrato import (
     FATOS_CONTRATO,
     fatos_contrato,
@@ -18,12 +19,13 @@ from mcp_engine.modules.agenda.contrato import (
 )
 from mcp_engine.modules.agenda.crp import tipo_definir_crp
 from mcp_engine.modules.agenda.handlers import criar_handlers
-from mcp_engine.modules.agenda.pagamento import tipo_registrar_pagamento
+from mcp_engine.modules.agenda.pagamento import tipo_confirmar_pagamento, tipo_registrar_pagamento
 from mcp_engine.modules.agenda.provider import (
     AgendaConfigInvalida,
     AgendaProvider,
     HttpAgendaCadastroProvider,
 )
+from mcp_engine.modules.agenda.recibo import tipo_emitir_recibo
 from mcp_engine.modules.agenda.sincronizacao import executar_sincronizacao
 from mcp_engine.modules.agenda.status_sessao import tipo_atualizar_status
 from mcp_engine.modules.agenda.tempo import FUSO_PADRAO
@@ -78,7 +80,11 @@ class AgendaModule(BaseModule):
         host.registrar_tipo_acao(tipo_emitir_contrato(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_atualizar_status(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_registrar_pagamento(host, self.abrir_provider))
+        host.registrar_tipo_acao(tipo_confirmar_pagamento(host, self.abrir_provider))
+        host.registrar_tipo_acao(tipo_emitir_recibo(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_definir_crp(host, self.abrir_provider))
+        host.registrar_tipo_acao(tipo_definir_corte_bonus(host, self.abrir_provider))
+        host.registrar_tipo_acao(tipo_definir_aptidao_bonus(host, self.abrir_provider))
         host.module_api("financeiro").ao_faltar_paciente(lambda: executar_sincronizacao(host))
 
 

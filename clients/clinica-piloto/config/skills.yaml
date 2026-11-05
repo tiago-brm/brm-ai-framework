@@ -38,3 +38,7 @@ skills:
   autonomia: A1
 - usar: agenda.agenda_contratos_pendentes
   autonomia: A0
+- usar: agenda.agenda_recibo_pagamento
+  autonomia: A0
+- usar: agenda.agenda_bonus_indicacao
+  autonomia: A0

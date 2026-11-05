@@ -42,6 +42,11 @@ class FakeAgendaProvider:
         self.pagamentos: list[dict[str, Any]] = []
         self.crps_escritos: list[dict[str, Any]] = []
         self.saldos: dict[str, dict[str, Any]] = {}
+        self.recibos: dict[str, dict[str, Any]] = {}
+        self.confirmacoes: list[dict[str, Any]] = []
+        self.corte_bonus: str | None = None
+        self.aptos_bonus: set[str] = set()
+        self.bonus_escritos: list[dict[str, Any]] = []
 
     def semear(self, *agendamentos: Agendamento) -> None:
         for a in agendamentos:
@@ -135,14 +140,17 @@ class FakeAgendaProvider:
         anterior = next((p for p in self.pagamentos if p["referencia"] == referencia), None)
         if anterior is not None:
             return {**anterior["resposta"], "duplicate": True}
+        saldo = self.saldos.get(customer_id, {})
+        bate = centavos in {
+            round(float(saldo.get(k) or 0) * 100) for k in ("outstanding", "accumulating")
+        }
+        pid = f"00000000-0000-4000-8000-{len(self.pagamentos) + 1:012d}"
         resposta = {
             "success": True,
-            "payment_id": f"p{len(self.pagamentos) + 1}",
-            "status": "CONFIRMED",
+            "payment_id": pid,
+            "status": "CONFIRMED" if bate else "PENDING_REVIEW",
             "duplicate": False,
-            "review_required": False,
-            "allocated_amount": 0,
-            "unallocated_amount": centavos / 100,
+            "receipt": self._recibo(pid, centavos) if bate else None,
         }
         self.pagamentos.append(
             {
@@ -156,6 +164,72 @@ class FakeAgendaProvider:
             }
         )
         return resposta
+
+    def _recibo(self, pagamento_id: str, centavos: int) -> dict[str, Any]:
+        numero = f"2026-{len(self.recibos) + 1:06d}"
+        recibo = {
+            "number": numero,
+            "amount": centavos / 100,
+            "amount_in_words": f"{centavos // 100} reais",
+            "paid_at": "2026-11-03T12:00:00-03:00",
+            "method": "CASH",
+            "payer": {"name": "Tiago Pereira Ramos", "cpf": "***.***.***-25"},
+            "professionals": [{"name": "Ana Souza", "crp": "CRP 06/123456"}],
+            "items": [{"description": "Sessão de psicoterapia"}],
+            "registered_by": "sec@cli.test",
+        }
+        self.recibos[pagamento_id] = recibo
+        return recibo
+
+    def confirmar_pagamento(
+        self, pagamento_id: str, *, ator: str, trace_id: str | None
+    ) -> dict[str, Any]:
+        self._checar()
+        pagamento = next(
+            (p for p in self.pagamentos if p["resposta"]["payment_id"] == pagamento_id), None
+        )
+        if pagamento is None:
+            raise AgendaErro("Pagamento não encontrado na Agenda.")
+        if pagamento["resposta"]["status"] != "PENDING_REVIEW":
+            raise AgendaErro("Este pagamento não está aguardando conferência.")
+        pagamento["resposta"].update(
+            status="CONFIRMED", receipt=self._recibo(pagamento_id, pagamento["centavos"])
+        )
+        self.confirmacoes.append({"pagamento_id": pagamento_id, "ator": ator})
+        return dict(pagamento["resposta"])
+
+    def recibo_pagamento(
+        self, pagamento_id: str, *, ator: str, trace_id: str | None
+    ) -> dict[str, Any] | None:
+        self._checar()
+        return self.recibos.get(pagamento_id)
+
+    def politica_bonus_indicacao(self) -> dict[str, Any]:
+        self._checar()
+        return {"tiers": [], "referral_bonus_new_patients_from": self.corte_bonus}
+
+    def definir_corte_bonus_indicacao(
+        self, data_corte: date | None, *, ator: str, trace_id: str | None
+    ) -> None:
+        self._checar()
+        self.corte_bonus = data_corte.isoformat() if data_corte else None
+        self.bonus_escritos.append({"corte": self.corte_bonus, "ator": ator})
+
+    def aptidao_bonus_indicacao(self) -> list[dict[str, Any]]:
+        self._checar()
+        return [
+            {"id": p.id, "name": p.nome, "referral_bonus_eligible": p.id in self.aptos_bonus}
+            for p in self.profissionais
+        ]
+
+    def definir_aptidao_bonus_indicacao(
+        self, profissional_id: str, apto: bool, *, ator: str, trace_id: str | None
+    ) -> None:
+        self._checar()
+        if profissional_id not in {p.id for p in self.profissionais}:
+            raise AgendaErro("Profissional não encontrado na Agenda.")
+        (self.aptos_bonus.add if apto else self.aptos_bonus.discard)(profissional_id)
+        self.bonus_escritos.append({"profissional_id": profissional_id, "apto": apto, "ator": ator})
 
     def definir_crp(
         self, profissional_id: str, crp: str | None, *, ator: str, trace_id: str | None

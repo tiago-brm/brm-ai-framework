@@ -380,7 +380,7 @@ class TestPagamentoNaAgenda:
         assert pagamento["customer_id"] == "c3" and pagamento["centavos"] == 20000
         assert pagamento["metodo"] == "CASH" and pagamento["ator"] == SEC.id
         assert pagamento["referencia"].startswith(f"brm-{r['acao_id']}-0-")
-        assert "registrado na Agenda" in saida["resultado"][0]["resumo"]
+        assert "baixado na Agenda" in saida["resultado"][0]["resumo"]
 
     def test_repetir_a_confirmacao_nao_duplica(self, engine, fake) -> None:
         r = self.pedir_pagamento(engine)
@@ -621,6 +621,213 @@ class TestNovidadesDaAgenda:
         r = pedir(engine)
         itens = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]["dados"]["campos"]
         assert not [c for c in itens if c["campo"] == "profissional_crp" and c["faltante"]]
+
+
+class TestBaixaReciboEBonus:
+    GESTOR = Identidade(
+        id=GESTOR_PERFIL.identity, perfil=GESTOR_PERFIL, provedor="local", metodo="token"
+    )
+
+    @pytest.fixture(autouse=True)
+    def _dados(self, fake, engine) -> None:
+        fake.clientes = [Cliente("c3", "Tiago Pereira Ramos", None)]
+        fake.saldos["c3"] = {"outstanding": 0, "accumulating": 200, "credit": 0}
+        fake.profissionais = [Profissional("st1", "Ana Souza", "psi", True)]
+        engine.acoes.atributos.definir_pin("local", self.GESTOR.id, "7391", por=self.GESTOR.id)
+
+    def pagar(self, engine, valor):
+        como(SEC.perfil)
+        r = engine.criar_acao(
+            "agenda.registrar_pagamento",
+            {"paciente": "Tiago Pereira Ramos", "valor": valor, "forma": "dinheiro"},
+        )
+        previa = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]
+        return previa, engine.acoes.confirmar(SEC, r["acao_id"], PIN)["resultado"][0]
+
+    def test_valor_que_bate_baixa_na_hora_e_traz_o_recibo(self, engine, fake) -> None:
+        previa, saida = self.pagar(engine, "200")
+        assert "baixa na hora" in previa["dados"]["aviso"]
+        assert "baixado" in saida["resumo"] and "Recibo nº 2026-000001" in saida["resumo"]
+
+    def test_valor_que_nao_bate_fica_aguardando_a_gerencia(self, engine, fake) -> None:
+        previa, saida = self.pagar(engine, "150")
+        assert "aguardando conferência" in previa["dados"]["aviso"]
+        assert "aguardando conferência" in saida["resumo"] and "Recibo" not in saida["resumo"]
+        assert fake.pagamentos[0]["resposta"]["status"] == "PENDING_REVIEW"
+
+    def test_gerencia_confirma_e_o_recibo_sai(self, engine, fake) -> None:
+        _, pendente = self.pagar(engine, "150")
+        como(SEC.perfil)
+        r = engine.criar_acao(
+            "agenda.confirmar_pagamento", {"pagamento_id": pendente["pagamento_id"]}
+        )
+        with pytest.raises(AcaoErro) as exc:
+            engine.acoes.abrir(SEC, r["acao_id"])
+        assert exc.value.status == 403
+        saida = engine.acoes.confirmar(self.GESTOR, r["acao_id"], "7391")["resultado"][0]
+        assert "Recibo nº" in saida["resumo"]
+        assert fake.confirmacoes[0]["ator"] == self.GESTOR.id
+
+    def test_confirmar_pagamento_ja_confirmado_e_recusado(self, engine) -> None:
+        _, ok = self.pagar(engine, "200")
+        como(GESTOR_PERFIL)
+        r = engine.criar_acao("agenda.confirmar_pagamento", {"pagamento_id": ok["pagamento_id"]})
+        saida = engine.acoes.confirmar(self.GESTOR, r["acao_id"], "7391")["resultado"][0]
+        assert saida["ok"] is False and "não está aguardando" in saida["resumo"]
+
+    def test_recibo_em_pdf_sai_do_modelo_do_segundo_cerebro(self, engine, fake) -> None:
+        como(GESTOR_PERFIL)
+        assert engine.documento_aprovar_modelo("recibo-pagamento")["allowed"]
+        _, ok = self.pagar(engine, "200")
+        como(SEC.perfil)
+        r = engine.criar_acao(
+            "agenda.emitir_recibo_pagamento", {"pagamento_id": ok["pagamento_id"]}
+        )
+        item = engine.acoes.abrir(SEC, r["acao_id"])["itens"][0]
+        assert item["campos_faltantes"] == []
+        valores = {c["campo"]: c["valor"] for c in item["dados"]["campos"]}
+        assert valores["recibo_numero"] == "2026-000001" and valores["recibo_valor"] == "R$ 200,00"
+        assert valores["recibo_pagador_cpf"] == "***.***.***-25"
+        assert valores["recibo_profissionais"] == "Ana Souza (CRP 06/123456)"
+        saida = engine.acoes.confirmar(SEC, r["acao_id"], PIN)["resultado"][0]
+        pdf = engine.documentos.store.ler_pdf(saida["documento_id"])
+        assert pdf.startswith(b"%PDF")
+        doc = engine.documentos.store.obter(saida["documento_id"])
+        assert doc.referencia == f"agenda:pagamento:{ok['pagamento_id']}"
+
+    def test_recibo_de_pagamento_pendente_nao_e_emitido(self, engine, fake) -> None:
+        _, pendente = self.pagar(engine, "150")
+        como(SEC.perfil)
+        r = engine.criar_acao(
+            "agenda.emitir_recibo_pagamento", {"pagamento_id": pendente["pagamento_id"]}
+        )
+        with pytest.raises(AcaoErro, match="não tem recibo"):
+            engine.acoes.abrir(SEC, r["acao_id"])
+
+    def test_http_pagamento_repetido_devolve_200_e_vira_duplicado(self) -> None:
+        import httpx
+
+        provider = TestContratoDoProvider()._http(
+            lambda req: httpx.Response(
+                200, json={"data": {"payment_id": "p", "status": "CONFIRMED", "receipt": None}}
+            )
+        )
+        resposta = provider.registrar_pagamento(
+            "33333333-3333-4333-8333-333333333333",
+            100,
+            "PIX",
+            recebido_em=datetime.now(UTC),
+            referencia="x",
+            nota=None,
+            ator="a",
+            trace_id=None,
+        )
+        assert resposta["duplicate"] is True and resposta["payment_id"] == "p"
+
+    def test_http_confirma_e_relê_o_recibo(self) -> None:
+        import httpx
+
+        pid = "77777777-7777-4777-8777-777777777777"
+        vistos = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            vistos.append(req)
+            if req.url.path.endswith("/receipt"):
+                if "unmask" in req.url.params:
+                    return httpx.Response(400, json={})
+                return httpx.Response(200, json={"data": {"receipt": {"number": "2026-000009"}}})
+            return httpx.Response(200, json={"data": {"status": "CONFIRMED", "receipt": {}}})
+
+        provider = TestContratoDoProvider()._http(handler)
+        assert provider.confirmar_pagamento(pid, ator="g@c.com", trace_id="t")["status"] == (
+            "CONFIRMED"
+        )
+        assert provider.recibo_pagamento(pid, ator="g@c.com", trace_id="t") == {
+            "number": "2026-000009"
+        }
+        assert vistos[0].method == "POST" and vistos[0].url.path.endswith(
+            f"/payments/{pid}/confirm"
+        )
+        assert vistos[1].method == "GET" and vistos[1].url.path.endswith(f"/payments/{pid}/receipt")
+        assert vistos[1].headers["x-brm-actor"] == "g@c.com"
+
+    def test_recibo_sem_pagamento_pendente_nao_existe(self) -> None:
+        import httpx
+
+        provider = TestContratoDoProvider()._http(lambda req: httpx.Response(404, json={}))
+        assert (
+            provider.recibo_pagamento(
+                "77777777-7777-4777-8777-777777777777", ator="a", trace_id=None
+            )
+            is None
+        )
+
+    def bonus(self, engine, tipo, perfil=GESTOR_PERFIL, **args):
+        como(perfil)
+        return engine.criar_acao(f"agenda.{tipo}", args)
+
+    def test_gestor_define_a_data_de_corte_e_desliga(self, engine, fake) -> None:
+        r = self.bonus(engine, "definir_corte_bonus_indicacao", data_corte="2026-09-01")
+        item = engine.acoes.abrir(self.GESTOR, r["acao_id"])["itens"][0]
+        assert item["dados"]["data_corte"] == "01/09/2026"
+        engine.acoes.confirmar(self.GESTOR, r["acao_id"], "7391")
+        assert fake.corte_bonus == "2026-09-01"
+        r = self.bonus(engine, "definir_corte_bonus_indicacao")
+        engine.acoes.confirmar(self.GESTOR, r["acao_id"], "7391")
+        assert fake.corte_bonus is None
+
+    def test_corte_invalido_e_recusado(self, engine) -> None:
+        r = self.bonus(engine, "definir_corte_bonus_indicacao", data_corte="01/09/2026")
+        with pytest.raises(AcaoErro):
+            engine.acoes.abrir(self.GESTOR, r["acao_id"])
+
+    def test_gestor_marca_a_aptidao_do_profissional(self, engine, fake) -> None:
+        r = self.bonus(
+            engine, "definir_aptidao_bonus_indicacao", profissional="ana souza", apto=True
+        )
+        engine.acoes.confirmar(self.GESTOR, r["acao_id"], "7391")
+        assert fake.aptos_bonus == {"st1"}
+        r = self.bonus(
+            engine, "definir_aptidao_bonus_indicacao", profissional="Ana Souza", apto=False
+        )
+        item = engine.acoes.abrir(self.GESTOR, r["acao_id"])["itens"][0]
+        assert item["dados"]["apto_agora"] == "sim" and "sessões futuras" in item["dados"]["aviso"]
+        engine.acoes.confirmar(self.GESTOR, r["acao_id"], "7391")
+        assert fake.aptos_bonus == set()
+
+    def test_secretaria_nao_mexe_no_bonus(self, engine) -> None:
+        r = self.bonus(
+            engine, "definir_aptidao_bonus_indicacao", SEC.perfil, profissional="Ana", apto=True
+        )
+        with pytest.raises(AcaoErro) as exc:
+            engine.acoes.abrir(SEC, r["acao_id"])
+        assert exc.value.status == 403
+
+    def test_http_bonus_envia_corte_e_aptidao(self) -> None:
+        import json
+        from datetime import date as d
+
+        import httpx
+
+        vistos = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            vistos.append(req)
+            return httpx.Response(200, json={"success": True})
+
+        provider = TestContratoDoProvider()._http(handler)
+        provider.definir_corte_bonus_indicacao(d(2026, 9, 1), ator="g", trace_id="t")
+        provider.definir_corte_bonus_indicacao(None, ator="g", trace_id="t")
+        provider.definir_aptidao_bonus_indicacao(
+            "66666666-6666-4666-8666-666666666666", True, ator="g", trace_id="t"
+        )
+        assert vistos[0].url.path.endswith("/clinic/commission-policy/referral-bonus")
+        assert json.loads(vistos[0].content) == {"referral_bonus_new_patients_from": "2026-09-01"}
+        assert json.loads(vistos[1].content) == {"referral_bonus_new_patients_from": None}
+        assert vistos[2].url.path.endswith(
+            "/staff/66666666-6666-4666-8666-666666666666/referral-bonus-eligible"
+        )
+        assert json.loads(vistos[2].content) == {"referral_bonus_eligible": True}
 
 
 class TestEmAtendimentoECrp:

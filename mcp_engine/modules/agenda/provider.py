@@ -193,6 +193,26 @@ class AgendaCadastroProvider(Protocol):
         self, profissional_id: str, crp: str | None, *, ator: str, trace_id: str | None
     ) -> None: ...
 
+    def confirmar_pagamento(
+        self, pagamento_id: str, *, ator: str, trace_id: str | None
+    ) -> dict[str, Any]: ...
+
+    def recibo_pagamento(
+        self, pagamento_id: str, *, ator: str, trace_id: str | None
+    ) -> dict[str, Any] | None: ...
+
+    def politica_bonus_indicacao(self) -> dict[str, Any]: ...
+
+    def definir_corte_bonus_indicacao(
+        self, data_corte: date | None, *, ator: str, trace_id: str | None
+    ) -> None: ...
+
+    def aptidao_bonus_indicacao(self) -> list[dict[str, Any]]: ...
+
+    def definir_aptidao_bonus_indicacao(
+        self, profissional_id: str, apto: bool, *, ator: str, trace_id: str | None
+    ) -> None: ...
+
 
 class AgendaProvider(Protocol):
     def listar_agendamentos(
@@ -682,7 +702,81 @@ class HttpAgendaCadastroProvider(HttpAgendaProvider):
         )
         if codigo not in (200, 201):
             raise _recusa(codigo, resposta)
-        return resposta
+        return {**_conteudo(resposta), "duplicate": codigo == 200}
+
+    def confirmar_pagamento(
+        self, pagamento_id: str, *, ator: str, trace_id: str | None
+    ) -> dict[str, Any]:
+        codigo, resposta = self._chamar(
+            "POST",
+            f"api/v1/clinic/payments/{_id_cliente(pagamento_id)}/confirm",
+            corpo={},
+            ator=ator,
+            trace_id=trace_id or uuid.uuid4().hex,
+        )
+        if codigo not in (200, 201):
+            raise _recusa(codigo, resposta)
+        return _conteudo(resposta)
+
+    def recibo_pagamento(
+        self, pagamento_id: str, *, ator: str, trace_id: str | None
+    ) -> dict[str, Any] | None:
+        codigo, resposta = self._chamar(
+            "GET",
+            f"api/v1/clinic/payments/{_id_cliente(pagamento_id)}/receipt",
+            ator=ator,
+            trace_id=trace_id or uuid.uuid4().hex,
+        )
+        if codigo == 404:
+            return None
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
+        dados = _conteudo(resposta)
+        recibo = dados.get("receipt", dados)
+        return recibo if isinstance(recibo, dict) else None
+
+    def politica_bonus_indicacao(self) -> dict[str, Any]:
+        codigo, resposta = self._chamar("GET", "api/v1/clinic/commission-policy")
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
+        return _conteudo(resposta)
+
+    def definir_corte_bonus_indicacao(
+        self, data_corte: date | None, *, ator: str, trace_id: str | None
+    ) -> None:
+        codigo, resposta = self._chamar(
+            "PUT",
+            "api/v1/clinic/commission-policy/referral-bonus",
+            corpo={
+                "referral_bonus_new_patients_from": data_corte.isoformat() if data_corte else None
+            },
+            ator=ator,
+            trace_id=trace_id or uuid.uuid4().hex,
+        )
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
+
+    def aptidao_bonus_indicacao(self) -> list[dict[str, Any]]:
+        codigo, resposta = self._chamar("GET", "api/v1/clinic/staff/referral-bonus-eligibility")
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
+        dados = resposta.get("data", resposta)
+        if isinstance(dados, dict):
+            dados = dados.get("staff", dados.get("items", []))
+        return [d for d in dados if isinstance(d, dict)] if isinstance(dados, list) else []
+
+    def definir_aptidao_bonus_indicacao(
+        self, profissional_id: str, apto: bool, *, ator: str, trace_id: str | None
+    ) -> None:
+        codigo, resposta = self._chamar(
+            "PUT",
+            f"api/v1/clinic/staff/{_id_cliente(profissional_id)}/referral-bonus-eligible",
+            corpo={"referral_bonus_eligible": apto},
+            ator=ator,
+            trace_id=trace_id or uuid.uuid4().hex,
+        )
+        if codigo != 200:
+            raise _recusa(codigo, resposta)
 
     def definir_crp(
         self, profissional_id: str, crp: str | None, *, ator: str, trace_id: str | None
@@ -711,7 +805,10 @@ _RECUSAS = {
     "STAFF_NOT_FOUND": "Profissional não encontrado na Agenda.",
     "INVALID_CRP": "A Agenda recusou o CRP (use um formato como 06/123456).",
     "CUSTOMER_NOT_FOUND": "Paciente não encontrado na Agenda.",
-    "PAYMENT_REF_CONFLICT": "Esta referência de pagamento já foi usada em outro pagamento.",
+    "PAYMENT_REF_CONFLICT": "Esta referência de pagamento já foi usada em outro pagamento"
+    " (com valor diferente).",
+    "PAYMENT_NOT_FOUND": "Pagamento não encontrado na Agenda.",
+    "PAYMENT_NOT_PENDING": "Este pagamento não está aguardando conferência.",
     "APPOINTMENT_NOT_FOUND": "Agendamento não encontrado na Agenda.",
     "SPLIT_RULE_MISSING": "A Agenda não tem regra de repasse para esse profissional.",
     "PRICE_UNRESOLVED": "A Agenda não conseguiu definir o preço dessa sessão.",
@@ -725,6 +822,11 @@ _RECUSAS = {
     "INVALID_UF": "A Agenda recusou a UF.",
     "MULTIPLE_FINANCIAL_GUARDIANS": "Só um responsável pode ser o financeiro.",
 }
+
+
+def _conteudo(corpo: dict[str, Any]) -> dict[str, Any]:
+    dados = corpo.get("data")
+    return dados if isinstance(dados, dict) else corpo
 
 
 def _id_cliente(customer_id: str) -> str:

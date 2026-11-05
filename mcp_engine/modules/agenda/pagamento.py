@@ -2,8 +2,10 @@
 
 O dinheiro da clínica é da Agenda: o framework não guarda o recebimento. O chat prepara o pedido
 com o nome do paciente, o valor e a forma; a pessoa confere na página e confirma com o PIN, e o
-framework grava na Agenda (registro manual, confirmado e aplicado por ela) com ator e trace_id. A
-referência externa é derivada da ação, então repetir a confirmação nunca duplica o pagamento.
+framework grava na Agenda com ator e trace_id. A referência externa é derivada da ação, então
+repetir a confirmação nunca duplica o pagamento. Se o valor bate com um saldo em aberto a Agenda
+baixa na hora e devolve o recibo; se não bate, o pagamento fica aguardando conferência e a gerência
+o confirma por outra ação (`confirmar_pagamento`), que baixa e emite o recibo.
 """
 
 from __future__ import annotations
@@ -132,6 +134,34 @@ def _brl(valor: Any) -> str:
     return formatar_brl(round(float(valor or 0) * 100))
 
 
+def _reais(valor: Any) -> int | None:
+    try:
+        return round(float(valor) * 100)
+    except (TypeError, ValueError):
+        return None
+
+
+def descrever_recibo(recibo: Any) -> dict[str, Any]:
+    if not isinstance(recibo, dict):
+        return {}
+    numero = recibo.get("number") or recibo.get("receipt_number")
+    return {"recibo": recibo, "recibo_numero": numero} if numero else {"recibo": recibo}
+
+
+def _texto_baixa(sujeito: str, resposta: dict[str, Any]) -> str:
+    recibo = resposta.get("receipt")
+    numero = recibo.get("number") if isinstance(recibo, dict) else None
+    texto = f"{sujeito} registrado e baixado na Agenda"
+    alocado = resposta.get("allocated_amount")
+    credito = resposta.get("unallocated_amount")
+    if alocado is not None and credito is not None:
+        texto += f": {_brl(alocado)} aplicado às faturas e {_brl(credito)} como crédito"
+    texto += "."
+    if numero:
+        texto += f" Recibo nº {numero} emitido."
+    return texto
+
+
 def tipo_registrar_pagamento(
     host: ModuleHost, abrir_provider: Callable[[ModuleHost], Any]
 ) -> TipoAcao:
@@ -159,11 +189,14 @@ def tipo_registrar_pagamento(
             dados["saldo_vencido"] = _brl(saldo.get("outstanding"))
             dados["a_vencer_no_mes"] = _brl(saldo.get("accumulating"))
             dados["credito"] = _brl(saldo.get("credit"))
-            if float(saldo.get("outstanding") or 0) <= 0 < float(saldo.get("accumulating") or 0):
-                dados["aviso"] = (
-                    "A fatura do mês ainda está aberta: o valor entra como crédito do paciente e"
-                    " é aplicado quando a fatura fecha."
-                )
+            bate = centavos in {_reais(saldo.get("outstanding")), _reais(saldo.get("accumulating"))}
+            dados["aviso"] = (
+                "O valor bate com o saldo do paciente: a Agenda dá baixa na hora e emite o recibo."
+                if bate
+                else "O valor não bate com o saldo de nenhuma fatura: a Agenda guarda o pagamento"
+                " aguardando conferência da gerência, que dá a baixa e emite o recibo. Se for"
+                " maior que o saldo, o excedente vira crédito do paciente."
+            )
         if args.get("observacao"):
             dados["observacao"] = args["observacao"]
         return Previa(
@@ -192,23 +225,21 @@ def tipo_registrar_pagamento(
                 trace_id=ctx.trace_id,
             )
         valor = formatar_brl(centavos)
+        pendente = resposta.get("status") == "PENDING_REVIEW"
         if resposta.get("duplicate"):
             texto = f"O pagamento de {valor} já estava registrado na Agenda."
-        elif resposta.get("review_required"):
+        elif pendente:
             texto = (
-                f"Pagamento de {valor} enviado à Agenda; ficou aguardando conferência da gerência,"
-                " porque o valor não bate com nenhuma fatura em aberto."
+                f"Pagamento de {valor} enviado à Agenda; ficou aguardando conferência da gerência"
+                " (o valor não bate com nenhum saldo), sem recibo até lá."
             )
         else:
-            texto = (
-                f"Pagamento de {valor} registrado na Agenda:"
-                f" {_brl(resposta.get('allocated_amount'))} aplicado às faturas e"
-                f" {_brl(resposta.get('unallocated_amount'))} como crédito."
-            )
+            texto = _texto_baixa(f"Pagamento de {valor}", resposta)
         return {
             "resumo": texto,
-            "pagamento_id": resposta.get("payment_id"),
+            "pagamento_id": resposta.get("payment_id") or resposta.get("id"),
             "status_agenda": resposta.get("status"),
+            **descrever_recibo(resposta.get("receipt")),
         }
 
     return TipoAcao(
@@ -224,4 +255,56 @@ def tipo_registrar_pagamento(
         resumir=resumir,
         carregar=carregar,
         executar=executar,
+    )
+
+
+class ConfirmarPagamentoArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pagamento_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
+
+
+def tipo_confirmar_pagamento(
+    host: ModuleHost, abrir_provider: Callable[[ModuleHost], Any]
+) -> TipoAcao:
+    def resumir(args: dict[str, Any]) -> str:
+        return "Confirmar na Agenda um pagamento que aguarda conferência"
+
+    def carregar(ctx: ContextoAcao, args: dict[str, Any]) -> Previa:
+        return Previa(
+            resumo="Confirmar pagamento aguardando conferência",
+            dados={
+                "pagamento_id": args["pagamento_id"],
+                "aviso": (
+                    "A Agenda dá baixa nas dívidas mais antigas primeiro, emite o recibo e o"
+                    " excedente vira crédito do paciente."
+                ),
+            },
+        )
+
+    def executar(ctx: ContextoAcao, args: dict[str, Any]) -> dict[str, Any]:
+        with abrir_provider(host) as provider:
+            resposta = provider.confirmar_pagamento(
+                args["pagamento_id"], ator=ctx.ator, trace_id=ctx.trace_id
+            )
+        return {
+            "resumo": _texto_baixa("Pagamento", resposta),
+            "pagamento_id": args["pagamento_id"],
+            "status_agenda": resposta.get("status"),
+            **descrever_recibo(resposta.get("receipt")),
+        }
+
+    return TipoAcao(
+        nome="confirmar_pagamento",
+        titulo="Confirmar pagamento na Agenda",
+        descricao=(
+            "Confirma na Agenda um pagamento que ficou aguardando conferência (valor que não bateu"
+            " com nenhum saldo): dá a baixa e emite o recibo. Informe o `pagamento_id` devolvido"
+            " ao registrar. Restrito ao gestor."
+        ),
+        esquema=ConfirmarPagamentoArgs,
+        resumir=resumir,
+        carregar=carregar,
+        executar=executar,
+        papel_minimo="admin",
     )

@@ -9,5 +9,7 @@ skills:
 - agenda_sessoes_sem_pagamento
 - sincronizar_agenda
 - agenda_contratos_pendentes
+- agenda_recibo_pagamento
+- agenda_bonus_indicacao
 segredos_requeridos: [agenda_api_key, agenda_base_url]
 dominios_requeridos: [agenda.brmsolutions.com.br, worker-agenda.brmsolutions.com.br]

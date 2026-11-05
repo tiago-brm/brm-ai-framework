@@ -173,7 +173,38 @@ def criar_handlers(
             raise AgendaErro(resultado["erro"])
         return resultado
 
+    def recibo_pagamento(ctx: HandlerContext, args: dict[str, Any]) -> dict[str, Any]:
+        pagamento = str(args.get("pagamento_id") or "")
+        if not _UUID.match(pagamento):
+            raise ExecucaoFalhou("Informe o pagamento_id (identificador do pagamento na Agenda).")
+        with abrir_provider(host) as provider:
+            recibo = provider.recibo_pagamento(pagamento, ator=ctx.actor, trace_id=ctx.trace_id)
+        if recibo is None:
+            raise ExecucaoFalhou(
+                "Este pagamento não tem recibo (ainda aguarda conferência da gerência) ou não"
+                " existe na Agenda."
+            )
+        return {"pagamento_id": pagamento, "recibo": recibo}
+
+    def bonus_indicacao(ctx: HandlerContext, args: dict[str, Any]) -> dict[str, Any]:
+        if ctx.role not in GESTORES:
+            raise ExecucaoFalhou("O bônus de indicação é consultado só pelo gestor.")
+        with abrir_provider(host) as provider:
+            politica = provider.politica_bonus_indicacao()
+            profissionais = provider.aptidao_bonus_indicacao()
+        return {
+            "data_corte": politica.get("referral_bonus_new_patients_from"),
+            "faixas": politica.get("tiers"),
+            "profissionais": profissionais,
+            "regra": (
+                "O +10 só vale com profissional apto, paciente novo (primeira sessão a partir da"
+                " data de corte) e indicação para aquele profissional."
+            ),
+        }
+
     return {
+        "recibo_pagamento": recibo_pagamento,
+        "bonus_indicacao": bonus_indicacao,
         "sessoes": sessoes,
         "clientes": clientes,
         "servicos": servicos,
