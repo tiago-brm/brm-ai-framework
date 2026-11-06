@@ -26,8 +26,6 @@ skills:
   autonomia: A0
 - usar: financeiro.listar_pendencias
   autonomia: A0
-- usar: financeiro.exportar_planilha
-  autonomia: A1
 - usar: agenda.agenda_sessoes
   autonomia: A0
 - usar: agenda.agenda_clientes

@@ -12,8 +12,8 @@ Esta política vale para todo o chat, a Central de Ações e os relatórios. Que
 - comissão, repasse, taxa, parte da clínica e quanto cada profissional ganha;
 - o bônus de indicação e a aptidão de cada profissional;
 - faturamento, resultado, entradas e saídas, painel financeiro e relatórios da clínica;
-- qualquer planilha exportada (financeira ou das secretarias, que serão descontinuadas pelo módulo
-  novo da Agenda);
+- qualquer planilha exportada (a skill foi retirada desta clínica porque o módulo novo da Agenda
+  substitui as planilhas; se voltar, a regra `planilha-so-admin` a mantém restrita ao administrador);
 - o valor previsto das sessões sem pagamento;
 - o repasse devolvido ao registrar um recebimento.
 

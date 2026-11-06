@@ -183,11 +183,18 @@ class TestMotorDePonta:
         for consulta in ("resumo_mensal", "repasse_por_profissional", "painel_financeiro"):
             r = engine.call_skill("consultar_financeiro", {"consulta": consulta})
             assert r["allowed"] is False and r["rule_id"].endswith("so-admin"), r
-        r = engine.call_skill("exportar_planilha", {"tipo": "financeiro", "periodo": "2026-02"})
-        assert r["allowed"] is False and r["rule_id"] == "planilha-so-admin"
         set_current_user(UserProfile(identity="gestor@x", role=Role.ADMIN))
         r = engine.call_skill("consultar_financeiro", {"consulta": "resumo_mensal"})
         assert r["allowed"] is True, r
+
+    def test_planilha_foi_retirada_da_clinica_para_todos(self, engine) -> None:
+        for perfil in (
+            UserProfile(identity="sec@x", role=Role.VIEWER),
+            UserProfile(identity="gestor@x", role=Role.ADMIN),
+        ):
+            set_current_user(perfil)
+            r = engine.call_skill("exportar_planilha", {"tipo": "financeiro", "periodo": "2026-02"})
+            assert r["allowed"] is False and "skill not found" in r["reason"], r
 
     def test_acoes_de_bonus_e_aptidao_exigem_administrador(self, engine) -> None:
         for nome in (
