@@ -737,21 +737,23 @@ def test_perfil_sem_permissao_recebe_agregados(ambiente):
     assert "por_pacote" not in ap
 
 
-def test_profissional_so_ve_o_proprio_repasse(ambiente):
+def test_profissional_nao_ve_nem_o_proprio_repasse(ambiente):
     tmp, _, _ = ambiente
     popular(tmp)
-    ana = consulta(tmp, "repasse_por_profissional", role="viewer", actor="ana@clinica.test")
-    assert [x["profissional"] for x in ana["dados"]] == ["Ana Souza"]
-    prof = consulta(tmp, "por_profissional", role="viewer", actor="ana@clinica.test")
-    assert [x["chave"] for x in prof["dados"]] == ["Ana Souza"]
-    outro = consulta(
-        tmp,
-        "repasse_por_profissional",
-        role="viewer",
-        actor="ana@clinica.test",
-        profissional="Bruno Lima",
-    )
-    assert outro["dados"] == []
+    for nome in ("repasse_por_profissional", "por_profissional"):
+        with pytest.raises(ErroFinanceiro, match="restrit"):
+            consulta(tmp, nome, role="viewer", actor="ana@clinica.test")
+        with pytest.raises(ErroFinanceiro, match="restrit"):
+            consulta(tmp, nome, role="viewer", actor="ana@clinica.test", profissional="Ana Souza")
+
+
+def test_recebimento_de_perfil_comum_nao_devolve_o_repasse(ambiente):
+    tmp, _, _ = ambiente
+    popular(tmp)
+    hoje = date.today().isoformat()
+    r = rec(tmp, role="viewer", actor="sec@clinica.test", data_pagamento=hoje, key="k-sec")
+    assert r["registrado"], r
+    assert "repasse" not in r and "repasse" not in str(r)
 
 
 @pytest.mark.parametrize(

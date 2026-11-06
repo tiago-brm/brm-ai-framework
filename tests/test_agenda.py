@@ -527,6 +527,7 @@ def test_sessoes_sem_pagamento_some_quando_ha_recebimento(amb):
     assert [s["paciente"] for s in g["sessoes"]] == ["Joao Lima"]
     v = amb.chamar("sessoes_sem_pagamento", {"de": "2026-10-01"}, **SEC_CTX)
     assert v["agregado"] is True and "Joao" not in json.dumps(v)
+    assert "valor_previsto" not in v and "valor_previsto" in g
 
 
 def semear_meio(amb):

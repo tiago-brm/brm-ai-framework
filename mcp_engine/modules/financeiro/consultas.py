@@ -53,13 +53,6 @@ class Ctx:
     def gestor(self) -> bool:
         return self.quem.gestor
 
-    @property
-    def profissional_id(self) -> int | None:
-        row = self.con.execute(
-            "SELECT id FROM profissional WHERE lower(email) = lower(?)", (self.quem.actor,)
-        ).fetchone()
-        return row["id"] if row else None
-
 
 def parse_periodo(periodo: str | None, hoje: date) -> tuple[str, str]:
     if not periodo:
@@ -221,22 +214,12 @@ def por_unidade(c: Ctx) -> dict[str, Any]:
 
 
 def por_profissional(c: Ctx) -> dict[str, Any]:
-    if not c.gestor:
-        pid = c.profissional_id
-        if pid is None:
-            raise ErroFinanceiro("Consulta por profissional restrita ao gestor.")
-        c = Ctx(
-            c.con, c.quem, c.hoje, c.de, c.ate, {**c.filtros, "profissional": _nome_prof(c, pid)}
-        )
+    _exigir_gestor(c, "A consulta por profissional")
     r = _grupo_rec(
         c, "pr.nome", "LEFT JOIN profissional pr ON pr.id = r.profissional_id", "sem profissional"
     )
     r["texto"] = _texto_grupos("Por profissional", r["dados"], "chave", "total")
     return r
-
-
-def _nome_prof(c: Ctx, pid: int) -> str:
-    return c.con.execute("SELECT nome FROM profissional WHERE id = ?", (pid,)).fetchone()[0]
 
 
 def sem_nf(c: Ctx) -> dict[str, Any]:
@@ -337,13 +320,8 @@ def ultimos_lancamentos(c: Ctx) -> dict[str, Any]:
 
 
 def _repasse_agrupado(c: Ctx) -> list[dict[str, Any]]:
+    _exigir_gestor(c, "O repasse")
     w, p = _where_rec(c)
-    if not c.gestor:
-        pid = c.profissional_id
-        if pid is None:
-            raise ErroFinanceiro("O repasse é restrito ao gestor e ao próprio profissional.")
-        w += " AND r.profissional_id = ?"
-        p = [*p, pid]
     rows = c.con.execute(
         "SELECT COALESCE(pr.nome, 'sem profissional') AS profissional, SUM(r.valor_centavos) AS"
         " bruto,"

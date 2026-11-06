@@ -271,13 +271,14 @@ def registrar_recebimento(ctx: HandlerContext, args: dict[str, Any]) -> dict[str
             "reutilizado": reutilizado,
             "valor_centavos": d["valor"],
             "valor": formatar_brl(d["valor"]),
-            "repasse": {
+            "fatos": fatos,
+        }
+        if quem.gestor:
+            resultado["repasse"] = {
                 "taxa_centavos": rep["taxa_centavos"],
                 "repasse_centavos": rep["repasse_centavos"],
                 "parte_clinica_centavos": rep["parte_clinica_centavos"],
-            },
-            "fatos": fatos,
-        }
+            }
         if not reutilizado:
             resultado[EVENTOS_CHAVE] = [
                 _evento(

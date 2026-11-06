@@ -6,6 +6,39 @@ vinculo_campo: responsavel
 identificador_campo: identificador
 write_denied_next_step: Peça a um administrador do cliente.
 policies:
+- id: financeiro-confidencial-negado-a-nao-admin
+  when:
+    and:
+    - or:
+      - in:
+        - var: note.tipo
+        - - relatorio
+          - comissao
+          - taxa
+          - repasse
+      - ==:
+        - var: note.confidencialidade
+        - financeiro
+    - '!':
+      - in:
+        - var: actor_role
+        - - admin
+          - super_admin
+  effect: deny
+- id: financeiro-confidencial-so-admin
+  when:
+    or:
+    - in:
+      - var: note.tipo
+      - - relatorio
+        - comissao
+        - taxa
+        - repasse
+    - ==:
+      - var: note.confidencialidade
+      - financeiro
+  effect: allow
+  audit: leitura-financeira-confidencial
 - id: modelos-abertos
   when:
     ==: [{var: note.tipo}, modelo]

@@ -153,10 +153,10 @@ def criar_handlers(
         resposta: dict[str, Any] = {
             "periodo": {"de": de.isoformat(), "ate": ate.isoformat()},
             "total": len(itens),
-            "valor_previsto": _brl(total),
             "ultima_sincronizacao": ler_estado(host, CHAVE_ULTIMA),
         }
         if ctx.role in GESTORES:
+            resposta["valor_previsto"] = _brl(total)
             resposta["sessoes"] = [
                 {**i, "valor_previsto": _brl(i["valor_previsto_centavos"])}
                 for i in itens[:MAX_ITENS]

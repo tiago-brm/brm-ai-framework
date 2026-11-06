@@ -1,6 +1,86 @@
 schema_version: 1
 client_id: clinica-piloto
 rules:
+- id: comissao-so-admin
+  description: Comissão, repasse e quanto cada profissional ganha são restritos ao administrador. Vale
+    para qualquer consulta de repasse, taxa ou parte da clínica e para o bônus de indicação.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - consultar_financeiro
+    - '!':
+      - in:
+        - var: actor_role
+        - - admin
+          - super_admin
+    - in:
+      - var: consulta
+      - - repasse_por_profissional
+        - simular_repasse
+        - parte_clinica
+        - taxas_por_meio
+  effect: deny
+  message: Comissão, repasse e ganhos de profissionais são restritos ao administrador.
+  next_step: Peça ao administrador da clínica.
+- id: bonus-indicacao-so-admin
+  description: A política e a aptidão do bônus de indicação são remuneração de profissionais e só o
+    administrador consulta.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - agenda_bonus_indicacao
+    - '!':
+      - in:
+        - var: actor_role
+        - - admin
+          - super_admin
+  effect: deny
+  message: O bônus de indicação e a aptidão dos profissionais são restritos ao administrador.
+  next_step: Peça ao administrador da clínica.
+- id: faturamento-so-admin
+  description: Faturamento, resultado e relatórios financeiros da clínica são do administrador. Quem
+    não é administrador só consulta o que é operacional da recepção (lista de permitidos); consulta
+    nova nasce negada até entrar na lista.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - consultar_financeiro
+    - '!':
+      - in:
+        - var: actor_role
+        - - admin
+          - super_admin
+    - '!':
+      - in:
+        - var: consulta
+        - - a_receber
+          - saldo_pacote
+          - faltas_por_periodo
+          - pendencias
+          - sem_nf
+          - ultimos_lancamentos
+  effect: deny
+  message: Faturamento, resultado e relatórios financeiros da clínica são restritos ao administrador.
+  next_step: Peça ao administrador da clínica.
+- id: planilha-so-admin
+  description: Toda exportação de planilha (financeira ou das secretarias) é do administrador. As
+    planilhas serão descontinuadas pelo módulo novo da Agenda; até lá só o administrador exporta.
+  condition:
+    and:
+    - ==:
+      - var: skill_name
+      - exportar_planilha
+    - '!':
+      - in:
+        - var: actor_role
+        - - admin
+          - super_admin
+  effect: deny
+  message: A exportação de planilhas é restrita ao administrador.
+  next_step: Peça ao administrador da clínica.
 - id: lancamento-em-mes-fechado
   description: Lançar em mês já fechado é recusado; o ajuste entra no mês corrente. O banco também
     recusa, esta regra só dá a mensagem antes.
