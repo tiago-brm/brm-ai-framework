@@ -10,7 +10,11 @@ from pathlib import Path
 
 from mcp_engine.core.executor import ExecucaoFalhou
 from mcp_engine.modules import BaseModule, ModuleError, ModuleHost
-from mcp_engine.modules.agenda.bonus import tipo_definir_aptidao_bonus, tipo_definir_corte_bonus
+from mcp_engine.modules.agenda.bonus import (
+    tipo_consultar_bonus,
+    tipo_definir_aptidao_bonus,
+    tipo_definir_corte_bonus,
+)
 from mcp_engine.modules.agenda.contrato import (
     FATOS_CONTRATO,
     fatos_contrato,
@@ -83,6 +87,7 @@ class AgendaModule(BaseModule):
         host.registrar_tipo_acao(tipo_confirmar_pagamento(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_emitir_recibo(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_definir_crp(host, self.abrir_provider))
+        host.registrar_tipo_acao(tipo_consultar_bonus(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_definir_corte_bonus(host, self.abrir_provider))
         host.registrar_tipo_acao(tipo_definir_aptidao_bonus(host, self.abrir_provider))
         host.module_api("financeiro").ao_faltar_paciente(lambda: executar_sincronizacao(host))

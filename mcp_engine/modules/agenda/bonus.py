@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from mcp_engine.core.acoes import ContextoAcao, Previa, TipoAcao
 from mcp_engine.core.executor import ExecucaoFalhou
+from mcp_engine.core.leituras import tipo_leitura_protegida
 from mcp_engine.modules import ModuleHost
 from mcp_engine.modules.agenda.crp import _resolver
 from mcp_engine.modules.agenda.tempo import parse_dia
@@ -152,5 +153,38 @@ def tipo_definir_aptidao_bonus(
         resumir=resumir,
         carregar=carregar,
         executar=executar,
+        papel_minimo="admin",
+    )
+
+
+class ConsultarBonusArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+def tipo_consultar_bonus(host: ModuleHost, abrir_provider: Callable[[ModuleHost], Any]) -> TipoAcao:
+    def ler(ctx: ContextoAcao, args: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+        with abrir_provider(host) as provider:
+            politica = provider.politica_bonus_indicacao()
+            profissionais = provider.aptidao_bonus_indicacao()
+        return "Bônus de indicação", {
+            "data_corte": politica.get("referral_bonus_new_patients_from"),
+            "faixas": politica.get("tiers"),
+            "profissionais": profissionais,
+            "regra": (
+                "O +10 só vale com profissional apto, paciente novo (primeira sessão a partir da"
+                " data de corte) e indicação para aquele profissional."
+            ),
+        }
+
+    return tipo_leitura_protegida(
+        nome="consultar_bonus_indicacao",
+        titulo="Bônus de indicação",
+        descricao=(
+            "Mostra a data de corte, as faixas e a aptidão de cada profissional ao bônus de"
+            " indicação (pacientes nos últimos 6 meses, CRP, contrato). É remuneração, então só o"
+            " administrador vê: devolva o link, ele o abre e vê na página."
+        ),
+        esquema=ConsultarBonusArgs,
+        ler=ler,
         papel_minimo="admin",
     )

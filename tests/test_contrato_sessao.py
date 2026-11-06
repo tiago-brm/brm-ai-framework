@@ -803,6 +803,17 @@ class TestBaixaReciboEBonus:
             engine.acoes.abrir(SEC, r["acao_id"])
         assert exc.value.status == 403
 
+    def test_consulta_do_bonus_so_abre_para_admin(self, engine, fake) -> None:
+        fake.aptos_bonus.add("st1")
+        r = self.bonus(engine, "consultar_bonus_indicacao", SEC.perfil)
+        with pytest.raises(AcaoErro) as exc:
+            engine.acoes.abrir(SEC, r["acao_id"])
+        assert exc.value.status == 403
+        dados = engine.acoes.abrir(self.GESTOR, r["acao_id"])["itens"][0]["dados"]
+        assert dados["profissionais"][0]["referral_bonus_eligible"] is True
+        saida = engine.acoes.confirmar(self.GESTOR, r["acao_id"], "7391")["resultado"][0]
+        assert "profissionais" not in str(saida)
+
     def test_http_bonus_envia_corte_e_aptidao(self) -> None:
         import json
         from datetime import date as d

@@ -9,7 +9,9 @@ from pathlib import Path
 import pytest
 import yaml
 
+from mcp_engine.core.acoes import AcaoErro
 from mcp_engine.core.auth import Role, UserProfile, current_user_var, set_current_user
+from mcp_engine.core.identidade import Identidade
 from mcp_engine.core.mcp_server import BRMEngine
 from mcp_engine.core.models import RuleEffect, RuleSet, VaultAccess, VaultNote
 from mcp_engine.core.rule_evaluator import evaluate
@@ -204,3 +206,48 @@ class TestMotorDePonta:
             "agenda.definir_crp_profissional",
         ):
             assert engine.acoes._tipo(nome).papel_minimo == "admin", nome
+
+    def test_consulta_restrita_so_abre_para_admin_e_o_chat_nao_ve_numeros(self, engine) -> None:
+        sec = Identidade(
+            id="sec@x",
+            perfil=UserProfile(identity="sec@x", role=Role.VIEWER),
+            provedor="local",
+            metodo="token",
+        )
+        gestor = Identidade(
+            id="gestor@x",
+            perfil=UserProfile(identity="gestor@x", role=Role.ADMIN),
+            provedor="local",
+            metodo="token",
+        )
+        engine.acoes.atributos.definir_pin("local", gestor.id, "7391", por=gestor.id)
+        set_current_user(sec.perfil)
+        r = engine.criar_acao(
+            "financeiro.consulta_restrita",
+            {"consulta": "repasse_por_profissional", "periodo": "2026-11"},
+        )
+        assert r.get("acao_id"), r
+        with pytest.raises(AcaoErro) as exc:
+            engine.acoes.abrir(sec, r["acao_id"])
+        assert exc.value.status == 403
+        pagina = engine.acoes.abrir(gestor, r["acao_id"])
+        item = pagina["itens"][0]
+        assert item["dados"]["consulta"] == "repasse_por_profissional"
+        assert "dados" in item["dados"]
+        saida = engine.acoes.confirmar(gestor, r["acao_id"], "7391")
+        assert saida["status"] == "confirmada"
+        chat = engine.status_da_acao(r["acao_id"])
+        assert "dados" not in str(chat["resultado"]) and "repasse" not in str(chat["resultado"])
+        assert "gestor@x" in chat["resultado"][0]["resumo"]
+
+    def test_consulta_restrita_de_consulta_inexistente_falha_sem_vazar(self, engine) -> None:
+        gestor = Identidade(
+            id="gestor@x",
+            perfil=UserProfile(identity="gestor@x", role=Role.ADMIN),
+            provedor="local",
+            metodo="token",
+        )
+        set_current_user(gestor.perfil)
+        r = engine.criar_acao("financeiro.consulta_restrita", {"consulta": "nao_existe"})
+        with pytest.raises(AcaoErro):
+            engine.acoes.abrir(gestor, r["acao_id"])

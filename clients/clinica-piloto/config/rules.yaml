@@ -22,7 +22,7 @@ rules:
         - taxas_por_meio
   effect: deny
   message: Comissão, repasse e ganhos de profissionais são restritos ao administrador.
-  next_step: Peça ao administrador da clínica.
+  next_step: Peça pela Central de Ações (consulta restrita) e entregue o link; o administrador o abre, se identifica e vê o resultado na página.
 - id: bonus-indicacao-so-admin
   description: A política e a aptidão do bônus de indicação são remuneração de profissionais e só o
     administrador consulta.
@@ -38,7 +38,7 @@ rules:
           - super_admin
   effect: deny
   message: O bônus de indicação e a aptidão dos profissionais são restritos ao administrador.
-  next_step: Peça ao administrador da clínica.
+  next_step: Peça pela Central de Ações (consulta restrita) e entregue o link; o administrador o abre, se identifica e vê o resultado na página.
 - id: faturamento-so-admin
   description: Faturamento, resultado e relatórios financeiros da clínica são do administrador. Quem
     não é administrador só consulta o que é operacional da recepção (lista de permitidos); consulta
@@ -64,7 +64,7 @@ rules:
           - ultimos_lancamentos
   effect: deny
   message: Faturamento, resultado e relatórios financeiros da clínica são restritos ao administrador.
-  next_step: Peça ao administrador da clínica.
+  next_step: Peça pela Central de Ações (consulta restrita) e entregue o link; o administrador o abre, se identifica e vê o resultado na página.
 - id: planilha-so-admin
   description: Toda exportação de planilha (financeira ou das secretarias) é do administrador. As
     planilhas serão descontinuadas pelo módulo novo da Agenda; até lá só o administrador exporta.

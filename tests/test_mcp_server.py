@@ -282,6 +282,7 @@ skills:
         assert len(events) >= 1
 
     def test_query_audit_log_returns_all_events(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         engine.call_skill("consultar_saldo", {})
         engine.call_skill("consultar_saldo", {"valor_consultado": 200000})
         engine.call_skill("enviar_email", {"tipo_acao": "enviar_para_sistema_externo"})
@@ -292,6 +293,7 @@ skills:
         assert len(result["events"]) >= 3
 
     def test_query_audit_log_filters_by_action(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         engine.call_skill("consultar_saldo", {})
         engine.call_skill("enviar_email", {"tipo_acao": "enviar_para_sistema_externo"})
 
@@ -301,6 +303,7 @@ skills:
         assert result["events"][0]["action"] == "consultar_saldo"
 
     def test_query_audit_log_filters_by_decision(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         engine.call_skill("consultar_saldo", {})
         engine.call_skill("consultar_saldo", {"valor_consultado": 200000})
 
@@ -311,6 +314,7 @@ skills:
             assert event["decision"] == "denied"
 
     def test_query_audit_log_filters_by_date_range(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         engine.call_skill("consultar_saldo", {})
 
         now = datetime.now(UTC)
@@ -326,6 +330,7 @@ skills:
         assert result_future["total"] == 0
 
     def test_query_audit_log_event_format(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         engine.call_skill("consultar_saldo", {})
 
         result = engine.query_audit_log()
@@ -336,9 +341,10 @@ skills:
         assert "actor" in event
         assert "action" in event
         assert "decision" in event
-        assert event["actor"] == "claude"
+        assert event["actor"] == "socio@escritorio.com.br"
 
     def test_query_audit_log_rule_id_field(self, engine: BRMEngine) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         engine.call_skill("consultar_saldo", {"valor_consultado": 200000})
 
         result = engine.query_audit_log()
@@ -677,6 +683,7 @@ class TestVaultInterpreterWiring:
     def test_vault_interpret_and_propose_generates_pending_draft(
         self, roots: tuple[Path, Path]
     ) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         config_root, data_root = roots
         self._write_note(
             config_root,
@@ -726,6 +733,7 @@ class TestVaultInterpreterWiring:
         assert agent.prompts == []
 
     def test_vault_promote_draft_writes_to_active_rules(self, roots: tuple[Path, Path]) -> None:
+        set_current_user(UserProfile(identity="socio@escritorio.com.br", role=Role.ADMIN))
         config_root, data_root = roots
         self._write_note(
             config_root,

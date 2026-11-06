@@ -1133,6 +1133,16 @@ class BRMEngine:
     def _negado(motivo: str, **extra: Any) -> dict[str, Any]:
         return {"allowed": False, "reason": motivo, **extra}
 
+    def _exigir_gestor(self, o_que: str) -> dict[str, Any] | None:
+        user = get_current_user()
+        if user.role in (Role.ADMIN, Role.SUPER_ADMIN):
+            return None
+        self.auditar_evento(f"gestor_exigido:{o_que}", False, {})
+        return self._negado(
+            f"{o_que} é restrito ao administrador.",
+            proximo_passo="Peça ao administrador da clínica.",
+        )
+
     def _carregar_operacao(self, operacao_id: str) -> Operacao | None:
         op = self.operacoes.get(operacao_id)
         if op is None:
@@ -1297,6 +1307,8 @@ class BRMEngine:
         action: str | None = None,
         decision: str | None = None,
     ) -> dict[str, Any]:
+        if (negado := self._exigir_gestor("A consulta ao log de auditoria")) is not None:
+            return negado
         if start_date:
             start = datetime.fromisoformat(start_date)
             if start.tzinfo is None:
@@ -1423,6 +1435,8 @@ class BRMEngine:
         return self._interpreter_agent
 
     def vault_interpret_and_propose(self, note_id: str) -> dict[str, Any]:
+        if (negado := self._exigir_gestor("Propor regra ou skill")) is not None:
+            return negado
         return propose_draft(
             self.client_id,
             note_id,
@@ -1460,6 +1474,8 @@ class BRMEngine:
         return f"_modelos/{destino.name}"
 
     def vault_generate_document(self, instrucoes: str) -> dict[str, Any]:
+        if (negado := self._exigir_gestor("Gerar documento para o vault")) is not None:
+            return negado
         return propose_document(
             self.client_id,
             instrucoes,
@@ -1471,6 +1487,8 @@ class BRMEngine:
         )
 
     def vault_promote_document(self, draft_id: str) -> dict[str, Any]:
+        if (negado := self._exigir_gestor("Promover documento")) is not None:
+            return negado
         return promote_document(
             self.client_id,
             draft_id,
@@ -1588,6 +1606,8 @@ class BRMEngine:
         )
 
     def vault_promote_draft(self, draft_id: str, kind: str) -> dict[str, Any]:
+        if (negado := self._exigir_gestor("Promover regra ou skill")) is not None:
+            return negado
         if self._client_config.config_via_notas and kind in ("rule", "skill"):
             return self._negado(
                 "Este cliente configura regras e skills por notas aprovadas "
